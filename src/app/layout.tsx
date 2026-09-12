@@ -61,10 +61,10 @@ export const metadata: Metadata = {
   // param, add hreflang then — claiming it now would point every language at
   // the same English HTML.
   title: {
-    default: 'Zeneva - Advanced Inventory Management & Global POS Operating System',
-    template: '%s | Zeneva'
+    default: 'ZenOffice - Your Complete Office Suite',
+    template: '%s | ZenOffice'
   },
-  description: 'Zeneva is a borderless retail operating system unifying inventory, offline-capable POS, analytics, and USD/NGN payments into a powerful platform for modern retailers and mini-marts.',
+  description: 'ZenOffice is a powerful document management platform and office suite for viewing and editing files like Word, Excel, and PDF.',
   keywords: [
     'inventory management software', 
     'retail pos system', 
@@ -81,10 +81,10 @@ export const metadata: Metadata = {
     'zeneva vs quickbooks pos',
     'pos for open markets'
   ],
-  applicationName: 'Zeneva',
-  authors: [{ name: 'Zeneva Team' }],
+  applicationName: 'ZenOffice',
+  authors: [{ name: 'ZenOffice Team' }],
   generator: 'Next.js',
-  publisher: 'Zeneva',
+  publisher: 'ZenOffice',
   referrer: 'origin-when-cross-origin',
   manifest: '/manifest.json',
   icons: {
@@ -99,13 +99,13 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Zeneva',
+    title: 'ZenOffice',
   },
   openGraph: {
-    title: 'Zeneva - Advanced Inventory Management & Global POS',
-    description: 'Track every product, capture every sale, and scale globally. Zeneva unifies inventory, analytics, and multi-currency payments for the modern retailer.',
+    title: 'ZenOffice - Your Complete Office Suite',
+    description: 'Manage, edit, and organize all your documents seamlessly with ZenOffice.',
     url: siteUrl,
-    siteName: 'Zeneva',
+    siteName: 'ZenOffice',
     images: [
       {
         url: `${siteUrl}/zeneva-og-image.png?v=5`,
@@ -120,10 +120,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Zeneva - Global Retail OS & POS Platform',
-    description: 'Transform your retail operations with Zeneva. Inventory, analytics, and global payments in one unified platform.',
+    title: 'ZenOffice - Your Complete Office Suite',
+    description: 'Manage, edit, and organize all your documents seamlessly with ZenOffice.',
     images: [`${siteUrl}/zeneva-og-image.png?v=5`],
-    creator: '@zeneva_retail',
+    creator: '@zenoffice',
   }
 };
 
