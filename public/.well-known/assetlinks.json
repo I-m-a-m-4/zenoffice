@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls", "delegate_permission/common.get_login_creds"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.zeneva.app",
+    "sha256_cert_fingerprints": ["5C:20:BF:52:BD:9A:C3:0A:5A:A3:C4:AF:D2:7A:C6:EA:14:23:7B:B0:CE:37:8A:BF:FE:E2:BC:AC:19:63:8F:D1"]
+  }
+}]

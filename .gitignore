@@ -1,0 +1,62 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+.genkit/*
+.env*
+
+# firebase
+firebase-debug.log
+firestore-debug.log
+android-keystore-backup.json
+
+# marketing recorder output (videos + raw frame sequences)
+/marketing-out
+
+# throwaway capture/encode probes — sample mp4s and wavs from tuning the
+# recorder. Large binaries with no reason to be in history.
+/.tmp-probe
+
+# next-pwa generated service worker artifacts (regenerated on every build)
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat

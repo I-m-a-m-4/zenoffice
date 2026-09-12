@@ -1,0 +1,473 @@
+name: Release
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+# Workflow-level so every step inherits these, including the second `next build`
+# that tauri.conf.json's beforeBuildCommand triggers via scripts/tauri-prebuild.mjs.
+# That rebuild is what actually gets bundled; without these the NEXT_PUBLIC_*
+# values inline as undefined and Firebase auth fails at runtime.
+env:
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+  NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+  NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+  # Web Push certificate public key. Missing here meant every native build
+  # inlined it as undefined, so use-fcm.ts bailed before getToken and no
+  # installed app ever registered a device — the push system looked wired but
+  # had nothing to send to.
+  NEXT_PUBLIC_FIREBASE_VAPID_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_VAPID_KEY }}
+  NEXT_PUBLIC_EMAILJS_INVITE_SERVICE_ID: ${{ secrets.NEXT_PUBLIC_EMAILJS_INVITE_SERVICE_ID }}
+  NEXT_PUBLIC_EMAILJS_INVITE_TEMPLATE_ID: ${{ secrets.NEXT_PUBLIC_EMAILJS_INVITE_TEMPLATE_ID }}
+  NEXT_PUBLIC_EMAILJS_INVITE_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_EMAILJS_INVITE_PUBLIC_KEY }}
+  NEXT_PUBLIC_EMAILJS_RECEIPT_SERVICE_ID: ${{ secrets.NEXT_PUBLIC_EMAILJS_RECEIPT_SERVICE_ID }}
+  NEXT_PUBLIC_EMAILJS_RECEIPT_TEMPLATE_ID: ${{ secrets.NEXT_PUBLIC_EMAILJS_RECEIPT_TEMPLATE_ID }}
+  NEXT_PUBLIC_EMAILJS_RECEIPT_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_EMAILJS_RECEIPT_PUBLIC_KEY }}
+  NEXT_PUBLIC_STORAGE_ENCRYPTION_KEY: ${{ secrets.NEXT_PUBLIC_STORAGE_ENCRYPTION_KEY }}
+  NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY }}
+
+jobs:
+  release:
+    name: Build & Release (${{ matrix.platform }})
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Sync node version and setup cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Install macOS dependencies
+        if: matrix.platform == 'macos-latest'
+        run: |
+          # No extra brew deps usually needed for standard Tauri, but can add if necessary
+
+      - name: Verify Firebase config is present
+        shell: bash
+        run: |
+          missing=""
+          for v in NEXT_PUBLIC_FIREBASE_API_KEY NEXT_PUBLIC_FIREBASE_PROJECT_ID \
+                   NEXT_PUBLIC_FIREBASE_APP_ID NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
+                   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID; do
+            [ -z "${!v}" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing Firebase secrets:$missing - the app would build but every login would fail."
+            exit 1
+          fi
+          echo "Firebase config present."
+
+          # Deliberately a warning, not a failure: a build with no VAPID key is
+          # a working app that cannot receive push notifications, which is worth
+          # shouting about but not worth blocking a release over. Promote this to
+          # `exit 1` once the secret is set and expected to stay set.
+          if [ -z "$NEXT_PUBLIC_FIREBASE_VAPID_KEY" ]; then
+            echo "::warning::NEXT_PUBLIC_FIREBASE_VAPID_KEY is missing - this build will install fine but can never register a device for push notifications."
+          fi
+
+      - name: Build frontend
+        shell: bash
+        env:
+          IS_TAURI: true
+        run: |
+          node scripts/prepare-tauri.mjs
+          npm run build
+
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          CARGO_BUILD_JOBS: 1
+          RUSTFLAGS: "-C codegen-units=1"
+        with:
+          tagName: v__VERSION__
+          releaseName: 'Zeneva v__VERSION__'
+          releaseBody: 'Zeneva Multi-Platform Release (Windows/macOS). For the best experience, use the auto-updater within the application settings.'
+          releaseDraft: false
+          prerelease: false
+
+      - name: Verify Artifacts (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path src-tauri/target/release/bundle -Recurse
+
+      - name: Verify Artifacts (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          ls -R src-tauri/target/release/bundle
+
+      - name: Generate and Upload latest.json (Windows Only)
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/generate-latest-json.mjs
+
+      - name: Upload Built App Artifacts (Windows/macOS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: zeneva-${{ matrix.platform }}-bundle
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/*.app
+          if-no-files-found: warn
+
+  release-android:
+    name: Build & Release (Android)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo docker system prune -af
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Android SDK setup
+        id: setup-android
+        uses: android-actions/setup-android@v3
+
+      - name: Setup NDK
+        run: |
+          # Install pinned NDK version known to work with Rust cross-compilation (26.1.10909125 is the stable LTS for Tauri)
+          NDK_VERSION="26.1.10909125"
+          yes | sdkmanager --install "ndk;${NDK_VERSION}" > /dev/null 2>&1 || true
+
+          NDK_PATH="${ANDROID_SDK_ROOT}/ndk/${NDK_VERSION}"
+          if [ ! -d "$NDK_PATH" ]; then
+            # Fallback to whatever NDK is installed
+            NDK_PATH=$(find ${ANDROID_SDK_ROOT}/ndk -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -1)
+          fi
+
+          echo "Zeneva: Using NDK at $NDK_PATH"
+          echo "NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+
+          TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin
+          echo "$TOOLCHAIN" >> $GITHUB_PATH
+
+          # Use API 24 versioned clang wrappers (avoid generic wildcard)
+          AARCH64_CLANG=$(ls $TOOLCHAIN/aarch64-linux-android*-clang 2>/dev/null | grep -v '++' | sort -V | tail -1)
+          ARMV7_CLANG=$(ls $TOOLCHAIN/armv7a-linux-androideabi*-clang 2>/dev/null | grep -v '++' | sort -V | tail -1)
+          I686_CLANG=$(ls $TOOLCHAIN/i686-linux-android*-clang 2>/dev/null | grep -v '++' | sort -V | tail -1)
+          X86_64_CLANG=$(ls $TOOLCHAIN/x86_64-linux-android*-clang 2>/dev/null | grep -v '++' | sort -V | tail -1)
+
+          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$AARCH64_CLANG" >> $GITHUB_ENV
+          echo "CC_aarch64_linux_android=$AARCH64_CLANG" >> $GITHUB_ENV
+          echo "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=$ARMV7_CLANG" >> $GITHUB_ENV
+          echo "CC_armv7_linux_androideabi=$ARMV7_CLANG" >> $GITHUB_ENV
+          
+          echo "CARGO_TARGET_I686_LINUX_ANDROID_LINKER=$I686_CLANG" >> $GITHUB_ENV
+          echo "CC_i686_linux_android=$I686_CLANG" >> $GITHUB_ENV
+          echo "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$X86_64_CLANG" >> $GITHUB_ENV
+          echo "CC_x86_64_linux_android=$X86_64_CLANG" >> $GITHUB_ENV
+
+          echo "Zeneva: aarch64 linker=$AARCH64_CLANG"
+          echo "Zeneva: armv7 linker=$ARMV7_CLANG"
+          echo "Zeneva: i686 linker=$I686_CLANG"
+          echo "Zeneva: x86_64 linker=$X86_64_CLANG"
+
+
+      - name: Sync node version and setup cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Extract App Version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl wget file libssl-dev libayatana-appindicator3-dev
+          npm install
+
+      - name: Build frontend
+        env:
+          IS_TAURI: true
+        run: |
+          node scripts/prepare-tauri.mjs
+          npm run build
+
+      - name: Initialize Android (if not exists)
+        run: npx tauri android init --ci
+        continue-on-error: true
+
+      # No continue-on-error here on purpose. Camera and microphone permissions
+      # come from this step; a silent failure ships an APK where getUserMedia is
+      # denied with no OS dialog, which is exactly how audio was missing through
+      # 3.1.6. Fail the build instead.
+      - name: Patch Android Manifest with Camera and Microphone Permissions
+        run: node scripts/patch-android-manifest.mjs
+
+      - name: Generate App Icons
+        run: npm run tauri icon public/zeneva-app-icon.png
+        continue-on-error: true
+
+      - name: Build Android App (APK & AAB)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NDK_HOME: ${{ env.NDK_HOME }}
+          ANDROID_NDK_HOME: ${{ env.NDK_HOME }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
+        run: |
+          echo "Checking for Android keystore in GitHub Secrets..."
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "Release keystore found. Decoding..."
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > src-tauri/gen/android/app/upload-keystore.jks
+            {
+              echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+              echo "keyPassword=$ANDROID_KEY_PASSWORD"
+              echo "keyAlias=$ANDROID_KEY_ALIAS"
+              echo "storeFile=upload-keystore.jks"
+            } > src-tauri/gen/android/app/key.properties
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. A tagged release must be signed with the registered Play upload key."
+            exit 1
+          else
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret found. Building unsigned AAB/APK - Play Console will reject these."
+          fi
+
+          # Boost Gradle JVM heap inside gradlew itself
+          mkdir -p src-tauri/gen/android
+          printf '\norg.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8\nandroid.useAndroidX=true\nandroid.enableJetifier=true\n' >> src-tauri/gen/android/gradle.properties
+
+          # Build AAB for Play Store
+          npm run tauri android build -- --aab --target aarch64 --target armv7 --ignore-version-mismatches
+          # Build APK for sideloading
+          npm run tauri android build -- --apk --target aarch64 --target armv7 --ignore-version-mismatches
+
+      - name: Locate and Prepare Android Files
+        run: |
+          echo "Searching for APK and AAB files..."
+          APK_PATH=$(find . -name "*.apk" | grep release | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            APK_PATH=$(find . -name "*.apk" | head -n 1)
+          fi
+          
+          AAB_PATH=$(find . -name "*.aab" | grep release | head -n 1)
+          if [ -z "$AAB_PATH" ]; then
+            AAB_PATH=$(find . -name "*.aab" | head -n 1)
+          fi
+          
+          if [ -n "$APK_PATH" ]; then
+            echo "Found APK at: $APK_PATH"
+            cp "$APK_PATH" "./zeneva-v${{ env.APP_VERSION }}-Android.apk"
+            echo "APK ready at ./zeneva-v${{ env.APP_VERSION }}-Android.apk"
+          else
+            echo "Warning: No APK file found!"
+          fi
+          
+          if [ -n "$AAB_PATH" ]; then
+            echo "Found AAB at: $AAB_PATH"
+            cp "$AAB_PATH" "./zeneva-v${{ env.APP_VERSION }}-Android.aab"
+            echo "AAB ready at ./zeneva-v${{ env.APP_VERSION }}-Android.aab"
+          else
+            echo "Warning: No AAB file found!"
+          fi
+
+      - name: Verify AAB signing certificate
+        run: |
+          # Fingerprint Play expects for com.zeneva.app. Must match the
+          # sha256_cert_fingerprints in public/.well-known/assetlinks.json.
+          EXPECTED="5C:20:BF:52:BD:9A:C3:0A:5A:A3:C4:AF:D2:7A:C6:EA:14:23:7B:B0:CE:37:8A:BF:FE:E2:BC:AC:19:63:8F:D1"
+          AAB="./zeneva-v${{ env.APP_VERSION }}-Android.aab"
+
+          if [ ! -f "$AAB" ]; then
+            echo "::error::No AAB produced - nothing to verify."
+            exit 1
+          fi
+
+          ACTUAL=$(keytool -printcert -jarfile "$AAB" 2>/dev/null \
+            | grep -m1 'SHA256:' | sed 's/.*SHA256: *//' | tr -d '[:space:]')
+
+          if [ -z "$ACTUAL" ]; then
+            echo "::error::AAB is unsigned. Play Console will reject it."
+            exit 1
+          fi
+
+          echo "expected: $EXPECTED"
+          echo "actual:   $ACTUAL"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::AAB signed with the wrong key. Check that ANDROID_KEYSTORE_BASE64 and ANDROID_KEY_ALIAS hold the registered Play upload key."
+            exit 1
+          fi
+
+          echo "AAB is signed with the registered Play upload key."
+
+      - name: Upload Artifacts to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./zeneva-v${{ env.APP_VERSION }}-Android.apk
+            ./zeneva-v${{ env.APP_VERSION }}-Android.aab
+          tag_name: v${{ env.APP_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+
+      - name: Upload Android Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zeneva-android-artifacts
+          path: |
+            ./zeneva-*-Android.apk
+            ./zeneva-*-Android.aab
+          if-no-files-found: warn
+
+  release-ios:
+    name: Build & Release (iOS)
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,x86_64-apple-ios
+
+      - name: Sync node version and setup cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Extract App Version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build frontend
+        env:
+          IS_TAURI: true
+        run: |
+          node scripts/prepare-tauri.mjs
+          npm run build
+
+      - name: Initialize iOS (if not exists)
+        run: npx tauri ios init --ci
+        continue-on-error: true
+
+      - name: Build iOS App
+        run: |
+          # Build iOS app without signing certificates (to prevent errors in CI)
+          npm run tauri ios build -- --no-signing
+        continue-on-error: true
+
+      - name: Compress iOS App
+        run: |
+          echo "Locating built iOS app..."
+          APP_PATH=""
+          
+          # Search 1: Local Tauri apple builds
+          if [ -d "src-tauri/gen/apple" ]; then
+            APP_PATH=$(find src-tauri/gen/apple -name "*.app" -not -path "*/DerivedData/*" 2>/dev/null | head -n 1)
+          fi
+          
+          # Search 2: Xcode DerivedData
+          if [ -z "$APP_PATH" ]; then
+            DERIVED_DATA="/Users/runner/Library/Developer/Xcode/DerivedData"
+            if [ -d "$DERIVED_DATA" ]; then
+              APP_PATH=$(find "$DERIVED_DATA" -name "*.app" 2>/dev/null | head -n 1)
+            fi
+          fi
+          
+          # Search 3: Fallback search user directory
+          if [ -z "$APP_PATH" ]; then
+            APP_PATH=$(find /Users/runner -name "*.app" -path "*/Build/*" 2>/dev/null | head -n 1)
+          fi
+          
+          if [ -n "$APP_PATH" ]; then
+            echo "Found iOS app at: $APP_PATH"
+            APP_DIR=$(dirname "$APP_PATH")
+            APP_NAME=$(basename "$APP_PATH")
+            cd "$APP_DIR"
+            zip -r "$GITHUB_WORKSPACE/zeneva-v${{ env.APP_VERSION }}-ios.zip" "$APP_NAME"
+            echo "iOS App zipped successfully to $GITHUB_WORKSPACE/zeneva-v${{ env.APP_VERSION }}-ios.zip"
+          else
+            echo "Warning: No .app file found to compress!"
+          fi
+        continue-on-error: true
+
+      - name: Upload iOS App to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./zeneva-v${{ env.APP_VERSION }}-ios.zip
+          tag_name: v${{ env.APP_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+        continue-on-error: true
+
+      - name: Upload iOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zeneva-ios-artifacts
+          path: |
+            src-tauri/gen/apple/build/arm64/*.app
+            src-tauri/gen/apple/build/**/*.app
+            /Users/runner/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+          if-no-files-found: warn

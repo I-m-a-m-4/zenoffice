@@ -1,0 +1,130 @@
+{
+  "placeholderImages": [
+    {
+      "id": "zeneva-hero",
+      "description": "A modern business management software interface on a laptop.",
+      "imageUrl": "https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxidXNpbmVzcyUyMG1hbmFnZW1lbnR8ZW58MHx8fHwxNzY4NTkyNzUyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "business management"
+    },
+    {
+      "id": "product-1",
+      "description": "A generic product image.",
+      "imageUrl": "https://images.unsplash.com/photo-1546868871-7041f2a55e12?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxwcm9kdWN0fGVufDB8fHx8MTc2ODY1MTA1NXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "product"
+    },
+    {
+      "id": "product-2",
+      "description": "Another generic product image.",
+      "imageUrl": "https://images.unsplash.com/photo-1738045646275-979fc0daea2e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxwcm9kdWN0JTIwaXRlbXxlbnwwfHx8fDE3Njg2NjQwODJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "product item"
+    },
+    {
+      "id": "product-3",
+      "description": "A third generic product image.",
+      "imageUrl": "https://images.unsplash.com/photo-1462392246754-28dfa2df8e6b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxtZXJjaGFuZGlzZXxlbnwwfHx8fDE3Njg2NzAwOTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "merchandise"
+    },
+    {
+      "id": "product-4",
+      "description": "A fourth generic product image.",
+      "imageUrl": "https://images.unsplash.com/photo-1498049794561-7780e7231661?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxlbGVjdHJvbmljc3xlbnwwfHx8fDE3Njg2NDI5ODl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "electronics"
+    },
+    {
+      "id": "product-5",
+      "description": "A fifth generic product image.",
+      "imageUrl": "https://images.unsplash.com/photo-1620799139834-6b8f844fbe61?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxhcHBhcmVsfGVufDB8fHx8MTc2ODY3MDA5MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "apparel"
+    },
+    {
+      "id": "boutique-store",
+      "description": "A chic fashion boutique interior.",
+      "imageUrl": "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?q=80&w=2070&auto=format&fit=crop",
+      "imageHint": "fashion boutique"
+    },
+    {
+      "id": "cafe-shop",
+      "description": "A cozy coffee shop.",
+      "imageUrl": "https://images.unsplash.com/photo-1525610553991-2bede1a236e2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjb2ZmZWUlMjBzaG9wfGVufDB8fHx8MTc2ODkzMjU2OHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "coffee shop"
+    },
+    {
+      "id": "jewelry-store",
+      "description": "A display of fine jewelry.",
+      "imageUrl": "/jewllery.jpg",
+      "imageHint": "jewelry rings"
+    },
+    {
+      "id": "gift-store",
+      "description": "A shop filled with various gifts.",
+      "imageUrl": "https://images.unsplash.com/photo-1656443046114-08c6dac52aa2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Z2lmdCUyMHNob3B8ZW58MHx8fHwxNzY4OTQ3ODk5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "gift shop"
+    },
+    {
+      "id": "electronics-store",
+      "description": "An electronics retail store.",
+      "imageUrl": "https://images.unsplash.com/photo-1556742111-a301076d9d18?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxlbGVjdHJvbmljcyUyMHN0b3JlfGVufDB8fHx8MTc2ODg4NjcwMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "electronics store"
+    },
+    {
+      "id": "online-vendor",
+      "description": "A person using a laptop with an e-commerce website on screen.",
+      "imageUrl": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=1934&auto=format&fit=crop",
+      "imageHint": "ecommerce laptop"
+    },
+    {
+      "id": "social-media-seller",
+      "description": "Illustrations of social media like icons.",
+      "imageUrl": "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=1974&auto=format&fit=crop",
+      "imageHint": "social media"
+    },
+    {
+      "id": "entrepreneur",
+      "description": "A group of people collaborating in a startup environment.",
+      "imageUrl": "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop",
+      "imageHint": "startup team"
+    },
+    {
+      "id": "creator",
+      "description": "A person working on a creative project in a studio.",
+      "imageUrl": "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?q=80&w=1974&auto=format&fit=crop",
+      "imageHint": "creative artist"
+    },
+    {
+      "id": "furniture-store",
+      "description": "A modern furniture showroom.",
+      "imageUrl": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=2070&auto=format&fit=crop",
+      "imageHint": "modern sofa"
+    },
+    {
+      "id": "fast-food",
+      "description": "A delicious-looking hamburger and fries.",
+      "imageUrl": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1998&auto=format&fit=crop",
+      "imageHint": "fast food"
+    },
+    {
+      "id": "enterprise",
+      "description": "A professional corporate meeting room with a presentation screen.",
+      "imageUrl": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2070&auto=format&fit=crop",
+      "imageHint": "corporate meeting"
+    },
+    {
+      "id": "book-store",
+      "description": "A cozy bookstore aisle.",
+      "imageUrl": "https://images.unsplash.com/photo-1518373714866-3f1478910cc0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxib29rJTIwc3RvcmV8ZW58MHx8fHwxNzY4OTUxMzc2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "book store"
+    },
+    {
+      "id": "skin-care",
+      "description": "A collection of skin care products.",
+      "imageUrl": "/skincare-cream.jpg",
+      "imageHint": "skin care"
+    },
+    {
+      "id": "restaurant",
+      "description": "The interior of a modern restaurant.",
+      "imageUrl": "https://images.unsplash.com/photo-1667388969250-1c7220bf3f37?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwaW50ZXJpb3J8ZW58MHx8fHwxNzY4OTQ3OTg0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "restaurant interior"
+    }
+  ]
+}

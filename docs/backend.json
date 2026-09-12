@@ -1,0 +1,576 @@
+
+{
+  "entities": {
+    "BusinessInstance": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BusinessInstance",
+      "type": "object",
+      "description": "Stores core details for each business tenant, including their subscription status and settings.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the BusinessInstance entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the business."
+        },
+        "address": {
+          "type": "string",
+          "description": "The physical address of the business."
+        },
+        "financialSettings": {
+          "type": "string",
+          "description": "Financial settings of the business."
+        },
+        "subscriptionStatus": {
+          "type": "string",
+          "description": "The current subscription status of the business."
+        },
+        "settings": {
+            "type": "object",
+            "description": "Settings object, holds configuration for the business instance.",
+            "properties": {
+                "publicStore": {
+                    "type": "object",
+                    "properties": {
+                        "slug": {
+                            "type": "string",
+                            "description": "The URL-friendly slug for the public store."
+                        },
+                        "socialTwitter": { "type": "string" },
+                        "socialInstagram": { "type": "string" },
+                        "socialFacebook": { "type": "string" },
+                        "socialWhatsapp": { "type": "string" }
+                    }
+                },
+                "industry": {
+                    "type": "string",
+                    "description": "The industry the business operates in."
+                },
+                "language": {
+                    "type": "string",
+                    "description": "The default language for the business."
+                },
+                "inventoryStartDate": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "The date inventory tracking starts."
+                },
+                "fiscalYearStart": {
+                    "type": "string",
+                    "description": "The starting month of the fiscal year."
+                },
+                "state": {
+                    "type": "string",
+                    "description": "The state or province of the business."
+                },
+                "country": {
+                    "type": "string",
+                    "description": "The country of the business."
+                }
+            }
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Stores all user profiles. Each user has a businessId and a role.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "businessId": {
+          "type": "string",
+          "description": "Reference to BusinessInstance. (Relationship: BusinessInstance 1:N User)"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the business.",
+          "enum": [
+            "admin",
+            "manager",
+            "vendor_operator"
+          ]
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "phone": {
+            "type": "string",
+            "description": "The user's phone number."
+        },
+        "lastSeen": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of when the user was last active in the app."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "The main inventory collection, storing product details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Product entity."
+        },
+        "businessId": {
+          "type": "string",
+          "description": "Reference to BusinessInstance. (Relationship: BusinessInstance 1:N Product)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the product."
+        },
+        "sku": {
+          "type": "string",
+          "description": "The Stock Keeping Unit for the product, also used for barcode generation."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the product."
+        },
+        "price": {
+          "type": "number",
+          "description": "The selling price of the product."
+        },
+        "costPrice": {
+          "type": "number",
+          "description": "The cost of acquiring the product, used for profit calculation."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the product image.",
+          "format": "uri"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the product."
+        },
+        "expiryDate": {
+            "type": "string",
+            "format": "date",
+            "description": "The expiration date of the product, for perishable goods."
+        }
+      },
+      "required": [
+        "id",
+        "businessId",
+        "name",
+        "price"
+      ]
+    },
+    "Receipt": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Receipt",
+      "type": "object",
+      "description": "Stores records of all completed sales transactions.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Receipt entity."
+        },
+        "businessId": {
+          "type": "string",
+          "description": "Reference to BusinessInstance. (Relationship: BusinessInstance 1:N Receipt)"
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Reference to Customer. (Relationship: Customer 1:N Receipt)"
+        },
+        "date": {
+          "type": "string",
+          "description": "The date and time when the sale was completed.",
+          "format": "date-time"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total amount of the sale."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The method of payment used (e.g., Cash, Card)."
+        },
+        "discount": {
+          "type": "number",
+          "description": "Discount applied to the sale."
+        },
+        "taxRate": {
+          "type": "number",
+          "description": "Tax rate applied to the sale."
+        },
+        "lineItems": {
+          "type": "array",
+          "description": "List of products bought in the sale.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "totalCost": {
+          "type": "number",
+          "description": "The total cost of goods sold for this transaction."
+        },
+        "profit": {
+          "type": "number",
+          "description": "The calculated profit for this transaction (Total - Total Cost)."
+        }
+      },
+      "required": [
+        "id",
+        "businessId",
+        "date",
+        "totalAmount",
+        "paymentMethod"
+      ]
+    },
+    "Customer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Customer",
+      "type": "object",
+      "description": "The CRM database storing customer information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Customer entity."
+        },
+        "businessId": {
+          "type": "string",
+          "description": "Reference to BusinessInstance. (Relationship: BusinessInstance 1:N Customer)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the customer."
+        },
+        "email": {
+          "type": "string",
+          "description": "The customer's email address.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "The customer's phone number."
+        },
+        "address": {
+          "type": "string",
+          "description": "The customer's address."
+        }
+      },
+      "required": [
+        "id",
+        "businessId",
+        "name"
+      ]
+    },
+    "Invitation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Invitation",
+      "type": "object",
+      "description": "Stores pending invitations for users to join a business.",
+      "properties": {
+        "email": {
+            "type": "string",
+            "format": "email",
+            "description": "The email of the user being invited."
+        },
+        "role": {
+            "type": "string",
+            "description": "The role to be assigned to the user upon joining.",
+            "enum": ["manager", "vendor_operator"]
+        },
+        "businessId": {
+            "type": "string",
+            "description": "The ID of the business the user is invited to join."
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp when the invitation was created."
+        }
+      },
+      "required": ["email", "role", "businessId"]
+    },
+    "Purchase": {
+        "title": "Purchase",
+        "description": "Represents a successful subscription purchase transaction.",
+        "type": "object",
+        "properties": {
+            "userId": { "type": "string" },
+            "businessId": { "type": "string" },
+            "plan": { "type": "string" },
+            "amount": { "type": "number" },
+            "currency": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" }
+        },
+        "required": ["userId", "businessId", "plan", "amount", "currency", "timestamp"]
+    },
+    "SubscriptionHistory": {
+        "title": "Subscription History",
+        "description": "Logs an instance of a subscription payment for a business.",
+        "type": "object",
+        "properties": {
+            "action": { "type": "string" },
+            "amount": { "type": "number" },
+            "currency": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" }
+        },
+        "required": ["action", "amount", "currency", "timestamp"]
+    },
+    "BlogPost": {
+        "title": "Blog Post",
+        "description": "Represents a single article in the blog.",
+        "type": "object",
+        "properties": {
+            "title": { "type": "string" },
+            "slug": { "type": "string" },
+            "content": { "type": "string" },
+            "excerpt": { "type": "string" },
+            "imageUrl": { "type": "string", "format": "uri" },
+            "authorId": { "type": "string" },
+            "authorName": { "type": "string" },
+            "published": { "type": "boolean" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["title", "slug", "content", "authorId", "authorName", "published"]
+    },
+    "AdminNotification": {
+        "title": "Admin Notification",
+        "description": "A platform-wide notification sent to users.",
+        "type": "object",
+        "properties": {
+            "title": { "type": "string" },
+            "body": { "type": "string" },
+            "sentBy": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["title", "body", "sentBy", "createdAt"]
+    },
+    "SupportThread": {
+        "title": "Support Thread",
+        "description": "Represents a single conversation thread between a user and admin support.",
+        "type": "object",
+        "properties": {
+            "userId": { "type": "string" },
+            "userName": { "type": "string" },
+            "userEmail": { "type": "string", "format": "email" },
+            "subject": { "type": "string" },
+            "status": { "type": "string", "enum": ["open", "closed"] },
+            "lastMessageAt": { "type": "string", "format": "date-time" },
+            "lastMessageSnippet": { "type": "string" },
+            "isReadByAdmin": { "type": "boolean" }
+        },
+        "required": ["userId", "userName", "userEmail", "subject", "status", "lastMessageAt"]
+    },
+    "SupportMessage": {
+        "title": "Support Message",
+        "description": "A single message within a support thread.",
+        "type": "object",
+        "properties": {
+            "senderId": { "type": "string" },
+            "senderName": { "type": "string" },
+            "text": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["senderId", "senderName", "text", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "An immutable log of important actions taken within a business instance.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "businessId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string", "format": "email" },
+        "action": { "type": "string", "description": "e.g., 'product.create', 'sale.void'" },
+        "entityType": { "type": "string", "description": "e.g., 'Product', 'Receipt'" },
+        "entityId": { "type": "string" },
+        "details": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["businessId", "userId", "action", "entityType", "entityId", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/businessInstances/{businessId}",
+        "definition": {
+          "entityName": "BusinessInstance",
+          "schema": {
+            "$ref": "#/backend/entities/BusinessInstance"
+          },
+          "description": "Stores core details for each business tenant, including their subscription status and settings.",
+          "params": [
+            {
+              "name": "businessId",
+              "description": "Unique identifier for the BusinessInstance entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores all user profiles. Requires the 'businessId' field for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "Unique identifier for the User entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "The main inventory collection. Includes denormalized 'businessId' for authorization independence.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "Unique identifier for the Product entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/receipts/{receiptId}",
+        "definition": {
+          "entityName": "Receipt",
+          "schema": {
+            "$ref": "#/backend/entities/Receipt"
+          },
+          "description": "Stores records of all completed sales transactions. Includes denormalized 'businessId' for authorization independence.",
+          "params": [
+            {
+              "name": "receiptId",
+              "description": "Unique identifier for the Receipt entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/customers/{customerId}",
+        "definition": {
+          "entityName": "Customer",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "The CRM database storing customer information. Includes denormalized 'businessId' for authorization independence.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "Unique identifier for the Customer entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/invitations/{invitationId}",
+        "definition": {
+            "entityName": "Invitation",
+            "schema": {
+                "$ref": "#/backend/entities/Invitation"
+            },
+            "description": "Stores pending user invitations. An invitation is deleted upon user signup.",
+            "params": [{
+                "name": "invitationId",
+                "description": "Unique identifier for the invitation."
+            }]
+        }
+      },
+      {
+        "path": "/purchases/{purchaseId}",
+        "definition": {
+            "entityName": "Purchase",
+            "schema": { "$ref": "#/backend/entities/Purchase" },
+            "description": "Stores a record of every successful subscription purchase for admin analytics."
+        }
+      },
+      {
+        "path": "/businessInstances/{businessId}/subscription_history/{historyId}",
+        "definition": {
+            "entityName": "SubscriptionHistory",
+            "schema": { "$ref": "#/backend/entities/SubscriptionHistory" },
+            "description": "A log of each subscription payment made for a business.",
+            "params": [{ "name": "businessId", "description": "The business ID." }]
+        }
+      },
+      {
+        "path": "/businessInstances/{businessId}/auditLogs/{logId}",
+        "definition": {
+            "entityName": "AuditLog",
+            "schema": { "$ref": "#/backend/entities/AuditLog" },
+            "description": "An immutable log of important actions taken within a business instance.",
+            "params": [{ "name": "businessId", "description": "The business ID." }]
+        }
+      },
+      {
+        "path": "/blogPosts/{postId}",
+        "definition": {
+            "entityName": "BlogPost",
+            "schema": { "$ref": "#/backend/entities/BlogPost" },
+            "description": "Stores all blog posts for the platform."
+        }
+      },
+      {
+        "path": "/notifications/{notificationId}",
+        "definition": {
+            "entityName": "AdminNotification",
+            "schema": { "$ref": "#/backend/entities/AdminNotification" },
+            "description": "Stores platform-wide notifications for all users, sent by an admin."
+        }
+      },
+      {
+          "path": "/supportThreads/{threadId}",
+          "definition": {
+              "entityName": "SupportThread",
+              "schema": { "$ref": "#/backend/entities/SupportThread" },
+              "description": "Stores all support conversation threads."
+          }
+      },
+      {
+          "path": "/supportThreads/{threadId}/messages/{messageId}",
+          "definition": {
+              "entityName": "SupportMessage",
+              "schema": { "$ref": "#/backend/entities/SupportMessage" },
+              "description": "Stores all messages within a specific support thread."
+          }
+      }
+    ],
+    "reasoning": "The Firestore structure for Zeneva is designed around multi-tenancy and the core design principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs. Each top-level collection (products, receipts, customers, and users) is scoped to a BusinessInstance to ensure data isolation and straightforward security rules. The design denormalizes the businessId into every business-specific document, thus ensuring authorization independence. The roles of users is stored directly in the `users` collection. Path-based ownership is applied to the `/users/{userId}` collection, simplifying security rules for user profiles.\n\nThe structure achieves Authorization Independence (Strategy A) by denormalizing the `businessId` into each document within the `products`, `receipts`, `customers` collections. This eliminates the need for `get()` calls to parent documents in security rules, enabling atomic operations and improving performance. Every collection is segregated to guarantee a Homogeneous Security Posture (Strategy B).\n\nA top-level `/purchases` collection is added for admins to easily query and analyze revenue data, while user-specific subscription details are nested under `/businessInstances/{businessId}/subscription_history` for privacy.\n\nThe referral system and its related notifications have been removed to simplify the application and resolve permission errors.\n\nA new `auditLogs` subcollection is added under `businessInstances` to store immutable records of important actions, secured so that only admins of that business can read them and all authenticated users of that business can write to them."
+  }
+}

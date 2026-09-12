@@ -1,0 +1,36 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions",
+  "windows": [
+    "main",
+    "dodo-checkout"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:window:allow-create",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-is-maximized",
+    "core:event:default",
+    "fs:default",
+    "sql:default",
+    "sql:allow-execute",
+    "updater:default",
+    "shell:default",
+    "log:default",
+    "dialog:default",
+    "process:default",
+    "notification:default",
+    "http:default"
+  ]
+}
+

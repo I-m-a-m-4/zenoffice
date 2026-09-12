@@ -1,0 +1,17 @@
+{
+  "id": "dashboard",
+  "title": "Your whole business, one screen",
+  "route": "/dashboard",
+  "open": { "title": "Your whole business.", "subtitle": "One screen.", "ms": 2200 },
+  "steps": [
+    { "caption": "Today's numbers, live.", "ms": 3600 },
+    { "hold": 1200 },
+    { "hover": { "text": "Total Revenue" } },
+    { "scroll": 520 },
+    { "hold": 1500 },
+    { "clickTo": { "text": "Inventory" }, "path": "/inventory", "ms": 1400 },
+    { "caption": "Every item, every branch." },
+    { "hold": 1600 }
+  ],
+  "end": { "title": "Zeneva", "subtitle": "Retail, handled.", "cta": "Start free" }
+}

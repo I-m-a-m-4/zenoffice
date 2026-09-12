@@ -1,0 +1,58 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "zeneva",
+  "version": "3.3.2",
+  "identifier": "com.zeneva.app",
+  "build": {
+    "frontendDist": "../out",
+    "devUrl": "http://localhost:9007",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "node scripts/tauri-prebuild.mjs && node scripts/tauri-postbuild.mjs && node scripts/post-build-cleanup.mjs && node scripts/patch-android-manifest.mjs"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Zeneva v3.3.2",
+        "width": 1024,
+        "height": 768,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "visible": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' tauri: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co https://cdn.jsdelivr.net; connect-src 'self' https: wss: blob:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://www.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; frame-src 'self' https://checkout.paystack.com https://js.paystack.co;"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "displayLanguageSelector": true,
+        "installMode": "perMachine"
+      }
+    },
+    "android": {
+      "versionCode": 3003002
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/I-m-a-m-4/zeneva/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDREQTAyQjM4QTk1MkI4QgpSV1NMSzVXS3N3TGFCTWdnUVdWM2FhVnZoaG9DaHlWaTZnK1V1WHBIcm9leTl2ZkduUGNnUndicwo="
+    }
+  }
+}

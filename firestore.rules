@@ -1,0 +1,690 @@
+// Force rules update - Version 3.0.0 (hardened tenancy + entitlement lock)
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =================================================================
+    // Helper Functions
+    // =================================================================
+
+    function isSuperAdmin() {
+      return request.auth != null &&
+             (request.auth.uid == 'jzQgCHzaObeUbeYklTLtQQh03G53' ||
+              (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email == 'belloimam431@gmail.com'));
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    function isUserAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Direct access to user profile data - cached within a single request
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getCurrentUserBusinessId() {
+      return isUserAuthenticated() ? getUserData().get('businessId', 'none') : 'none';
+    }
+
+    function getCurrentUserRole() {
+      return isUserAuthenticated() ? getUserData().get('role', 'none') : 'none';
+    }
+
+    // A suspended account keeps its token until it expires. Every write path
+    // below runs through this so a Cyber Shield hard-kill takes effect on the
+    // next request instead of whenever the ID token happens to refresh.
+    function isNotSuspended() {
+      return isSuperAdmin() ||
+             (isUserAuthenticated() && getUserData().get('status', 'active') != 'suspended');
+    }
+
+    function isRequestingUserMemberOf(businessId) {
+      return isSuperAdmin() || (isUserAuthenticated() && getCurrentUserBusinessId() == businessId);
+    }
+
+    function isRequestingUserAdmin() {
+      return isSuperAdmin() || (isUserAuthenticated() && getCurrentUserRole() in ['admin', 'owner', 'super-admin']);
+    }
+
+    function isRequestingUserManager() {
+      return isSuperAdmin() || (isUserAuthenticated() && getCurrentUserRole() in ['admin', 'manager', 'owner', 'super-admin']);
+    }
+
+    function isRequestingUserStaff() {
+      return isSuperAdmin() || (isUserAuthenticated() && getCurrentUserRole() in ['admin', 'manager', 'owner', 'super-admin', 'operator', 'staff', 'vendor_operator']);
+    }
+
+    function isSubscriptionActive(businessId) {
+      return isSuperAdmin() ||
+             (exists(/databases/$(database)/documents/businessInstances/$(businessId)) &&
+              get(/databases/$(database)/documents/businessInstances/$(businessId)).data.get('status', 'active') in ['active', 'trialing']);
+    }
+
+    // The default a role gets when its user document carries no explicit entry
+    // for `permission`. Deliberately asymmetric, because the two directions have
+    // very different costs. `record_sales` and `view_customers` are what the POS
+    // needs; every staff role legitimately holds them, and denying one to a
+    // legacy or unrecognised role would stop that person selling. UserRole is
+    // only 'admin' | 'manager' | 'vendor_operator' in src/types.ts while the
+    // helpers above enumerate seven strings, so an unlisted role in live data is
+    // unlikely but not impossible — those two stay on for any member.
+    //
+    // Everything else — manage_inventory today, any permission added later —
+    // defaults to manager and above. That is the direction that must fail
+    // closed: a new permission name nobody has granted yet is denied to staff
+    // rather than handed to them.
+    function rolePermits(permission) {
+      return permission in ['record_sales', 'view_customers'] ||
+             getCurrentUserRole() in ['admin', 'manager', 'owner', 'super-admin'];
+    }
+
+    // Tri-state, and the middle state is the point. `permissions` is optional on
+    // the user document (src/types.ts: `permissions?: Record<string, boolean>`),
+    // so the map being absent cannot mean "denied" without locking out every
+    // account created before per-permission grants existed — but it must not
+    // mean "allowed" either, which is what `.get(permission, true) != false`
+    // used to do. That default handed every permission to every role: a
+    // `vendor_operator` with no map passed hasPermission('manage_inventory')
+    // and could write products straight to Firestore, even though the UI has
+    // always hidden that from them. Explicit false denies, explicit true
+    // allows, absent falls through to the role default above — which is the
+    // same tri-state the client already computes
+    // (`permissions?.manage_inventory ?? (role === 'admin' || role === 'manager')`
+    // in the inventory pages), so a button the UI hides is now also a write
+    // the rules refuse.
+    function hasPermission(permission) {
+      return isSuperAdmin() ||
+             (isUserAuthenticated() &&
+              (getUserData().get('permissions', {}).get(permission, 'unset') is bool
+                 ? getUserData().get('permissions', {}).get(permission, false) == true
+                 : rolePermits(permission)));
+    }
+
+    // True when this update leaves every field in `fields` exactly as it was.
+    // The moat for entitlements and roles: a client may write its own document,
+    // but never the fields that decide what it is allowed to do or pay for.
+    function fieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // --- user-document creation: proving a claim to a tenant ------------------
+    //
+    // `update` has always locked `businessId` and `role` behind
+    // identityFieldsLocked(). `create` did not, and that was the whole hole: an
+    // account whose user document does not exist yet could write it once with
+    // someone else's businessId and role 'admin', and every helper below
+    // (getCurrentUserBusinessId, isRequestingUserAdmin, isRequestingUserMemberOf)
+    // would then resolve in the victim's favour. Blocking only 'super-admin' was
+    // not enough — 'admin' and 'owner' are what actually run a tenant.
+    //
+    // These two functions mirror the only writer, createUserProfileDocument()
+    // in src/firebase/users.ts. Both legitimate shapes must keep working.
+
+    // Shape 1 — self-registering owner. The businessInstances document is
+    // created in the SAME writeBatch as the user document, so `get()` is null
+    // here and only `getAfter()`/`existsAfter()` can see it.
+    function createsOwnBusiness(businessId) {
+      return existsAfter(/databases/$(database)/documents/businessInstances/$(businessId)) &&
+             getAfter(/databases/$(database)/documents/businessInstances/$(businessId)).data.get('ownerId', '') == request.auth.uid;
+    }
+
+    // Shape 2 — invited member. The invitation is deleted in the same batch,
+    // but rules read `get()` against the pre-batch state, so it is still there.
+    // The invitation is the proof of entitlement, so businessId AND role are
+    // both taken from it — an invitee cannot upgrade themselves on the way in.
+    function holdsInvitationFor(businessId, role) {
+      return 'invitationCode' in request.resource.data &&
+             request.resource.data.invitationCode is string &&
+             request.resource.data.invitationCode.size() > 0 &&
+             exists(/databases/$(database)/documents/invitations/$(request.resource.data.invitationCode)) &&
+             'email' in request.auth.token &&
+             get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationCode)).data.get('businessId', '') == businessId &&
+             get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationCode)).data.get('role', '') == role &&
+             get(/databases/$(database)/documents/invitations/$(request.resource.data.invitationCode)).data.get('email', '').lower() == request.auth.token.email.lower();
+    }
+
+    // Fields only the platform owner may ever move. Anything that grants paid
+    // capability or resets a metered counter lives here — a modded client that
+    // writes `plan: 'business'` straight to Firestore is the whole threat model.
+    function entitlementFieldsLocked() {
+      return fieldsUnchanged([
+        'plan', 'accessLevel', 'trialExpiresAt', 'status', 'ownerId',
+        'aiBonusCredits', 'aiUsageCount', 'aiUsageCurrentDate',
+        // The AI burst limiter's sliding window, written by reserveCredits inside its
+        // transaction. This list is a DENY-list, so a field left off it is one a client
+        // may write to its own business document — and a client that can clear this
+        // array can turn its own rate limit off. Same reasoning as aiUsageCount.
+        'aiCallTimestamps',
+        'subscriptionReference', 'isVerified', 'featureOverrides'
+      ].toSet());
+    }
+
+    // Identity fields a user must never rewrite on their own document.
+    // `businessId` is the tenant boundary: letting a user set it to someone
+    // else's id hands them that tenant's entire dataset.
+    function identityFieldsLocked() {
+      return fieldsUnchanged(['role', 'businessId', 'permissions', 'status', 'suspendedAt', 'suspendedBy'].toSet());
+    }
+
+    // =================================================================
+    // Public & Admin-Only Collections
+    // =================================================================
+
+    match /blogPosts/{postId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow list, get: if isUserAuthenticated();
+      allow create, delete: if isSuperAdmin();
+      allow update: if false;
+    }
+
+    match /purchases/{purchaseId} {
+      allow create: if isUserAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow read, list: if isSuperAdmin();
+      allow update, delete: if false;
+    }
+
+    // Owner-scoped. The client only ever queries `where('userId','==',me)`, so
+    // scoping this costs nothing and stops one tenant reading another's tickets.
+    match /supportThreads/{threadId} {
+        allow get, list: if isSuperAdmin() ||
+                            (isUserAuthenticated() && resource.data.get('userId', 'none') == request.auth.uid);
+        allow create: if isUserAuthenticated() && request.resource.data.get('userId', 'none') == request.auth.uid;
+        allow update: if isSuperAdmin() ||
+                         (isUserAuthenticated() && resource.data.get('userId', 'none') == request.auth.uid);
+        allow delete: if isSuperAdmin();
+
+        match /messages/{messageId} {
+            allow read, write: if isSuperAdmin() ||
+                                  (isUserAuthenticated() &&
+                                   get(/databases/$(database)/documents/supportThreads/$(threadId)).data.get('userId', 'none') == request.auth.uid);
+        }
+    }
+
+    // Append-only anomaly feed powering the admin Cyber Shield board. Clients
+    // may report, never read or rewrite — otherwise an attacker erases the
+    // record of their own attack.
+    match /security_events/{eventId} {
+      allow create: if isUserAuthenticated() &&
+                       request.resource.data.get('actorUid', 'none') == request.auth.uid;
+      allow read, list: if isSuperAdmin();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /error_logs/{logId} {
+      allow create: if true;
+      allow read, update, delete: if isSuperAdmin();
+    }
+
+    // =================================================================
+    // Multi-Tenant Collections
+    // =================================================================
+
+    match /businessInstances/{businessId} {
+      // Public storefronts resolve a business by id, so `get` stays open.
+      allow get: if true;
+
+      allow list: if (isUserAuthenticated() && request.query.limit <= 1) || isSuperAdmin();
+
+      // A new business may not be born already paid for.
+      allow create: if isUserAuthenticated() &&
+                       request.auth.uid == request.resource.data.ownerId &&
+                       request.resource.data.get('plan', 'starter') == 'starter' &&
+                       request.resource.data.get('accessLevel', null) == null;
+
+      // Owners and admins run their business; only the platform owner moves
+      // the fields that decide what that business has paid for.
+      allow update: if isSuperAdmin() ||
+                       (isUserAuthenticated() && isNotSuspended() &&
+                        entitlementFieldsLocked() &&
+                        (
+                          (isRequestingUserAdmin() && isRequestingUserMemberOf(businessId)) ||
+                          resource.data.get('ownerId', null) == request.auth.uid
+                        ));
+      allow delete: if isSuperAdmin();
+
+      match /subscription_history/{historyId} {
+        allow read, list: if isSuperAdmin() || (isUserAuthenticated() && isRequestingUserMemberOf(businessId));
+        allow create: if isUserAuthenticated() && isRequestingUserMemberOf(businessId);
+        allow update, delete: if false;
+      }
+
+      match /auditLogs/{logId} {
+        allow list, get: if isSuperAdmin() || (isUserAuthenticated() && isRequestingUserAdmin() && isRequestingUserMemberOf(businessId));
+        // Scoped so one tenant cannot forge entries into another's audit trail.
+        allow create: if isUserAuthenticated() && isRequestingUserMemberOf(businessId);
+        allow update, delete: if false;
+      }
+
+      match /onlineOrders/{orderId} {
+         allow read, list: if isSuperAdmin() || (isUserAuthenticated() && isRequestingUserMemberOf(businessId));
+
+         // Public storefront checkout — anonymous shoppers place orders, so this
+         // is the one create in the whole ruleset with no authentication behind
+         // it. It used to be `if true`, which let anyone on the internet write
+         // arbitrary documents into any tenant's order list: forge a paid order
+         // for goods they never bought, or loop the endpoint and run the owner's
+         // Firestore bill up. The gate is now the shape of the document plus the
+         // storefront actually being switched on.
+         //
+         // `status` is pinned to 'pending'. A client asserting 'paid' is the
+         // forgery — the old checkout flow verified the Paystack reference and
+         // then wrote 'paid' from the browser, which an attacker simply skips.
+         // The Paystack webhook uses the Admin SDK and bypasses rules, so that
+         // is where 'paid' belongs when the storefront is restored.
+         //
+         // hasOnly() means adding a field to OnlineOrder needs a matching edit
+         // here or the create starts failing.
+         allow create: if request.resource.data.keys().hasOnly([
+                            'businessId', 'customerId', 'customerName', 'customerEmail',
+                            'customerPhone', 'customerAddress', 'items', 'total',
+                            'shippingDetails', 'status', 'paymentMethod',
+                            'paymentReference', 'createdAt'
+                          ]) &&
+                          request.resource.data.keys().hasAll([
+                            'businessId', 'customerName', 'customerEmail',
+                            'items', 'total', 'status', 'paymentMethod', 'createdAt'
+                          ]) &&
+                          request.resource.data.businessId == businessId &&
+                          request.resource.data.status == 'pending' &&
+                          request.resource.data.paymentMethod in ['Paystack', 'Bank Transfer'] &&
+                          request.resource.data.createdAt == request.time &&
+                          request.resource.data.total is number &&
+                          request.resource.data.total >= 0 &&
+                          request.resource.data.total <= 100000000 &&
+                          request.resource.data.items is list &&
+                          request.resource.data.items.size() > 0 &&
+                          request.resource.data.items.size() <= 200 &&
+                          request.resource.data.customerName is string &&
+                          request.resource.data.customerName.size() > 0 &&
+                          request.resource.data.customerName.size() <= 200 &&
+                          request.resource.data.customerEmail is string &&
+                          request.resource.data.customerEmail.size() <= 320 &&
+                          request.resource.data.get('customerPhone', '') is string &&
+                          request.resource.data.get('customerPhone', '').size() <= 40 &&
+                          request.resource.data.get('customerAddress', '') is string &&
+                          request.resource.data.get('customerAddress', '').size() <= 1000 &&
+                          exists(/databases/$(database)/documents/businessInstances/$(businessId)) &&
+                          get(/databases/$(database)/documents/businessInstances/$(businessId))
+                            .data.get('settings', {}).get('publicStore', {}).get('enabled', false) == true;
+
+         allow update: if isSuperAdmin() || (isUserAuthenticated() && isRequestingUserMemberOf(businessId));
+         allow delete: if false;
+      }
+
+      match /stats/{statId} {
+        allow read, write: if isSuperAdmin() ||
+                             (isUserAuthenticated() && (
+                               getCurrentUserBusinessId() == businessId ||
+                               get(/databases/$(database)/documents/businessInstances/$(businessId)).data.ownerId == request.auth.uid
+                             ));
+      }
+    }
+
+    match /users/{userId} {
+      allow get: if isSuperAdmin() || (isUserAuthenticated() && request.auth.uid == userId);
+      allow list: if isSuperAdmin() || (isUserAuthenticated() && getCurrentUserBusinessId() == resource.data.businessId);
+
+      // Self-updates may not touch role, businessId, permissions or status —
+      // that is privilege escalation and tenant-hopping in one field write.
+      // Admins may manage their own members, but not themselves into a new tenant.
+      allow update: if isSuperAdmin() ||
+                       (isUserAuthenticated() && request.auth.uid == userId && identityFieldsLocked()) ||
+                       (isUserAuthenticated() && isNotSuspended() && isRequestingUserAdmin() &&
+                        isRequestingUserMemberOf(resource.data.get('businessId', 'none')) &&
+                        fieldsUnchanged(['businessId'].toSet()) &&
+                        request.resource.data.get('role', 'none') != 'super-admin');
+
+      // A self-registering user cannot mint themselves an elevated role, and —
+      // the part that was missing — cannot attach themselves to a tenant they
+      // have no claim on. See createsOwnBusiness / holdsInvitationFor above.
+      allow create: if isUserAuthenticated() && request.auth.uid == userId &&
+                       request.resource.data.get('role', 'none') != 'super-admin' &&
+                       request.resource.data.get('status', 'active') != 'suspended' &&
+                       (
+                         createsOwnBusiness(request.resource.data.get('businessId', 'none')) ||
+                         holdsInvitationFor(
+                           request.resource.data.get('businessId', 'none'),
+                           request.resource.data.get('role', 'none')
+                         )
+                       );
+      allow delete: if isSuperAdmin();
+
+      match /notifications/{notificationId} {
+        allow read: if isSuperAdmin() || (isUserAuthenticated() && request.auth.uid == userId);
+        allow write: if isSuperAdmin() ||
+                        (isUserAuthenticated() && (
+                          request.auth.uid == userId ||
+                          (isRequestingUserAdmin() && isRequestingUserMemberOf(get(/databases/$(database)/documents/users/$(userId)).data.get('businessId', 'none')))
+                        ));
+      }
+
+      match /fcmTokens/{tokenId} {
+        allow read, write: if isSuperAdmin() || (isUserAuthenticated() && request.auth.uid == userId);
+      }
+
+      match /sessions/{sessionId} {
+        allow read, write: if isSuperAdmin() || (isUserAuthenticated() && request.auth.uid == userId);
+      }
+
+      // Page-visit behavior, written by UserActivityTracker. One doc per
+      // session holding the ordered route log. Only the owner writes; the
+      // admin analytics tab reads it via the isSuperAdmin catch-all above.
+      match /journey/{sessionId} {
+        allow read, write: if isSuperAdmin() || (isUserAuthenticated() && request.auth.uid == userId);
+      }
+    }
+
+    match /error_logs/{logId} {
+      allow create: if true;
+      allow read, update, delete: if isSuperAdmin();
+    }
+
+    // Invitations carry a businessId that grants tenant membership on accept,
+    // so they are read by token, not listed to the world.
+    match /invitations/{invitationId} {
+      allow get: if true;
+      // Two legitimate listers, in this order because `||` short-circuits and
+      // the membership check reads a user document:
+      //   1. A brand-new signup checking for its own pending invitation. At
+      //      that moment users/{uid} does NOT exist yet, so any membership
+      //      test would error and deny — which failed signup outright and then
+      //      deleted the just-created auth account. Match on token email only.
+      //   2. An admin listing invitations for their own business.
+      allow list: if isSuperAdmin() ||
+                     (isUserAuthenticated() && 'email' in request.auth.token &&
+                      resource.data.get('email', '') == request.auth.token.email) ||
+                     (isUserAuthenticated() && isRequestingUserMemberOf(resource.data.get('businessId', 'none')));
+      allow create: if isSuperAdmin() ||
+                       (isUserAuthenticated() && isNotSuspended() && isRequestingUserAdmin() &&
+                        isRequestingUserMemberOf(request.resource.data.get('businessId', 'none')) &&
+                        request.resource.data.get('role', 'none') != 'super-admin');
+      allow update: if false;
+      // Deleted by an admin revoking it, or by the invitee consuming it during
+      // signup. The invitee is not yet a member of the business, so membership
+      // cannot be the test — matching the token email is what proves the
+      // invitation is theirs to consume.
+      allow delete: if isSuperAdmin() ||
+                       (isUserAuthenticated() && 'email' in request.auth.token &&
+                        resource.data.get('email', '') == request.auth.token.email) ||
+                       (isUserAuthenticated() && isRequestingUserAdmin() && isRequestingUserMemberOf(resource.data.businessId));
+    }
+
+    match /branches/{branchId} {
+      allow get, list: if isSuperAdmin() || (isUserAuthenticated() && (resource == null || isRequestingUserMemberOf(resource.data.businessId)));
+      allow create, update: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() && isRequestingUserMemberOf(request.resource.data.businessId));
+      allow delete: if isSuperAdmin() || (isUserAuthenticated() && isRequestingUserMemberOf(resource.data.businessId));
+    }
+
+    match /products/{productId} {
+      allow get: if isSuperAdmin() || (isUserAuthenticated() && (resource == null || isRequestingUserMemberOf(resource.data.get('businessId', null))));
+      allow list: if isSuperAdmin() || (isUserAuthenticated() && (resource.data.businessId == getCurrentUserBusinessId() || resource.data.createdBy == request.auth.uid));
+
+      allow create: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                      isRequestingUserStaff() &&
+                      hasPermission('manage_inventory') &&
+                      isRequestingUserMemberOf(request.resource.data.get('businessId', null)) &&
+                      isSubscriptionActive(request.resource.data.get('businessId', null)));
+      allow update: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                      isRequestingUserStaff() &&
+                      isRequestingUserMemberOf(resource.data.get('businessId', null)) &&
+                      isSubscriptionActive(resource.data.get('businessId', null)) &&
+                      fieldsUnchanged(['businessId'].toSet()) &&
+                      (
+                        hasPermission('manage_inventory') ||
+                        (hasPermission('record_sales') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'updatedAt']))
+                      ));
+      allow delete: if isSuperAdmin() || (isUserAuthenticated() && (resource == null || (
+                      isRequestingUserManager() &&
+                      hasPermission('manage_inventory') &&
+                      isRequestingUserMemberOf(resource.data.get('businessId', null)) &&
+                      isSubscriptionActive(resource.data.get('businessId', null)))));
+    }
+
+    match /receipts/{receiptId} {
+        // A customer opens a receipt link by unguessable id; keep get public.
+        allow get: if true;
+        allow list: if isSuperAdmin() || (isUserAuthenticated() && (resource.data.businessId == getCurrentUserBusinessId() || resource.data.createdBy == request.auth.uid));
+
+        allow create: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                        isRequestingUserMemberOf(request.resource.data.get('businessId', null)) &&
+                        hasPermission('record_sales') &&
+                        isSubscriptionActive(request.resource.data.get('businessId', null)));
+        allow update: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                                isRequestingUserManager() &&
+                                hasPermission('record_sales') &&
+                                isRequestingUserMemberOf(resource.data.get('businessId', null)) &&
+                                fieldsUnchanged(['businessId'].toSet()) &&
+                                isSubscriptionActive(resource.data.get('businessId', null)));
+        allow delete: if isSuperAdmin() || (isUserAuthenticated() && (resource == null || (
+                                isRequestingUserManager() &&
+                                hasPermission('record_sales') &&
+                                isRequestingUserMemberOf(resource.data.get('businessId', null)) &&
+                                isSubscriptionActive(resource.data.get('businessId', null)))));
+    }
+
+    match /customers/{customerId} {
+      allow get: if isSuperAdmin() || (isUserAuthenticated() && (resource == null || isRequestingUserMemberOf(resource.data.get('businessId', null)) || resource.data.get('createdBy', null) == request.auth.uid));
+      allow list: if isSuperAdmin() || (isUserAuthenticated() && (resource.data.businessId == getCurrentUserBusinessId() || resource.data.createdBy == request.auth.uid));
+
+      // Was: any authenticated user could create a customer in ANY tenant.
+      allow create: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                      hasPermission('view_customers') &&
+                      isRequestingUserMemberOf(request.resource.data.get('businessId', null)));
+      allow update: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                      isRequestingUserStaff() &&
+                      isRequestingUserMemberOf(resource.data.get('businessId', null)) &&
+                      isSubscriptionActive(resource.data.get('businessId', null)) &&
+                      fieldsUnchanged(['businessId'].toSet()) &&
+                      (
+                        hasPermission('view_customers') ||
+                        (hasPermission('record_sales') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalSpent', 'loyaltyPoints', 'updatedAt']))
+                      ));
+      allow delete: if isSuperAdmin() || (isUserAuthenticated() && (resource == null || (
+                      isRequestingUserManager() &&
+                      hasPermission('view_customers') &&
+                      isRequestingUserMemberOf(resource.data.get('businessId', null)) &&
+                      isSubscriptionActive(resource.data.get('businessId', null)))));
+    }
+
+    match /expenses/{expenseId} {
+      allow read, list: if isSuperAdmin() || (isUserAuthenticated() && isRequestingUserMemberOf(resource.data.get('businessId', null)));
+      allow create: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                      isRequestingUserMemberOf(request.resource.data.get('businessId', null)));
+      allow update, delete: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                      isRequestingUserMemberOf(resource.data.get('businessId', null)) &&
+                      isSubscriptionActive(resource.data.get('businessId', null)));
+    }
+
+    match /suppliers/{supplierId} {
+      allow read, list: if isSuperAdmin() || (isUserAuthenticated() && isRequestingUserMemberOf(resource.data.get('businessId', null)));
+      allow create: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                      isRequestingUserMemberOf(request.resource.data.get('businessId', null)));
+      allow update, delete: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                      isRequestingUserMemberOf(resource.data.get('businessId', null)) &&
+                      isSubscriptionActive(resource.data.get('businessId', null)));
+    }
+
+    match /supplier_purchases/{purchaseId} {
+      allow read, list: if isSuperAdmin() || (isUserAuthenticated() && isRequestingUserMemberOf(resource.data.get('businessId', null)));
+      allow create: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                      isRequestingUserMemberOf(request.resource.data.get('businessId', null)));
+      allow update, delete: if isSuperAdmin() || (isUserAuthenticated() && isNotSuspended() &&
+                      isRequestingUserMemberOf(resource.data.get('businessId', null)) &&
+                      isSubscriptionActive(resource.data.get('businessId', null)));
+    }
+
+    match /ai_sessions/{sessionId} {
+      allow read, update, delete: if isSuperAdmin() || (isUserAuthenticated() && isRequestingUserMemberOf(resource.data.get('businessId', 'none')));
+      allow create: if isSuperAdmin() || (isUserAuthenticated() && isRequestingUserMemberOf(request.resource.data.get('businessId', 'none')));
+    }
+
+    match /admin_analytics/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // Phone-push delivery records behind the Push Analytics tab on
+    // /admin-imamshaffy/notifications. Written by the Admin SDK at send time (which
+    // bypasses these rules); the owner reads them, and a recipient may do exactly
+    // one thing — count their own open.
+    //
+    // The narrow `update` below is what lets a tapped notification register without
+    // a server round trip: a new API route would 404 until zeneva.space redeploys,
+    // and `scripts/prepare-tauri.mjs` deletes src/app/api wholesale for the native
+    // builds, so the phone apps could never reach one.
+    match /push_campaigns/{campaignId} {
+      allow read, write: if isSuperAdmin();
+
+      // Nudge the open counter and nothing else. `hasOnly` bounds which fields may
+      // move and the equality bounds how far, so the worst a caller can do is
+      // over-report their own opens — inherent to click tracking, and the reason
+      // the board derives unique openers from the recipient rows instead.
+      allow update: if isUserAuthenticated()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clickCount', 'lastClickAt'])
+                    && request.resource.data.clickCount is int
+                    && request.resource.data.clickCount == resource.data.get('clickCount', 0) + 1;
+
+      // One row per person, carrying the name and email as they were at send time.
+      // Cross-tenant by nature — a broadcast reaches every business — so an
+      // ordinary user may only ever touch the row whose id is their own uid.
+      match /recipients/{recipientId} {
+        allow read, write: if isSuperAdmin();
+
+        allow read: if isUserAuthenticated() && request.auth.uid == recipientId;
+        allow create: if isUserAuthenticated() && request.auth.uid == recipientId
+                      && request.resource.data.keys().hasOnly(['userId', 'clickCount', 'clickedAt', 'lastClickedAt'])
+                      && request.resource.data.userId == recipientId;
+        allow update: if isUserAuthenticated() && request.auth.uid == recipientId
+                      && request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['clickCount', 'clickedAt', 'lastClickedAt']);
+        allow delete: if false;
+      }
+    }
+
+    // Metered by the server via the Admin SDK, which bypasses these rules.
+    // Clients read their own counter and never write it.
+    match /platform_stats/{docId} {
+      allow read: if isUserAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // Per-day AI rollups behind the admin board. Cross-tenant by nature — the
+    // `businesses` map names every business that used AI that day — so unlike
+    // the parent counter above these are NOT readable by an ordinary signed-in
+    // user. Stated explicitly rather than left to the isSuperAdmin catch-all:
+    // subcollections do not inherit the rule above, and the day this becomes
+    // `/platform_stats/{docId}/{sub=**}` for convenience, that read: if
+    // isUserAuthenticated() would hand one tenant the whole platform's usage.
+    match /platform_stats/ai_usage_global/daily/{dateId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
+    // Force-update settings, written by /admin-imamshaffy/updates and read by the
+    // modal in src/components/layout/update-required-modal.tsx.
+    //
+    // There was **no rule for this collection at all**, so the only thing granting
+    // access was the `isSuperAdmin` catch-all at the top. The modal runs as an
+    // ordinary user, so its snapshot was permission-denied for every real merchant
+    // — and with no error callback on the listener it failed silently, leaving
+    // `settings` null forever. That is why the whole feature only ever worked for
+    // the platform owner's own account.
+    //
+    // The consequence to respect: everything written here is visible to every
+    // tenant. `targetUsers` holds the addresses of the people being asked to
+    // update, which is the same trade the platform-wide `notifications` collection
+    // already makes for `targetEmail` (see docs/notifications.md — scoped on read,
+    // not by rules, because a globally-readable doc cannot be narrowed). Do not put
+    // anything here that is more sensitive than that.
+    match /platform_settings/{docId} {
+      allow read: if isUserAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    match /admin_config/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // Zeneva's own cap table — stakeholders, share classes, issuances, rounds,
+    // convertibles and the option pool. This is the platform owner's equity, not
+    // any tenant's data, so it is owner-only on both read and write. Stated
+    // explicitly rather than left to the `/{allPaths=**}` catch-all above: the day
+    // that catch-all is narrowed, this must not silently become world-readable.
+    match /cap_table/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // Append-only audit trail for every cap table mutation. Equity records are the
+    // kind of thing a dispute turns on, so history must not be rewritable — not
+    // even by the owner. Create is allowed, update and delete never are.
+    match /cap_table_events/{eventId} {
+      allow read, create: if isSuperAdmin();
+      allow update, delete: if false;
+    }
+
+    match /terminationLogs/{logId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /system_config/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /system_stats/{docId} {
+      allow read: if isUserAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    match /system_broadcasts/{broadcastId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /ceo_broadcasts/{broadcastId} {
+      allow read: if isUserAuthenticated() || isSuperAdmin();
+      allow create: if isSuperAdmin();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /{path=**}/auditLogs/{logId} {
+      allow read, list: if isSuperAdmin();
+      allow create: if isUserAuthenticated();
+    }
+
+    match /follow_up_logs/{logId} {
+      allow read, list, write: if isSuperAdmin();
+    }
+
+    match /checkout_attempts/{attemptId} {
+      allow create: if isUserAuthenticated();
+      allow read, update, delete: if isSuperAdmin();
+    }
+
+    // Telemetry for inventory import options and file uploads
+    match /import_attempts/{attemptId} {
+      allow create: if isUserAuthenticated();
+      allow read, update, delete: if isSuperAdmin();
+    }
+
+    // Zen AI conversational chat sessions
+    match /ai_sessions/{sessionId} {
+      allow get, list: if isSuperAdmin() ||
+                          (isUserAuthenticated() && resource.data.get('userId', 'none') == request.auth.uid);
+      allow create: if isSuperAdmin() ||
+                       (isUserAuthenticated() && request.resource.data.get('userId', 'none') == request.auth.uid);
+      allow update: if isSuperAdmin() ||
+                       (isUserAuthenticated() && resource.data.get('userId', 'none') == request.auth.uid);
+      allow delete: if isSuperAdmin() ||
+                       (isUserAuthenticated() && resource.data.get('userId', 'none') == request.auth.uid);
+    }
+  }
+}

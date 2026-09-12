@@ -1,0 +1,846 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Instrument+Serif:ital@0;1&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 100% 99%;
+    --foreground: 224 71% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 22 90% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 22 90% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 0 0% 90%;
+    /* Crisp silver for definitive hairline borders */
+    --input: 220 13% 94%;
+    --ring: 22 90% 55%;
+    --radius: 0.5rem;
+
+    --chart-1: 22 90% 55%;
+    --chart-2: 25 95% 65%;
+    --chart-3: 15 80% 45%;
+    --chart-4: 35 90% 60%;
+    --chart-5: 10 85% 50%;
+
+    /* Categorical series slots for analytics charts. Validated for colour-vision
+       deficiency and contrast against the card surface in this mode; capped at
+       three hues on purpose — a fourth stops being separable. Keep the pairs. */
+    --viz-1: #2a78d6;
+    --viz-2: #eb6834;
+    --viz-3: #1baf7a;
+    --viz-neutral: #898781;
+    --viz-grid: #e1e0d9;
+    --viz-axis: #c3c2b7;
+
+    --sidebar-background: 40 33% 98%;
+    --sidebar-foreground: 224 71% 10%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-accent: 210 40% 92%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-primary: 22 90% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 22 90% 45%;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 4.5%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 22 90% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 12%;
+    /* Keep dark but allow for sharper contrast */
+    --input: 240 3.7% 12%;
+    --ring: 22 90% 55%;
+
+    --sidebar-background: 240 5.9% 5%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 22 90% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 22 90% 55%;
+
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    /* Same three hues, re-stepped for the dark card surface — not an auto-flip. */
+    --viz-1: #3987e5;
+    --viz-2: #d95926;
+    --viz-3: #199e70;
+    --viz-neutral: #898781;
+    --viz-grid: #2c2c2a;
+    --viz-axis: #383835;
+  }
+}
+
+@layer base {
+
+  /* Custom scrollbar to match premium feel - Neutral grey for better integration */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 20px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    transition: background-color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.4);
+  }
+
+  /* Force HTML/Body to match background */
+  html,
+  body {
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* Prevent layout shift from Radix UI Dialogs */
+  html,
+  body {
+    --removed-body-scroll-bar-size: 0px !important;
+  }
+
+  :root {
+    --removed-body-scroll-bar-size: 0px !important;
+  }
+
+  body[data-scroll-locked],
+  html[style*="overflow: hidden"] {
+    padding-right: 0px !important;
+    margin-right: 0px !important;
+  }
+
+  /* Override dynamic inline spacing injected by Radix UI */
+  body[data-scroll-locked] [style*="margin-right"],
+  body[data-scroll-locked] [style*="padding-right"],
+  [data-radix-portal] [style*="margin-right"],
+  [data-radix-portal] [style*="padding-right"] {
+    margin-right: 0px !important;
+    padding-right: 0px !important;
+  }
+
+  html,
+  body {
+    transition: opacity ease-in 0.3s;
+    opacity: 1;
+  }
+
+  html {
+    overflow-y: auto;
+  }
+
+  body[unresolved] {
+    opacity: 0;
+    display: block;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body {
+    overscroll-behavior: none;
+  }
+
+  body.is-desktop {
+    overflow: hidden;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.3);
+    color: hsl(var(--foreground));
+  }
+
+  .pattern-bg {
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(hsl(var(--foreground) / 0.06) 0.5px, transparent 0.5px);
+    background-size: 14px 14px;
+    background-attachment: fixed;
+  }
+
+  .auth-bg {
+    @apply bg-background transition-colors duration-300;
+    background-image: radial-gradient(circle at top, hsla(var(--primary), 0.05), transparent);
+  }
+
+  /* 
+     High-Fidelity Scoped Borders 
+     This ensures the POS and Admin Dashboard maintain the 'Crisp Silver' hairline aesthetic
+     without affecting the softer marketing homepage.
+  */
+  .high-fidelity-shell .border,
+  .high-fidelity-shell .border-b,
+  .high-fidelity-shell .border-t,
+  .high-fidelity-shell .border-l,
+  .high-fidelity-shell .border-r,
+  .high-fidelity-shell .sidebar-border,
+  .high-fidelity-shell [class*='border-border'] {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  /* Keep sidebar borders slightly more subtle even in high-fidelity mode */
+  .high-fidelity-shell [class*='sidebar-border'] {
+    border-color: hsl(var(--sidebar-border) / 0.3) !important;
+  }
+
+  .dark .high-fidelity-shell .border,
+  .dark .high-fidelity-shell .border-b,
+  .dark .high-fidelity-shell .border-t,
+  .dark .high-fidelity-shell .border-l,
+  .dark .high-fidelity-shell .border-r,
+  .dark .high-fidelity-shell [class*='border-border'] {
+    border-color: hsl(var(--border) / 0.5) !important;
+    /* Sharper definition in dark mode */
+  }
+
+  .dark .high-fidelity-shell .sidebar-border,
+  .dark .high-fidelity-shell [class*='sidebar-border'] {
+    border-color: hsl(var(--sidebar-border) / 0.2) !important;
+  }
+
+  /* Force dark mode background for shell components */
+  .dark .bg-sidebar,
+  .dark [data-sidebar='sidebar'] {
+    background-color: hsl(var(--sidebar-background)) !important;
+  }
+
+  .dark .bg-background {
+    background-color: hsl(var(--background)) !important;
+  }
+
+  .bg-sidebar,
+  [data-sidebar='sidebar'],
+  .bg-background,
+  header {
+    @apply transition-colors duration-300;
+  }
+
+  .codepen-button {
+    display: block;
+    cursor: pointer;
+    color: #fff;
+    position: relative;
+    text-decoration: none;
+    font-weight: 600;
+    overflow: hidden;
+    padding: 2px;
+    isolation: isolate
+  }
+
+  .codepen-button span {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 1rem;
+    font-size: 1.1rem;
+    height: 100%
+  }
+
+  .animated-input {
+    @apply bg-white/5 border border-white/20 text-white placeholder:text-gray-400 focus:bg-white/10 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary transition-all duration-300;
+  }
+
+  .text-gradient-mask-subtle {
+    background: linear-gradient(to bottom, hsl(var(--foreground)) 70%, hsla(var(--foreground) / 0.4) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .focus-glow {
+    transition: box-shadow 0.3s ease-out, border-color 0.3s ease-out;
+  }
+
+  .focus-glow:focus,
+  .focus-glow:focus-visible {
+    outline: none;
+    border-color: transparent;
+    box-shadow: 0 0 0 4px hsla(var(--primary) / 0.1), 0 0 20px 5px hsla(var(--primary) / 0.2);
+  }
+
+  /* Glow effect for primary buttons on focus/active */
+  .button-glow:focus-visible,
+  .button-glow:active {
+    box-shadow: 0 0 0 4px hsla(var(--primary) / 0.1), 0 0 20px 5px hsla(var(--primary) / 0.2);
+  }
+
+  /* Tauri Window Specific Overrides */
+  .tauri-window {
+    background-color: hsl(var(--background)) !important;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tauri-window main {
+    background-color: hsl(var(--background)) !important;
+    border-radius: 0 !important;
+  }
+
+  .tauri-window header {
+    /* Background handled by component logic */
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer utilities {
+  .sidebar-wavy-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='hsl(var(--primary))' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M25 24.32V3.5a1.5 1.5 0 0 1 3 0v20.82c4.666 0 8.324-2.825 10.493-7.532C40.66 11.076 42.665 8.5 45.5 8.5c2.835 0 4.84 2.576 6.993 7.288C54.676 20.495 58.334 23.32 63 23.32V44.5c-4.666 0-8.324-2.825-10.493-7.532C50.34 32.256 48.335 29.5 45.5 29.5c-2.835 0-4.84 2.576-6.993 7.288C36.324 41.505 32.666 44.32 28 44.32V24.32zM53 55.68V76.5a1.5 1.5 0 0 1-3 0V55.68c-4.666 0-8.324-2.825-10.493-7.532C37.34 43.436 35.335 40.5 32.5 40.5c-2.835 0-4.84 2.576-6.993 7.288C23.324 52.495 19.666 55.32 15 55.32V34.5c4.666 0 8.324 2.825 10.493 7.532C27.66 46.744 29.665 49.5 32.5 49.5c2.835 0 4.84-2.576 6.993 7.288C41.676 37.505 45.334 34.68 50 34.68V55.68z'/%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media print {
+
+    .no-print,
+    .no-print * {
+      display: none !important;
+    }
+
+    body {
+      background-color: white !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    @page {
+      margin: 0 !important;
+      padding: 0 !important;
+      size: auto;
+      /* Allow the browser to determine height, but we'll constrain width */
+    }
+
+    .print-receipt {
+      display: block !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      max-width: 80mm !important;
+      margin: 0 !important;
+      padding: 2mm 4mm !important;
+      box-shadow: none !important;
+      border: none !important;
+      background: white !important;
+      color: black !important;
+      page-break-after: avoid;
+    }
+
+    .print-receipt * {
+      color: black !important;
+    }
+
+    .print-receipt .watermark {
+      display: block !important;
+      opacity: 0.08 !important;
+      color: #aaa !important;
+    }
+
+    .print-receipt .text-destructive {
+      color: #dc2626 !important;
+      /* Keep destructive text red for emphasis */
+    }
+  }
+
+  @keyframes whatsapp-pulse {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+    }
+
+    70% {
+      transform: scale(1.05);
+      box-shadow: 0 0 0 15px rgba(37, 211, 102, 0);
+    }
+
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+    }
+  }
+
+  .whatsapp-button {
+    @apply fixed bottom-6 right-6 z-50 w-16 h-16 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg;
+    animation: whatsapp-pulse 2s infinite;
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .whatsapp-button:hover {
+    transform: scale(1.1);
+    animation-play-state: paused;
+  }
+
+  body {
+    scrollbar-gutter: stable;
+  }
+
+  body[data-scroll-locked] {
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  .blog-layout {
+    font-family: var(--font-inter), sans-serif !important;
+  }
+
+  .blog-layout h1,
+  .blog-layout h2,
+  .blog-layout h3,
+  .blog-layout h4,
+  .blog-layout h5,
+  .blog-layout h6,
+  .blog-layout .prose h1,
+  .blog-layout .prose h2,
+  .blog-layout .prose h3,
+  .blog-layout .prose h4 {
+    font-family: var(--font-bricolage), sans-serif !important;
+  }
+
+  .whatsapp-button svg {
+    @apply w-8 h-8;
+  }
+}
+
+@keyframes border-shift {
+  to {
+    transform: translateX(-25%)
+  }
+}
+
+/* NProgress styles */
+#nprogress {
+  pointer-events: none;
+}
+
+#nprogress .bar {
+  background: hsl(var(--primary));
+  position: fixed;
+  z-index: 1031;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+}
+
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0px;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px hsl(var(--primary)), 0 0 5px hsl(var(--primary));
+  opacity: 1.0;
+  -webkit-transform: rotate(3deg) translate(0px, -4px);
+  -ms-transform: rotate(3deg) translate(0px, -4px);
+  transform: rotate(3deg) translate(0px, -4px);
+}
+
+/* SAFETY FIX: Prevents Radix UI dialogs from locking the screen 
+  if the component unmounts unexpectedly. 
+*/
+body {
+  pointer-events: auto !important;
+}
+
+/* Ensure the portal container itself doesn't block clicks */
+[data-radix-portal] {
+  pointer-events: all;
+}
+
+@keyframes confetti-fall-left {
+  from {
+    transform: translateY(0) translateX(0) rotate(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(110vh) translateX(-15vw) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-fall-right {
+  from {
+    transform: translateY(0) translateX(0) rotate(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(110vh) translateX(15vw) rotate(-720deg);
+    opacity: 0;
+  }
+}
+
+
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 16px;
+  opacity: 0;
+  transform-origin: center center;
+}
+
+@keyframes aura-pulse {
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.aura-background {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px;
+  height: 800px;
+  background-image: radial-gradient(circle at center, hsl(var(--primary) / 0.1), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+  animation: aura-pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.aura-background-component {
+  background: radial-gradient(circle at center, hsla(var(--primary), 0.15) 0%, transparent 70%);
+  filter: blur(80px);
+}
+
+.border-gradient {
+  position: relative;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+}
+
+.border-gradient::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.codepen-button-aura {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(25, 95%, 45%));
+  color: white;
+  padding: 12px 24px;
+  border-radius: 9999px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px hsla(var(--primary), 0.3);
+}
+
+.codepen-button-aura:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px hsla(var(--primary), 0.5);
+  filter: brightness(1.1);
+}
+
+@keyframes marquee-left {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-left {
+  animation: marquee-left 40s linear infinite;
+}
+
+[data-alpha-mask] {
+  mask-attachment: scroll;
+}
+
+.font-jakarta {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.font-geist {
+  font-family: 'Inter', sans-serif;
+  /* Fallback for Geist */
+}
+
+@layer utilities {}
+
+@layer components {
+  .home-marq {
+    max-width: 100%;
+  }
+
+  .marquee-container {
+    --gap: 1rem;
+    display: flex;
+    overflow: hidden;
+    gap: var(--gap);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .marquee {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-around;
+    gap: var(--gap);
+    min-width: 100%;
+    animation: marquee-scroll 30s linear infinite;
+  }
+
+  @keyframes marquee-scroll {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+
+  .marquee-container:hover .marquee {
+    animation-play-state: paused;
+  }
+}
+
+/* Prevent Radix UI / react-remove-scroll scroll-lock from shifting the viewport layout */
+body {
+  scrollbar-gutter: stable;
+  padding-right: 0px !important;
+}
+
+body[data-scroll-locked],
+html[data-scroll-locked] {
+  margin-right: 0px !important;
+  padding-right: 0px !important;
+}
+
+/* Prevent Radix UI / react-remove-scroll scroll-lock from shifting layout */
+body { scrollbar-gutter: stable; padding-right: 0px !important; }
+body[data-scroll-locked], html[data-scroll-locked] { margin-right: 0px !important; padding-right: 0px !important; }
+
+/* ── Zen AI ───────────────────────────────────────────────────────────────
+   The glyph breathes while a reply streams. The silver sweep itself is an
+   SVG <animateTransform> inside <ZenMark>; this only adds the scale, so the
+   two effects can run at different rates and not look mechanical. */
+@keyframes zen-mark-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.06); opacity: 0.92; }
+}
+
+.zen-mark-pulse {
+  transform-origin: center;
+  animation: zen-mark-pulse 2.1s ease-in-out infinite;
+}
+
+/* Each word of the status line fades up as the label changes. */
+@keyframes zen-status-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.zen-status-in {
+  animation: zen-status-in 0.28s ease-out both;
+}
+
+/* Streaming caret on the in-progress assistant message. */
+@keyframes zen-caret {
+  0%, 45%   { opacity: 1; }
+  50%, 95%  { opacity: 0; }
+  100%      { opacity: 1; }
+}
+
+.zen-caret {
+  display: inline-block;
+  width: 0.45rem;
+  height: 1.02em;
+  margin-left: 0.15rem;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background: hsl(var(--primary));
+  animation: zen-caret 1.05s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zen-mark-pulse,
+  .zen-status-in,
+  .zen-caret {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Short-phone density
+   ---------------------------------------------------------------------------
+
+   On a tall phone (Pixel 7 at 412x915, iPhone 14 Pro Max at 430x932) the app
+   reads well. On a short one (iPhone SE at 375x667, a 360x640 Android) the
+   *same* layout feels oversized: type and padding are unchanged but there is
+   28% less vertical room, so every screen needs more scrolling to say the same
+   thing. Nothing is broken there — it is simply too dense for the space.
+
+   The fix is one root font-size step-down rather than per-component overrides,
+   and that is safe here for a specific, verified reason:
+
+     Tailwind breakpoints in this repo are the default **pixel** ones. There is
+     no `screens` override in tailwind.config.ts and no rem/em media query in
+     this file. So scaling the root changes how big things are and *not* when
+     the layout changes shape. `md:grid-cols-2` still flips at exactly 768px.
+
+   Everything sized in rem follows along in proportion, which is what keeps the
+   existing responsive work intact. In particular the two that had to stay in
+   step do, automatically:
+
+     - mobile-bottom-nav.tsx  h-[calc(4rem+env(safe-area-inset-bottom))]
+     - (app)/layout.tsx       pb-32 md:pb-0   (the content reserve under it)
+
+   Both are rem, so the bar shrinks and the reserve shrinks with it. No gap and
+   no occluded content. Hand-editing either one is what would have desynced them.
+
+   Deliberately left alone: anything already fixed in px. `min-w-[600px]` tables
+   inside their overflow-x-auto wrappers, recharts' inline `fontSize: 12` axis
+   labels, and calc(100vh - 120px) drawers keep their current size — the tables
+   just fit more rows per screen and the axis labels stay legible.
+
+   Gated on width as well as height so this is phones only. A short *desktop*
+   window (1280x600) keeps its current sizing; below 768px the mobile layout is
+   already in play, so scaling there is consistent with what is on screen.
+
+   Percentages rather than px, so a reader who has raised their browser's
+   default font size keeps that preference — this scales relative to it instead
+   of overwriting it. `screen` keeps it out of the print stylesheet above.
+
+   On the choice of `max-height` over `dvh`: a media query resolves height
+   against the *large* viewport — the same basis as `100vh`, per the note in
+   (auth)/layout.tsx about 100vh being the viewport without browser chrome.
+   That value is stable while the URL bar collapses and expands, so the size
+   is decided once on load and does not jump mid-scroll. A dvh-based query
+   would re-evaluate on every scroll and visibly reflow the page; that is the
+   reason this is not written with dvh, so keep it as-is.
+--------------------------------------------------------------------------- */
+
+@media screen and (max-width: 767.98px) and (max-height: 800px) {
+  html {
+    font-size: 93.75%; /* 15px at a default root */
+  }
+}
+
+@media screen and (max-width: 767.98px) and (max-height: 690px) {
+  html {
+    font-size: 87.5%; /* 14px — iPhone SE, 360x640 Androids */
+  }
+}
+
+/* The one thing that must NOT scale: form control text.
+   iOS Safari zooms the whole page when you focus a control whose text is under
+   16px, and it does not zoom back out. `input.tsx` carries `text-base md:text-sm`
+   precisely for that — the 16px on mobile is a functional requirement, not a
+   design choice. Scaling the root would drop `text-base` under the line and
+   reintroduce the zoom, so pin it back.
+
+   Scoped to `.text-base` on purpose. tailwind-merge guarantees a control has
+   exactly one text-size class, so this matches only the controls that were
+   relying on the default 16px and cannot match the dozen inputs that opt into
+   `text-sm` deliberately — those keep the compact size they were given. It also
+   beats the plain `.text-base` utility on specificity alone (0,1,1 vs 0,1,0),
+   so no !important and no dependence on rule order.
+
+   max() rather than a flat 16px so a raised browser default still wins. */
+@media screen and (max-width: 767.98px) and (max-height: 800px) {
+  input.text-base,
+  textarea.text-base,
+  select.text-base {
+    font-size: max(16px, 1rem);
+  }
+
+  /* Controls that opted into a smaller size keep the exact px they had before
+     this file scaled the root — measured, not assumed: the landing page's
+     hand-rolled contact fields (they bypass `input.tsx`) computed 14px and 12px
+     at a 16px root, and scaling took them to 12.25px and 10.5px. Restating the
+     sizes in px holds them where they were.
+
+     These are already under the iOS 16px threshold and always have been, so
+     focusing one zooms the page. That is a pre-existing bug in those fields, not
+     something this block introduces; fixing it means giving them `text-base`
+     like every other control, which is a change to those components rather than
+     to the density pass. Left alone deliberately — the rule here only ensures
+     this change makes nothing smaller than it already was.
+
+     px, not rem: rem resolves against the root this file just scaled, so
+     restating `0.875rem` would recompute to the same 12.25px and change nothing.
+     px is what actually pins them. */
+  input.text-sm, textarea.text-sm, select.text-sm { font-size: 14px; }
+  input.text-xs, textarea.text-xs, select.text-xs { font-size: 12px; }
+}
+
+/* Optimize touch interaction and remove 300ms click latency on mobile WebViews */
+a, button, select, input, [role="button"], .clickable {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+

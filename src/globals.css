@@ -1,0 +1,328 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 100% 99%;
+    --foreground: 224 71% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 22 90% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 22 90% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 22 90% 55%;
+    --radius: 0.5rem;
+
+    --chart-1: 220 80% 60%;
+    --chart-2: 160 70% 50%;
+    --chart-3: 40 80% 60%;
+    --chart-4: 280 80% 60%;
+    --chart-5: 340 80% 60%;
+
+    --sidebar-background: 40 33% 98%;
+    --sidebar-foreground: 224 71% 10%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-accent: 210 40% 92%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-primary: 22 90% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 22 90% 45%;
+  }
+ 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 22 90% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 22 90% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 22 90% 55%;
+
+    --chart-1: 220 80% 70%;
+    --chart-2: 160 70% 60%;
+    --chart-3: 40 80% 70%;
+    --chart-4: 280 80% 70%;
+    --chart-5: 340 80% 70%;
+
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-primary: 22 90% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 22 90% 45%;
+  }
+
+  /* Custom scrollbar to match premium feel */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background-color: #f97316; border-radius: 20px; }
+  ::-webkit-scrollbar-thumb:hover { background-color: #ea580c; }
+  
+  ::selection {
+    background: hsl(var(--primary) / 0.3);
+    color: hsl(var(--foreground));
+  }
+
+  .codepen-button {
+    display: block;
+    cursor: pointer;
+    color: #fff;
+    position: relative;
+    text-decoration: none;
+    font-weight: 600;
+    overflow: hidden;
+    padding: 2px;
+    isolation: isolate
+  }
+
+  .codepen-button span {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 1rem;
+    font-size: 1.1rem;
+    height: 100%
+  }
+
+  .pattern-bg {
+    background-color: #ffffff;
+    opacity: 1;
+    background-image: radial-gradient(#d3d3d3 0.5px, #ffffff 0.5px);
+    background-size: 10px 10px;
+  }
+
+  .auth-bg {
+    @apply bg-gray-50 dark:bg-gray-900; /* Simple fallback */
+    background-image: radial-gradient(circle at top, hsl(240 5% 15%), hsl(240 5% 8%));
+  }
+  
+  .animated-input {
+    @apply bg-white/5 border border-white/20 text-white placeholder:text-gray-400 focus:bg-white/10 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary transition-all duration-300;
+  }
+  .text-gradient-mask-subtle {
+    background: linear-gradient(to bottom, hsl(var(--foreground)) 70%, hsla(var(--foreground) / 0.4) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  
+  .focus-glow {
+      transition: box-shadow 0.3s ease-out, border-color 0.3s ease-out;
+  }
+  .focus-glow:focus, .focus-glow:focus-visible {
+      outline: none;
+      border-color: transparent;
+      box-shadow: 0 0 0 4px hsla(var(--primary) / 0.1), 0 0 20px 5px hsla(var(--primary) / 0.2);
+  }
+
+  /* Glow effect for primary buttons on focus/active */
+  .button-glow:focus-visible, .button-glow:active {
+      box-shadow: 0 0 0 4px hsla(var(--primary) / 0.1), 0 0 20px 5px hsla(var(--primary) / 0.2);
+  }
+}
+
+@layer utilities {
+  .sidebar-wavy-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='hsl(var(--primary))' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M25 24.32V3.5a1.5 1.5 0 0 1 3 0v20.82c4.666 0 8.324-2.825 10.493-7.532C40.66 11.076 42.665 8.5 45.5 8.5c2.835 0 4.84 2.576 6.993 7.288C54.676 20.495 58.334 23.32 63 23.32V44.5c-4.666 0-8.324-2.825-10.493-7.532C50.34 32.256 48.335 29.5 45.5 29.5c-2.835 0-4.84 2.576-6.993 7.288C36.324 41.505 32.666 44.32 28 44.32V24.32zM53 55.68V76.5a1.5 1.5 0 0 1-3 0V55.68c-4.666 0-8.324-2.825-10.493-7.532C37.34 43.436 35.335 40.5 32.5 40.5c-2.835 0-4.84 2.576-6.993 7.288C23.324 52.495 19.666 55.32 15 55.32V34.5c4.666 0 8.324 2.825 10.493 7.532C27.66 46.744 29.665 49.5 32.5 49.5c2.835 0 4.84-2.576 6.993 7.288C41.676 37.505 45.334 34.68 50 34.68V55.68z'/%3E%3C/g%3E%3C/svg%3E");
+  }
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+  @media print {
+    .no-print, .no-print * {
+      display: none !important;
+    }
+    body {
+        background-color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .print-receipt {
+        display: block !important;
+        position: static !important;
+        box-shadow: none !important;
+        border: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        color: black !important;
+    }
+    .print-receipt * {
+        color: black !important;
+    }
+    .print-receipt .watermark {
+        display: block !important;
+        opacity: 0.08 !important;
+        color: #aaa !important;
+    }
+    .print-receipt .text-destructive {
+        color: #dc2626 !important; /* Keep destructive text red for emphasis */
+    }
+  }
+
+  @keyframes whatsapp-pulse {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+    }
+
+    70% {
+      transform: scale(1.05);
+      box-shadow: 0 0 0 15px rgba(37, 211, 102, 0);
+    }
+
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+    }
+  }
+
+  .whatsapp-button {
+    @apply fixed bottom-6 right-6 z-50 w-16 h-16 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg;
+    animation: whatsapp-pulse 2s infinite;
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .whatsapp-button:hover {
+    transform: scale(1.1);
+    animation-play-state: paused;
+  }
+
+  .whatsapp-button svg {
+    @apply w-8 h-8;
+  }
+}
+
+@keyframes border-shift {
+  to {
+    transform: translateX(-25%)
+  }
+}
+
+/* NProgress styles */
+#nprogress {
+  pointer-events: none;
+}
+
+#nprogress .bar {
+  background: hsl(var(--primary));
+  position: fixed;
+  z-index: 1031;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+}
+
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0px;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px hsl(var(--primary)), 0 0 5px hsl(var(--primary));
+  opacity: 1.0;
+  -webkit-transform: rotate(3deg) translate(0px, -4px);
+      -ms-transform: rotate(3deg) translate(0px, -4px);
+          transform: rotate(3deg) translate(0px, -4px);
+}
+
+/* SAFETY FIX: Prevents Radix UI dialogs from locking the screen 
+  if the component unmounts unexpectedly. 
+*/
+body {
+  pointer-events: auto !important;
+}
+
+/* Ensure the portal container itself doesn't block clicks */
+[data-radix-portal] {
+  pointer-events: all;
+}
+
+@keyframes confetti-blast-left {
+  from {
+    transform: translateY(0) translateX(0) rotate(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-110vh) translateX(-25vw) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-blast-right {
+  from {
+    transform: translateY(0) translateX(0) rotate(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-110vh) translateX(25vw) rotate(-720deg);
+    opacity: 0;
+  }
+}
+
+
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 16px;
+  opacity: 0;
+  transform-origin: center center;
+}
+
+@keyframes aura-pulse {
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.aura-background {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 800px;
+    height: 800px;
+    background-image: radial-gradient(circle at center, hsl(var(--primary) / 0.1), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+    animation: aura-pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
