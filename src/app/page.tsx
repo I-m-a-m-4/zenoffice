@@ -310,7 +310,7 @@ export default function Home() {
         <article className="group overflow-hidden transition-shadow hover:shadow-md bg-[#EA580C]/20 border-stone-300 border rounded relative shadow-xl backdrop-blur-xl">
   <div className="sm:p-10 bg-stone-50 rounded pt-6 pr-6 pb-6 pl-6">
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-      <h3 className="text-2xl font-light text-stone-900 tracking-tight font-instrument-serif">Real‑Time Market Data
+      <h3 className="text-2xl font-light text-stone-900 tracking-tight font-instrument-serif">Real‑Time Collaboration
       </h3>
       <span className="inline-flex items-center gap-2 text-[10px] sm:text-xs text-neutral-300 bg-stone-950 border-white/10 border rounded-full px-2.5 py-1">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-400">
@@ -326,7 +326,7 @@ export default function Home() {
       
       <div className="absolute right-3 sm:right-6 top-4 sm:top-6 w-[78%] h-[68%] rounded-2xl backdrop-blur border shadow-sm bg-neutral-900/90 border-neutral-800">
         <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-800/70">
-          <span className="text-[10px] sm:text-xs tracking-widest text-neutral-400" style={{}}>AAPL</span>
+          <span className="text-[10px] sm:text-xs tracking-widest text-neutral-400" style={{}}>DOC</span>
           <div className="flex items-center gap-2">
             <span className="text-xs text-green-400" style={{}}>+2.34%</span>
             <span className="h-2 w-12 rounded bg-green-500/20"></span>
@@ -359,19 +359,19 @@ export default function Home() {
       
       <div className="absolute left-6 sm:left-12 bottom-10 sm:bottom-12 w-[62%] h-[52%] rounded-2xl backdrop-blur border shadow-sm bg-neutral-900/90 border-neutral-800">
         <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-800/70">
-          <span className="text-[10px] sm:text-xs tracking-widest text-neutral-400" style={{}}>WATCHLIST</span>
+          <span className="text-[10px] sm:text-xs tracking-widest text-neutral-400" style={{}}>RECENT FILES</span>
         </div>
         <div className="p-2 space-y-1">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-neutral-300" style={{}}>TSLA</span>
+            <span className="text-neutral-300" style={{}}>PDF</span>
             <span className="text-green-400" style={{}}>+1.2%</span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-neutral-300" style={{}}>MSFT</span>
+            <span className="text-neutral-300" style={{}}>XLSX</span>
             <span className="text-red-400" style={{}}>-0.5%</span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-neutral-300" style={{}}>GOOGL</span>
+            <span className="text-neutral-300" style={{}}>PPTX</span>
             <span className="text-green-400" style={{}}>+0.8%</span>
           </div>
         </div>
@@ -380,7 +380,7 @@ export default function Home() {
       
       <div className="absolute left-3 sm:left-6 bottom-3 sm:bottom-4 w-[38%] h-[44%] rounded-2xl backdrop-blur border shadow-sm bg-neutral-900/90 border-neutral-800">
         <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-800/70">
-          <span className="text-[10px] sm:text-xs tracking-widest text-neutral-400" style={{}}>MOBILE</span>
+          <span className="text-[10px] sm:text-xs tracking-widest text-neutral-400" style={{}}>CLOUD</span>
         </div>
         <div className="p-2">
           <svg viewBox="0 0 180 70" className="w-full h-14 sm:h-16 text-neutral-700">
@@ -402,12 +402,12 @@ export default function Home() {
     
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <div className="">
-        <h4 className="text-2xl font-light text-stone-900 tracking-tight font-instrument-serif">Advanced Charting</h4>
+        <h4 className="text-2xl font-light text-stone-900 tracking-tight font-instrument-serif">Advanced Editing</h4>
         <p className="text-sm text-stone-700 mt-2">Professional-grade technical analysis tools with real-time
           candlestick patterns.</p>
       </div>
       <div className="">
-        <h4 className="text-2xl font-light text-stone-900 tracking-tight font-instrument-serif">Smart Watchlists</h4>
+        <h4 className="text-2xl font-light text-stone-900 tracking-tight font-instrument-serif">Smart Folders</h4>
         <p className="mt-2 text-sm text-stone-600">Curated stock tracking with instant performance updates and
           alerts.</p>
       </div>
@@ -417,7 +417,7 @@ export default function Home() {
     
     <div className="">
       <a href="#" className="inline-flex items-center gap-2 text-xs font-medium text-slate-900 hover:text-orange-600 font-semibold" style={{}}>
-        Start trading
+        Start collaborating
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
           <path d="M5 12h14" className="" />
           <path d="m12 5 7 7-7 7" className="" />
@@ -434,7 +434,7 @@ export default function Home() {
 
         <div className="tech-content" id="technology">
           <h3 className="sm:text-5xl transition-colors duration-500 text-4xl font-light text-slate-900 tracking-tight font-instrument-serif">
-    Industry‑leading precision, professionally certified</h3>
+    Industry‑leading security, professionally certified</h3>
 
 
           
@@ -450,7 +450,7 @@ export default function Home() {
         </svg>
       </div>
       <div className="">
-        <h5 className="text-base font-medium tracking-tight font-dm-sans text-slate-900" style={{}}>Real-time Processing</h5>
+        <h5 className="text-base font-medium tracking-tight font-dm-sans text-slate-900" style={{}}>Real-time Syncing</h5>
         <p className="text-base tracking-tight font-dm-sans mt-1 text-slate-600" style={{}}>Sub-second color analysis with continuous
           calibration and
           temperature compensation for consistent results.</p>
@@ -465,7 +465,7 @@ export default function Home() {
         </svg>
       </div>
       <div className="">
-        <h5 className="text-base font-medium tracking-tight font-dm-sans text-slate-900" style={{}}>Advanced Algorithms</h5>
+        <h5 className="text-base font-medium tracking-tight font-dm-sans text-slate-900" style={{}}>Advanced AI Search</h5>
         <p className="text-base tracking-tight font-dm-sans mt-1 text-slate-600" style={{}}>Machine learning-enhanced color matching
           with proprietary
           spectral analysis for superior accuracy.</p>
@@ -484,57 +484,57 @@ export default function Home() {
             integration for professional color analysis workflows.</p>
 
           <div className="mt-8 border-t pt-6 border-neutral-200">
-            <h4 className="text-lg font-semibold mb-4 text-slate-900" style={{}}>Hardware Specifications</h4>
+            <h4 className="text-lg font-semibold mb-4 text-slate-900" style={{}}>Software Capabilities</h4>
             <div className="space-y-3">
               <div className="flex justify-between py-2 border-b border-neutral-200">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Spectral Range</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>380-780 nm</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Storage Limit</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>Unlimited (Enterprise)</span>
               </div>
               <div className="flex justify-between py-2 border-b border-neutral-200">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Accuracy</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>±0.03 ΔE*ab</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Uptime</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>99.99% SLA</span>
               </div>
               <div className="flex justify-between py-2 border-b border-neutral-200">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Measurement Time</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>0.5 seconds</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Search Speed</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>< 50ms</span>
               </div>
               <div className="flex justify-between py-2 border-b border-neutral-200">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Illumination</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>LED D65/A/C/D50/D55/F2/F7/F11</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Encryption</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>AES-256 at rest and in transit</span>
               </div>
               <div className="flex justify-between py-2 border-b border-neutral-200">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Observer Angle</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>2°/10° standard observer</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Max File Size</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>5GB per file</span>
               </div>
               <div className="flex justify-between py-2 border-b border-neutral-200">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Repeatability</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>ΔE*ab ≤ 0.04 (σ)</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Version History</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>Unlimited Revisions</span>
               </div>
             </div>
           </div>
 
           <div className="mt-8 border-t pt-6 border-neutral-200">
-            <h4 className="text-lg font-semibold mb-4 text-slate-900" style={{}}>Connectivity &amp; Power</h4>
+            <h4 className="text-lg font-semibold mb-4 text-slate-900" style={{}}>Integrations &amp; Security</h4>
             <div className="space-y-3">
               <div className="flex justify-between py-2 border-b border-neutral-200">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Interface</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>USB-C 3.0, Bluetooth 5.2, Wi-Fi 6</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>API Support</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>REST, GraphQL, Webhooks</span>
               </div>
               <div className="flex justify-between py-2 border-b border-neutral-200">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Battery Life</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>8 hours continuous use</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>SSO Integrations</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>Okta, Google, Microsoft</span>
               </div>
               <div className="flex justify-between py-2 border-b border-neutral-200">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Operating Temperature</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>0°C to 40°C (32°F to 104°F)</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Data Centers</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>US, EU, AP (SOC2 Type II)</span>
               </div>
               <div className="flex justify-between py-2 border-b border-neutral-200">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Dimensions</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>95 × 65 × 28 mm</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Supported Formats</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>PDF, DOCX, XLSX, PPTX, MD</span>
               </div>
               <div className="flex justify-between py-2">
-                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Weight</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>280g (9.9 oz)</span>
+                <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Max Users</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>Unlimited</span>
               </div>
             </div>
           </div>
@@ -550,20 +550,20 @@ export default function Home() {
             <h4 className="text-lg font-semibold mb-4 text-slate-900" style={{}}>International Standards</h4>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-lg p-3 ring-1 shadow-sm bg-neutral-50 ring-neutral-200">
-                <div className="text-sm font-medium font-instrument-serif text-slate-900" style={{}}>ISO 11664</div>
-                <div className="text-xs font-instrument-serif text-slate-600" style={{}}>Colorimetry Standards</div>
+                <div className="text-sm font-medium font-instrument-serif text-slate-900" style={{}}>SOC 2 Type II</div>
+                <div className="text-xs font-instrument-serif text-slate-600" style={{}}>Security & Privacy</div>
               </div>
               <div className="rounded-lg p-3 ring-1 shadow-sm bg-neutral-50 ring-neutral-200">
-                <div className="text-sm font-medium font-instrument-serif text-slate-900" style={{}}>CIE Standard</div>
-                <div className="text-xs font-instrument-serif text-slate-600" style={{}}>Illuminant D65</div>
+                <div className="text-sm font-medium font-instrument-serif text-slate-900" style={{}}>ISO 27001</div>
+                <div className="text-xs font-instrument-serif text-slate-600" style={{}}>Information Security Management</div>
               </div>
               <div className="rounded-lg p-3 ring-1 shadow-sm bg-neutral-50 ring-neutral-200">
-                <div className="text-sm font-medium font-instrument-serif text-slate-900" style={{}}>ASTM E308</div>
-                <div className="text-xs font-instrument-serif text-slate-600" style={{}}>Standard Practice for Computing Colors</div>
+                <div className="text-sm font-medium font-instrument-serif text-slate-900" style={{}}>GDPR Ready</div>
+                <div className="text-xs font-instrument-serif text-slate-600" style={{}}>EU Data Protection Compliant</div>
               </div>
               <div className="rounded-lg p-3 ring-1 shadow-sm bg-neutral-50 ring-neutral-200">
-                <div className="text-sm font-medium font-instrument-serif text-slate-900" style={{}}>DIN 5033</div>
-                <div className="text-xs font-instrument-serif text-slate-600" style={{}}>Colorimetry Guidelines</div>
+                <div className="text-sm font-medium font-instrument-serif text-slate-900" style={{}}>HIPAA Compliant</div>
+                <div className="text-xs font-instrument-serif text-slate-600" style={{}}>Health Insurance Portability and Accountability Act</div>
               </div>
             </div>
           </div>
@@ -578,9 +578,9 @@ export default function Home() {
                     <path d="m21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3" className="" />
                     <path d="m3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3" className="" />
                   </svg>
-                  <div className="text-sm font-medium font-instrument-serif text-slate-900" style={{}}>FDA Approved</div>
+                  <div className="text-sm font-medium font-instrument-serif text-slate-900" style={{}}>Enterprise Ready</div>
                 </div>
-                <div className="text-xs font-instrument-serif text-slate-600" style={{}}>Medical device classification for clinical use</div>
+                <div className="text-xs font-instrument-serif text-slate-600" style={{}}>Role-based access control with audit logging</div>
               </div>
               <div className="rounded-lg p-3 ring-1 shadow-sm bg-neutral-50 ring-neutral-200">
                 <div className="flex items-center gap-2 mb-2">
