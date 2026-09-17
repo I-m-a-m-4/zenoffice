@@ -63,7 +63,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getAuth, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { usePOS } from '@/context/pos-context';
+
 import { Separator } from '@/components/ui/separator';
 import { SettingsBodySkeleton } from './skeleton';
 import { ThemeSwitcher } from '@/components/settings/theme-switcher';
@@ -139,7 +139,7 @@ import { useFCM } from '@/hooks/use-fcm';
 import { apiBase, openStoreReview } from '@/lib/platform';
 
 function SettingsPageContent() {
-    const { business, currentUserProfile, triggerRefresh, addToQueue, mutateBusiness } = usePOS();
+    const { business, currentUserProfile, triggerRefresh, addToQueue, mutateBusiness } = ({} as any);
     const hasLifetimeAccess = business?.accessLevel === 'lifetime';
     const isOwnerOrAdmin = currentUserProfile && (
         currentUserProfile.role === 'admin' ||
@@ -1839,7 +1839,7 @@ function SettingsPageContent() {
 
 
 export default function SettingsPage() {
-    const { isLoading: isPosLoading, business } = usePOS();
+    const { isLoading: isPosLoading, business } = ({} as any);
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {

@@ -365,65 +365,31 @@ export default function LoginPage() {
         </div>
       </div>
       <div className="hidden bg-muted lg:block relative overflow-hidden bg-black">
-        {/* Background Videos */}
-        {loginVideoSlides.map((slide, index) => (
-          <video
-            key={index}
-            ref={(el) => { videoRefs.current[index] = el; }}
-            loop={false}
-            muted
-            playsInline
-            autoPlay={index === currentSlide}
-            preload="auto"
-            poster={slide.poster}
-            onEnded={() => handleVideoEnded(index)}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ease-in-out ${
-              index === currentSlide ? 'opacity-80 z-[0]' : 'opacity-0 z-[-1]'
-            }`}
-          >
-            <source src={slide.video} type="video/mp4" />
-          </video>
-        ))}
+        <img
+          src="/zen-office-bg.jpg"
+          alt="Zen Office Suite"
+          className="absolute inset-0 h-full w-full object-cover opacity-80"
+        />
 
         {/* Orangish filter overlay */}
-        <div className="absolute inset-0 bg-orange-600/60 mix-blend-multiply z-[1] pointer-events-none" />
+        <div className="absolute inset-0 bg-orange-600/40 mix-blend-multiply z-[1] pointer-events-none" />
 
         {/* Dark overlay gradient for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-[2]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-[2]" />
 
         <div className="absolute bottom-12 left-12 right-12 p-0 bg-transparent z-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentSlide}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.8, delay: 0.5 }}
-            >
-              <h2 className="text-white text-4xl font-bold font-headline leading-tight tracking-tight drop-shadow-lg">
-                {t(loginVideoSlides[currentSlide].titleKey).split(" ").map((word, i) => (
-                  <React.Fragment key={i}>
-                    {word === "for" || word === "Galaxy" || word === "System" ? <span className="text-primary italic"> {word} </span> : word + " "}
-                  </React.Fragment>
-                ))}
-              </h2>
-              <p className="text-white/90 mt-4 text-xl font-light leading-relaxed drop-shadow-md max-w-[600px]">
-                {t(loginVideoSlides[currentSlide].descKey)}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="mt-6 flex items-center gap-3">
-            {loginVideoSlides.map((_, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "h-1.5 transition-all duration-500 rounded-full shadow-[0_0_10px_rgba(255,165,0,0.5)]",
-                  currentSlide === i ? "w-12 bg-primary" : "w-2 bg-white/30"
-                )}
-              />
-            ))}
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+          >
+            <h2 className="text-white text-4xl font-bold font-headline leading-tight tracking-tight drop-shadow-lg">
+              The Ultimate <span className="text-primary italic">Workspace</span>
+            </h2>
+            <p className="text-white/90 mt-4 text-xl font-light leading-relaxed drop-shadow-md max-w-[600px]">
+              Seamlessly edit PDFs, manage documents, and crunch numbers in Excel. All in one powerful, unified interface designed for modern professionals.
+            </p>
+          </motion.div>
         </div>
       </div>
     </div>

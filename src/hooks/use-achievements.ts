@@ -40,7 +40,7 @@
  */
 
 import * as React from 'react';
-import { usePOS } from '@/context/pos-context';
+
 import { secureStorage } from '@/lib/secure-storage';
 import { safeToDate } from '@/lib/utils';
 import {
@@ -84,7 +84,7 @@ export function useAchievements(): UseAchievements {
     currentUserProfile,
     isLoading,
     isImpersonating,
-  } = usePOS();
+  } = ({} as any);
 
   const businessId = business?.id || null;
 

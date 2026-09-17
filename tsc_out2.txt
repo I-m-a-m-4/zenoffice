@@ -1,0 +1,270 @@
+﻿scratch/inspect-online-receipts.ts(29,9): error TS7034: Variable 'sample' implicitly has type 'any[]' in some locations where its type cannot be determined.
+scratch/inspect-online-receipts.ts(44,57): error TS7005: Variable 'sample' implicitly has an 'any[]' type.
+scratch/inspect-online-receipts.ts(46,9): error TS7034: Variable 'genSample' implicitly has type 'any[]' in some locations where its type cannot be determined.
+scratch/inspect-online-receipts.ts(59,58): error TS7005: Variable 'genSample' implicitly has an 'any[]' type.
+scripts/test-import.ts(577,46): error TS2367: This comparison appears to be unintentional because the types '750' and '800' have no overlap.
+src/actions/notifications.ts(179,13): error TS2322: Type '"support"' is not assignable to type 'PushSource | undefined'.
+src/ai/flows/business-analysis-flow.ts(36,5): error TS2322: Type 'unknown' is not assignable to type '{ smartStockRecommendations?: { name: string; confidence: number; reason: string; productId: string; recommendedStock: number; }[] | undefined; demandHeatmap?: { title: string; insight: string; } | undefined; ... 7 more ...; contentPlanner?: { ...; } | undefined; }'.
+src/ai/flows/business-analysis-flow.ts(136,10): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/flows/content-strategy-flow.ts(106,10): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/flows/customer-insights-flow.ts(59,10): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/flows/product-troubleshoot-flow.ts(95,9): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/flows/support-chat-flow.ts(52,11): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/flows/support-chat-flow.ts(156,10): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/flows/visual-count-flow.ts(64,12): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/genkit.ts(11,7): error TS2353: Object literal may only specify known properties, and 'telemetry' does not exist in type 'GenkitOptions'.
+src/app/(app)/customers/details/page.tsx(9,25): error TS2300: Duplicate identifier 'Receipt'.
+src/app/(app)/customers/details/page.tsx(24,5): error TS2300: Duplicate identifier 'Receipt'.
+src/app/(app)/customers/details/page.tsx(398,23): error TS2554: Expected 2 arguments, but got 1.
+src/app/(app)/customers/details/page.tsx(493,34): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(493,57): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(496,68): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(497,43): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(498,26): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(498,69): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(544,34): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(555,73): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(665,64): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(684,25): error TS2322: Type 'Customer | null' is not assignable to type 'Customer'.
+  Type 'null' is not assignable to type 'Customer'.
+src/app/(app)/customers/details/page.tsx(712,95): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/(app)/customers/details/page.tsx(763,73): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(780,77): error TS2693: 'Receipt' only refers to a type, but is being used as a value here.
+src/app/(app)/customers/details/page.tsx(821,73): error TS18047: 'displayCustomer' is possibly 'null'.
+src/app/(app)/customers/details/page.tsx(914,43): error TS2554: Expected 2 arguments, but got 1.
+src/app/(app)/customers/page.tsx(614,15): error TS2554: Expected 2 arguments, but got 1.
+src/app/(app)/expenses/page.tsx(206,36): error TS2339: Property 'currency' does not exist on type 'BusinessInstance'.
+src/app/(app)/expenses/page.tsx(206,74): error TS2339: Property 'currency' does not exist on type 'BusinessInstance'.
+src/app/(app)/expenses/page.tsx(206,96): error TS2339: Property 'currency' does not exist on type 'BusinessInstance'.
+src/app/(app)/expenses/page.tsx(385,55): error TS2339: Property 'deductFromCashDrawer' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(414,30): error TS2339: Property 'deductFromCashDrawer' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(433,34): error TS2339: Property 'title' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(434,39): error TS2339: Property 'recipient' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(435,35): error TS2339: Property 'notes' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(502,9): error TS2353: Object literal may only specify known properties, and 'title' does not exist in type 'Omit<Expense, "id">'.
+src/app/(app)/expenses/page.tsx(518,26): error TS2339: Property 'title' does not exist on type 'Omit<Expense, "id">'.
+src/app/(app)/expenses/page.tsx(523,30): error TS2339: Property 'recipient' does not exist on type 'Omit<Expense, "id">'.
+src/app/(app)/expenses/page.tsx(524,26): error TS2339: Property 'notes' does not exist on type 'Omit<Expense, "id">'.
+src/app/(app)/expenses/page.tsx(525,41): error TS2339: Property 'deductFromCashDrawer' does not exist on type 'Omit<Expense, "id">'.
+src/app/(app)/expenses/page.tsx(528,67): error TS2339: Property 'title' does not exist on type 'Omit<Expense, "id">'.
+src/app/(app)/expenses/page.tsx(533,13): error TS2322: Type '"inventory.edit"' is not assignable to type 'AuditAction'.
+src/app/(app)/expenses/page.tsx(535,39): error TS2339: Property 'title' does not exist on type 'Omit<Expense, "id">'.
+src/app/(app)/expenses/page.tsx(538,68): error TS2339: Property 'title' does not exist on type 'Omit<Expense, "id">'.
+src/app/(app)/expenses/page.tsx(587,17): error TS18047: 'products' is possibly 'null'.
+src/app/(app)/expenses/page.tsx(830,11): error TS2339: Property 'title' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(834,11): error TS2339: Property 'deductFromCashDrawer' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(835,11): error TS2339: Property 'recipient' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(836,11): error TS2339: Property 'createdByName' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(837,11): error TS2339: Property 'notes' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(840,17): error TS2345: Argument of type '(string | number)[][]' is not assignable to parameter of type 'string'.
+src/app/(app)/expenses/page.tsx(864,17): error TS2345: Argument of type '(string | number)[][]' is not assignable to parameter of type 'string'.
+src/app/(app)/expenses/page.tsx(1160,39): error TS2339: Property 'title' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(1161,34): error TS2339: Property 'notes' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(1161,108): error TS2339: Property 'notes' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(1171,36): error TS2339: Property 'deductFromCashDrawer' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(1180,34): error TS2339: Property 'recipient' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(1195,55): error TS2339: Property 'title' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(1197,54): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<ExpenseCategory>'.
+src/app/(app)/expenses/page.tsx(1200,59): error TS2339: Property 'recipient' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(1201,55): error TS2339: Property 'notes' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(1202,64): error TS2339: Property 'deductFromCashDrawer' does not exist on type 'Expense'.
+src/app/(app)/expenses/page.tsx(2126,93): error TS2339: Property 'title' does not exist on type 'Expense'.
+src/app/(app)/inventory/add/page.tsx(891,68): error TS2367: This comparison appears to be unintentional because the types 'number' and 'string' have no overlap.
+src/app/(app)/inventory/page.tsx(406,52): error TS2367: This comparison appears to be unintentional because the types '"manager" | "vendor_operator" | undefined' and '"owner"' have no overlap.
+src/app/(app)/inventory/page.tsx(413,107): error TS2367: This comparison appears to be unintentional because the types '"failed" | "completed"' and '"synced"' have no overlap.
+src/app/(app)/inventory/page.tsx(564,23): error TS2339: Property 'retailPrice' does not exist on type 'Product'.
+src/app/(app)/reports/page.tsx(771,112): error TS2322: Type '{ month: string; sales: number; }[] | undefined' is not assignable to type '{ month: string; totalSales: number; }[] | undefined'.
+  Type '{ month: string; sales: number; }[]' is not assignable to type '{ month: string; totalSales: number; }[]'.
+    Property 'totalSales' is missing in type '{ month: string; sales: number; }' but required in type '{ month: string; totalSales: number; }'.
+src/app/(app)/sales/pos/payment/page.tsx(101,58): error TS2339: Property 'terminalAccountNumber' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/sales/pos/payment/page.tsx(104,104): error TS2339: Property 'terminalBankName' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/sales/pos/payment/page.tsx(105,107): error TS2339: Property 'terminalAccountNumber' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/sales/pos/payment/page.tsx(106,111): error TS2339: Property 'terminalAccountName' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/sales/pos/review/page.tsx(31,156): error TS2339: Property 'offlineProfile' does not exist on type 'POSContextType'.
+src/app/(app)/sales/pos/select-products/page.tsx(254,13): error TS2339: Property 'currentUserProfile' does not exist on type 'UserHookResult'.
+src/app/(app)/settings/branches/page.tsx(31,5): error TS2367: This comparison appears to be unintentional because the types '"manager" | "vendor_operator"' and '"owner"' have no overlap.
+src/app/(app)/settings/page.tsx(46,71): error TS1117: An object literal cannot have multiple properties with the same name.
+src/app/(app)/settings/page.tsx(146,9): error TS2367: This comparison appears to be unintentional because the types '"manager" | "vendor_operator"' and '"owner"' have no overlap.
+src/app/(app)/settings/page.tsx(531,33): error TS18047: 'business' is possibly 'null'.
+src/app/(app)/settings/page.tsx(1288,73): error TS2339: Property 'terminalAccountNumber' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/settings/page.tsx(1301,131): error TS2339: Property 'terminalBankName' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/settings/page.tsx(1305,131): error TS2339: Property 'terminalAccountNumber' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/settings/page.tsx(1309,131): error TS2339: Property 'terminalAccountName' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/settings/page.tsx(1407,110): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number'.
+  Type 'undefined' is not assignable to type 'string | number'.
+src/app/(app)/settings/page.tsx(1691,77): error TS2304: Cannot find name 'Paintbrush'.
+src/app/(app)/settings/page.tsx(1751,93): error TS2339: Property 'kycStatus' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/settings/page.tsx(1755,97): error TS2339: Property 'kycStatus' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/settings/page.tsx(1757,66): error TS2339: Property 'kycStatus' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/settings/page.tsx(1764,54): error TS2339: Property 'kycStatus' does not exist on type '{ phone?: string | undefined; email?: string | undefined; currency?: string | undefined; timezone?: string | undefined; defaultTaxRate?: number | undefined; primaryColor?: string | undefined; ... 30 more ...; requireAdminApprovalForVoids?: boolean | undefined; }'.
+src/app/(app)/storefront/page.tsx(73,23): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ 3: string; 4: string; 5: string; }'.
+src/app/(app)/support/page.tsx(426,49): error TS2339: Property 'currentBusinessId' does not exist on type 'UserProfile'.
+src/app/(app)/support/page.tsx(438,53): error TS2339: Property 'currentBusinessId' does not exist on type 'UserProfile'.
+src/app/(app)/support/page.tsx(593,13): error TS2339: Property 'currentBusiness' does not exist on type 'POSContextType'.
+src/app/(app)/support/page.tsx(676,68): error TS2339: Property 'isReadByUser' does not exist on type 'WithId<SupportThread>'.
+src/app/(app)/support/page.tsx(868,21): error TS2561: Object literal may only specify known properties, but 'lastMessage' does not exist in type 'Omit<SupportThread, "id">'. Did you mean to write 'lastMessageAt'?
+src/app/(app)/support/page.tsx(950,21): error TS2561: Object literal may only specify known properties, but 'lastMessage' does not exist in type 'Omit<SupportThread, "id">'. Did you mean to write 'lastMessageAt'?
+src/app/(app)/support/page.tsx(1072,33): error TS2561: Object literal may only specify known properties, but 'lastMessage' does not exist in type 'Omit<SupportThread, "id">'. Did you mean to write 'lastMessageAt'?
+src/app/(app)/support/page.tsx(1524,49): error TS2339: Property 'currentBusinessId' does not exist on type 'WithId<UserProfile>'.
+src/app/(app)/terminal-alerts/page.tsx(339,13): error TS2322: Type '{ date: DateRange | undefined; setDate: Dispatch<SetStateAction<DateRange | undefined>>; }' is not assignable to type 'IntrinsicAttributes & DateRangePickerProps'.
+  Property 'setDate' does not exist on type 'IntrinsicAttributes & DateRangePickerProps'.
+src/app/(app)/users/page.tsx(252,98): error TS2304: Cannot find name 'UserRole'.
+src/app/(app)/users/page.tsx(290,31): error TS2339: Property 'branchId' does not exist on type 'UserProfile'.
+src/app/(app)/users/page.tsx(290,45): error TS2339: Property 'branchId' does not exist on type 'UserProfile'.
+src/app/(app)/users/page.tsx(290,74): error TS2339: Property 'branchId' does not exist on type 'UserProfile'.
+src/app/(app)/users/page.tsx(292,26): error TS2339: Property 'branchId' does not exist on type 'UserProfile'.
+src/app/(app)/users/page.tsx(479,36): error TS2322: Type '"warning"' is not assignable to type '"destructive" | "default" | null | undefined'.
+src/app/admin-imamshaffy/backups/page.tsx(231,32): error TS2322: Type '"success"' is not assignable to type '"secondary" | "destructive" | "default" | "outline" | null | undefined'.
+src/app/admin-imamshaffy/backups/page.tsx(268,32): error TS2322: Type '"success" | "outline"' is not assignable to type '"secondary" | "destructive" | "default" | "outline" | null | undefined'.
+  Type '"success"' is not assignable to type '"secondary" | "destructive" | "default" | "outline" | null | undefined'.
+src/app/admin-imamshaffy/backups/page.tsx(296,28): error TS2322: Type '"success" | "outline"' is not assignable to type '"secondary" | "destructive" | "default" | "outline" | null | undefined'.
+  Type '"success"' is not assignable to type '"secondary" | "destructive" | "default" | "outline" | null | undefined'.
+src/app/admin-imamshaffy/page.tsx(521,132): error TS2339: Property 'ownerName' does not exist on type 'BusinessInstance'.
+src/app/admin-imamshaffy/page.tsx(522,144): error TS2339: Property 'ownerEmail' does not exist on type 'BusinessInstance'.
+src/app/admin-imamshaffy/page.tsx(522,180): error TS2339: Property 'ownerEmail' does not exist on type 'BusinessInstance'.
+src/app/admin-imamshaffy/page.tsx(2757,51): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/admin-imamshaffy/page.tsx(3165,52): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/app/admin-imamshaffy/page.tsx(3213,29): error TS18046: 'b.value' is of type 'unknown'.
+src/app/admin-imamshaffy/page.tsx(3213,39): error TS18046: 'a.value' is of type 'unknown'.
+src/app/admin-imamshaffy/page.tsx(3218,29): error TS18046: 'b.value' is of type 'unknown'.
+src/app/admin-imamshaffy/page.tsx(3218,39): error TS18046: 'a.value' is of type 'unknown'.
+src/app/admin-imamshaffy/page.tsx(3269,29): error TS18046: 'b.value' is of type 'unknown'.
+src/app/admin-imamshaffy/page.tsx(3269,39): error TS18046: 'a.value' is of type 'unknown'.
+src/app/admin-imamshaffy/page.tsx(3356,95): error TS7006: Parameter 'itemSum' implicitly has an 'any' type.
+src/app/admin-imamshaffy/page.tsx(3356,104): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/admin-imamshaffy/page.tsx(3581,118): error TS18046: 'b.value' is of type 'unknown'.
+src/app/admin-imamshaffy/page.tsx(3581,128): error TS18046: 'a.value' is of type 'unknown'.
+src/app/admin-imamshaffy/page.tsx(3622,37): error TS18046: 'b' is of type 'unknown'.
+src/app/admin-imamshaffy/page.tsx(3622,41): error TS18046: 'a' is of type 'unknown'.
+src/app/admin-imamshaffy/page.tsx(3847,21): error TS2820: Type '"billing.revoke_lifetime"' is not assignable to type 'AuditAction'. Did you mean '"billing.grant_lifetime"'?
+src/app/admin-imamshaffy/page.tsx(4699,106): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+src/app/admin-imamshaffy/support/page.tsx(734,50): error TS2345: Argument of type '{ margin: number; filename: string; image: { type: string; quality: number; }; html2canvas: { scale: number; useCORS: boolean; logging: boolean; }; jsPDF: { unit: string; format: string; orientation: string; }; }' is not assignable to parameter of type 'Html2PdfOptions'.
+  The types of 'image.type' are incompatible between these types.
+    Type 'string' is not assignable to type '"png" | "jpeg" | "webp" | undefined'.
+src/app/admin-imamshaffy/support/page.tsx(734,60): error TS2345: Argument of type 'Element' is not assignable to parameter of type 'string | HTMLCanvasElement | HTMLElement | HTMLImageElement'.
+  Type 'Element' is missing the following properties from type 'HTMLImageElement': align, alt, border, complete, and 156 more.
+src/app/admin-imamshaffy/support/page.tsx(876,106): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+src/app/admin-imamshaffy/support/page.tsx(879,107): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+src/app/admin-imamshaffy/support/page.tsx(881,98): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+src/app/admin-imamshaffy/support/page.tsx(1223,35): error TS2352: Conversion of type '{ id: string; userId: string; userName: string; subject: string; status: "open"; lastMessageSnippet: string; lastMessageAt: Date; createdAt: Date; unreadCount: number; isReadByAdmin: true; }' to type 'SupportThread' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'userEmail' is missing in type '{ id: string; userId: string; userName: string; subject: string; status: "open"; lastMessageSnippet: string; lastMessageAt: Date; createdAt: Date; unreadCount: number; isReadByAdmin: true; }' but required in type 'SupportThread'.
+src/app/admin-imamshaffy/users/detail/page.tsx(322,65): error TS2339: Property 'branchId' does not exist on type 'WithId<UserProfile>'.
+src/app/admin-imamshaffy/users/page.tsx(118,20): error TS2339: Property 'userAgent' does not exist on type 'UserProfile'.
+src/app/admin-imamshaffy/users/page.tsx(299,21): error TS2339: Property 'userAgent' does not exist on type 'WithId<UserProfile>'.
+src/app/admin-imamshaffy/users/page.tsx(305,21): error TS2339: Property 'userAgent' does not exist on type 'WithId<UserProfile>'.
+src/app/admin-imamshaffy/users/page.tsx(311,21): error TS2339: Property 'userAgent' does not exist on type 'WithId<UserProfile>'.
+src/app/admin-imamshaffy/users/page.tsx(319,21): error TS2339: Property 'userAgent' does not exist on type 'WithId<UserProfile>'.
+src/app/admin-imamshaffy/users/page.tsx(362,25): error TS2339: Property 'userAgent' does not exist on type 'WithId<UserProfile>'.
+src/app/api/admin/backups/recover/route.ts(61,53): error TS2554: Expected 0-1 arguments, but got 2.
+src/app/api/admin/follow-up-stats/route.ts(28,40): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/app/api/admin/users/route.ts(33,41): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/app/api/chat/route.ts(812,15): error TS2552: Cannot find name 'text'. Did you mean 'Text'?
+src/app/api/chat/route.ts(815,24): error TS2552: Cannot find name 'text'. Did you mean 'Text'?
+src/app/api/chat/route.ts(816,15): error TS2353: Object literal may only specify known properties, and 'toolCalls' does not exist in type '{ role: any; content: string; createdAt: any; }'.
+src/app/api/images/search/route.ts(128,60): error TS18047: 'c' is possibly 'null'.
+src/app/api/webhooks/paystack/route.ts(78,45): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/api/webhooks/paystack/route.ts(184,53): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/app/editor/excel/page.tsx(624,17): error TS2345: Argument of type '(prev: Record<string, CellData>) => { [x: string]: CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }; }' is not assignable to parameter of type 'SetStateAction<Record<string, CellData>>'.
+  Type '(prev: Record<string, CellData>) => { [x: string]: CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }; }' is not assignable to type '(prevState: Record<string, CellData>) => Record<string, CellData>'.
+    Type '{ [x: string]: CellData | { value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }; }' is not assignable to type 'Record<string, CellData>'.
+      'string' index signatures are incompatible.
+        Type 'CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }' is not assignable to type 'CellData'.
+          Type '{ value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }' is not assignable to type 'CellData'.
+            Types of property 'align' are incompatible.
+              Type 'string' is not assignable to type '"left" | "center" | "right" | undefined'.
+src/app/editor/excel/page.tsx(629,17): error TS2345: Argument of type '{ [x: string]: CellData | { value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }; }' is not assignable to parameter of type 'Record<string, CellData>'.
+  'string' index signatures are incompatible.
+    Type 'CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }' is not assignable to type 'CellData'.
+      Type '{ value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }' is not assignable to type 'CellData'.
+        Types of property 'align' are incompatible.
+          Type 'string' is not assignable to type '"left" | "center" | "right" | undefined'.
+src/app/editor/excel/page.tsx(639,17): error TS2345: Argument of type '(prev: Record<string, CellData>) => { [x: string]: CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }; }' is not assignable to parameter of type 'SetStateAction<Record<string, CellData>>'.
+  Type '(prev: Record<string, CellData>) => { [x: string]: CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }; }' is not assignable to type '(prevState: Record<string, CellData>) => Record<string, CellData>'.
+    Type '{ [x: string]: CellData | { value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }; }' is not assignable to type 'Record<string, CellData>'.
+      'string' index signatures are incompatible.
+        Type 'CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }' is not assignable to type 'CellData'.
+          Type '{ value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }' is not assignable to type 'CellData'.
+            Types of property 'align' are incompatible.
+              Type 'string' is not assignable to type '"left" | "center" | "right" | undefined'.
+src/app/editor/excel/page.tsx(644,17): error TS2345: Argument of type '{ [x: string]: CellData | { value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }; }' is not assignable to parameter of type 'Record<string, CellData>'.
+  'string' index signatures are incompatible.
+    Type 'CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }' is not assignable to type 'CellData'.
+      Type '{ value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }' is not assignable to type 'CellData'.
+        Types of property 'align' are incompatible.
+          Type 'string' is not assignable to type '"left" | "center" | "right" | undefined'.
+src/app/editor/excel/page.tsx(654,17): error TS2345: Argument of type '(prev: Record<string, CellData>) => { [x: string]: CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }; }' is not assignable to parameter of type 'SetStateAction<Record<string, CellData>>'.
+  Type '(prev: Record<string, CellData>) => { [x: string]: CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }; }' is not assignable to type '(prevState: Record<string, CellData>) => Record<string, CellData>'.
+    Type '{ [x: string]: CellData | { value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }; }' is not assignable to type 'Record<string, CellData>'.
+      'string' index signatures are incompatible.
+        Type 'CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }' is not assignable to type 'CellData'.
+          Type '{ value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }' is not assignable to type 'CellData'.
+            Types of property 'align' are incompatible.
+              Type 'string' is not assignable to type '"left" | "center" | "right" | undefined'.
+src/app/editor/excel/page.tsx(659,17): error TS2345: Argument of type '{ [x: string]: CellData | { value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }; }' is not assignable to parameter of type 'Record<string, CellData>'.
+  'string' index signatures are incompatible.
+    Type 'CellData | { value: string; align: string; formula?: string | undefined; bold?: boolean | undefined; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }' is not assignable to type 'CellData'.
+      Type '{ value: string; align: string; formula?: string; bold?: boolean; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }' is not assignable to type 'CellData'.
+        Types of property 'align' are incompatible.
+          Type 'string' is not assignable to type '"left" | "center" | "right" | undefined'.
+src/app/editor/excel/page.tsx(701,44): error TS2345: Argument of type '{ [x: string]: CellData | { formula: string; value: string; bold: boolean; align: string; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }; }' is not assignable to parameter of type 'Record<string, CellData>'.
+  'string' index signatures are incompatible.
+    Type 'CellData | { formula: string; value: string; bold: boolean; align: string; italic?: boolean | undefined; bgColor?: string | undefined; textColor?: string | undefined; isHeader?: boolean | undefined; }' is not assignable to type 'CellData'.
+      Type '{ formula: string; value: string; bold: boolean; align: string; italic?: boolean; bgColor?: string; textColor?: string; isHeader?: boolean; }' is not assignable to type 'CellData'.
+        Types of property 'align' are incompatible.
+          Type 'string' is not assignable to type '"left" | "center" | "right" | undefined'.
+src/app/help-center/page.tsx(603,29): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'className' does not exist in type 'Partial<unknown> & Attributes'.
+src/components/admin/email-marketing/campaign-composer.tsx(70,3): error TS2353: Object literal may only specify known properties, and 'phone' does not exist in type 'BehaviorProfile'.
+src/components/admin/follow-up-center.tsx(367,44): error TS18047: 'prev' is possibly 'null'.
+src/components/admin/follow-up-center.tsx(367,66): error TS18047: 'prev' is possibly 'null'.
+src/components/admin/user-detail/sections.tsx(382,20): error TS2552: Cannot find name 'useRouter'. Did you mean 'router'?
+src/components/admin/user-detail/sections.tsx(431,18): error TS2304: Cannot find name 'Button'.
+src/components/admin/user-detail/sections.tsx(433,19): error TS2304: Cannot find name 'Button'.
+src/components/customers/customer-crm-panel.tsx(119,11): error TS2554: Expected 2 arguments, but got 1.
+src/components/customers/edit-customer-dialog.tsx(66,15): error TS18047: 'customer' is possibly 'null'.
+src/components/layout/branch-switcher.tsx(44,5): error TS2367: This comparison appears to be unintentional because the types 'UserRole' and '"owner"' have no overlap.
+src/components/layout/queue-status.tsx(97,42): error TS2367: This comparison appears to be unintentional because the types '"pending" | "failed" | "completed" | "processing"' and '"synced"' have no overlap.
+src/components/pos/held-sales-drawer.tsx(24,55): error TS2339: Property 'currency' does not exist on type 'BusinessInstance'.
+src/components/ProductTour.tsx(150,9): error TS2353: Object literal may only specify known properties, and 'closeBtnText' does not exist in type 'Config'.
+src/components/reports/customer-analytics.tsx(154,37): error TS18048: 'analyticsData.totalUniqueBuyers' is possibly 'undefined'.
+src/components/reports/customer-analytics.tsx(155,80): error TS18048: 'analyticsData.totalUniqueBuyers' is possibly 'undefined'.
+src/components/reports/daily-sales-items-table.tsx(66,43): error TS2367: This comparison appears to be unintentional because the types '"Cash" | "Bank Transfer" | "Invoice"' and '"POS Card"' have no overlap.
+src/components/reports/profit-loss-statement.tsx(205,21): error TS7053: Element implicitly has an 'any' type because expression of type '0' can't be used to index type 'HTMLTableRowElement | RowInput'.
+  Property '0' does not exist on type 'HTMLTableRowElement | RowInput'.
+src/components/reports/profit-loss-statement.tsx(205,54): error TS7053: Element implicitly has an 'any' type because expression of type '0' can't be used to index type 'HTMLTableRowElement | RowInput'.
+  Property '0' does not exist on type 'HTMLTableRowElement | RowInput'.
+src/components/reports/profit-loss-statement.tsx(205,105): error TS7053: Element implicitly has an 'any' type because expression of type '0' can't be used to index type 'HTMLTableRowElement | RowInput'.
+  Property '0' does not exist on type 'HTMLTableRowElement | RowInput'.
+src/components/reports/profit-loss-statement.tsx(209,21): error TS7053: Element implicitly has an 'any' type because expression of type '0' can't be used to index type 'HTMLTableRowElement | RowInput'.
+  Property '0' does not exist on type 'HTMLTableRowElement | RowInput'.
+src/components/reports/profit-loss-statement.tsx(209,64): error TS7053: Element implicitly has an 'any' type because expression of type '0' can't be used to index type 'HTMLTableRowElement | RowInput'.
+  Property '0' does not exist on type 'HTMLTableRowElement | RowInput'.
+src/components/reports/profit-loss-statement.tsx(209,102): error TS7053: Element implicitly has an 'any' type because expression of type '0' can't be used to index type 'HTMLTableRowElement | RowInput'.
+  Property '0' does not exist on type 'HTMLTableRowElement | RowInput'.
+src/components/reports/profit-loss-statement.tsx(212,25): error TS7053: Element implicitly has an 'any' type because expression of type '0' can't be used to index type 'HTMLTableRowElement | RowInput'.
+  Property '0' does not exist on type 'HTMLTableRowElement | RowInput'.
+src/components/shared/cached-image.tsx(26,68): error TS2345: Argument of type 'string | Blob | undefined' is not assignable to parameter of type 'string | (() => string | undefined) | undefined'.
+  Type 'Blob' is not assignable to type 'string | (() => string | undefined) | undefined'.
+src/components/shared/cached-image.tsx(46,19): error TS2345: Argument of type 'string | Blob' is not assignable to parameter of type 'SetStateAction<string | undefined>'.
+  Type 'Blob' is not assignable to type 'SetStateAction<string | undefined>'.
+src/components/shared/cached-image.tsx(48,22): error TS2339: Property 'startsWith' does not exist on type 'string | Blob'.
+  Property 'startsWith' does not exist on type 'Blob'.
+src/components/shared/cached-image.tsx(48,58): error TS2339: Property 'startsWith' does not exist on type 'string | Blob'.
+  Property 'startsWith' does not exist on type 'Blob'.
+src/components/shared/cached-image.tsx(69,25): error TS2345: Argument of type 'string | Blob | undefined' is not assignable to parameter of type 'SetStateAction<string | undefined>'.
+  Type 'Blob' is not assignable to type 'SetStateAction<string | undefined>'.
+src/components/shared/cached-image.tsx(84,21): error TS2345: Argument of type 'string | Blob' is not assignable to parameter of type 'SetStateAction<string | undefined>'.
+  Type 'Blob' is not assignable to type 'SetStateAction<string | undefined>'.
+src/components/shared/cached-image.tsx(87,54): error TS2345: Argument of type 'string | Blob' is not assignable to parameter of type 'string'.
+  Type 'Blob' is not assignable to type 'string'.
+src/components/shared/cached-image.tsx(100,32): error TS2339: Property 'startsWith' does not exist on type 'string | Blob'.
+  Property 'startsWith' does not exist on type 'Blob'.
+src/components/shared/cached-image.tsx(103,9): error TS2322: Type 'string | Blob' is not assignable to type 'string | StaticImport'.
+  Type 'Blob' is not assignable to type 'string | StaticImport'.
+src/firebase/users.ts(110,19): error TS2339: Property 'branchId' does not exist on type 'Omit<UserProfile, "id">'.
+src/lib/audit.ts(76,29): error TS2339: Property 'branchId' does not exist on type 'UserProfile'.

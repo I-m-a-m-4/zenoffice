@@ -1,83 +1,12 @@
 
 
-export interface Product {
-    id: string;
-    businessId: string;
-    name: string;
-    sku: string;
-    category: string;
-    price: number;
-    costPrice?: number;
-    /**
-     * True when `costPrice` was derived rather than known.
-     *
-     * A cost filled from a stated margin ("I sell drinks at 25%") is a guess, and
-     * without this flag it is indistinguishable from one read off a supplier's invoice
-     * — so every margin report would present arithmetic on an assumption as fact, and
-     * the shop would price against it. Absent or `false` means the figure came from a
-     * human or a waybill.
-     *
-     * A real cost may overwrite an estimate freely; an estimate must never overwrite a
-     * real cost. See `src/lib/import/cost-prices.ts`.
-     */
-    costPriceEstimated?: boolean;
-    stock: number;
-    imageUrl?: string;
-    imageHint?: string;
-    description?: string;
-    lowStockThreshold?: number;
-    createdAt?: any;
-    updatedAt?: any;
-    expiryDate?: any;
-    categoryType?: 'product' | 'service';
-    lowercaseName?: string;
-    branchId?: string;
 
-    // --- Premium Inventory Features ---
-    type?: 'single' | 'variant' | 'composite';
-    parentId?: string; // For variants, references the main template product
-    variantName?: string; // e.g., 'Size'
-    variantValue?: string; // e.g., 'Large'
-    components?: { productId: string; quantity: number }[]; // For composite items
-    baseUnit?: string; // e.g., 'Piece'
-    uomConversions?: {
-        unitName: string; // e.g., 'Carton'
-        multiplier: number; // e.g., 24
-        price?: number; // Optional override price for this UoM
-    }[];
 
-    // --- Industry & Electronics Tracking ---
-    isSerializable?: boolean;
-    serialNumbers?: string[]; // Array of active serial numbers / IMEIs
-    supplierId?: string;
-    supplierName?: string;
-}
-export type InventoryItem = Product;
-export interface CartItem {
-    product: Product;
-    quantity: number;
-    unit?: string;
-    multiplier?: number;
-    isPriceOverride?: boolean;
-    originalPrice?: number;
-    costPriceOverride?: number;
-    originalCostPrice?: number;
-    addedViaBarcode?: boolean;
-    selectedSerialNumber?: string;
-}
 
-export interface HeldSale {
-    id: string;
-    items: CartItem[];
-    customer?: Customer | null;
-    timestamp: number;
-    total: number;
-    notes?: string;
-    branchId?: string;
-}
 
-export type TopSellingItem = Product & {
-    quantitySold: number;
+
+
+
 };
 
 export type UserRole = 'admin' | 'manager' | 'vendor_operator';
@@ -125,6 +54,7 @@ export interface UserProfile {
     lastPage?: string; // most recent route this user opened
     appVersion?: string; // Latest app version used by the user
     deviceType?: string; // 'Desktop App' | 'Mobile App' | 'Mobile' | 'Web' - written by UserActivityTracker
+    userAgent?: string;
     country?: string; // Resolved at sign-in by UserActivityTracker; absent when lookup failed
     ip?: string; // Last known public IP, for the admin login-location column
     /**
@@ -183,222 +113,39 @@ export interface UserProfile {
 }
 
 
-export interface CustomerInsightsOutput {
-    summary: string;
-    productSuggestions: string[];
-    engagementTactics: string[];
-    createdAt?: any;
-}
 
-export interface Customer {
-    id: string;
-    businessId: string;
-    name: string;
-    email: string;
-    phone?: string;
-    code?: string;
-    loyaltyPoints?: number;
-    totalSpent?: number;
-    lastPurchaseDate?: any;
-    createdAt?: any;
-    updatedAt?: any;
-    lowercaseName?: string;
-    lowercaseEmail?: string;
-    aiInsights?: CustomerInsightsOutput;
-    branchId?: string;
-    /**
-     * Free-form labels the shop applies itself — "wholesale", "pays late",
-     * "Ikeja branch". Deliberately uncontrolled: a fixed taxonomy cannot cover
-     * what a corner shop and a salon both need.
-     *
-     * Stored on the customer document rather than in a subcollection. A tag is
-     * read on every list render, and Firestore cost is a standing constraint
-     * here — a subcollection would mean one query per customer.
-     */
-    tags?: string[];
-    /**
-     * The shop's own note about this person. One field, overwritten in place.
-     *
-     * Not an append-only activity log, on purpose: a log needs a subcollection,
-     * which costs a read per customer on every open and a write per entry. If a
-     * timeline is ever wanted, it needs its own design and its own budget.
-     */
-    notes?: string;
-}
 
-export interface Receipt {
-    id: string;
-    businessId: string;
-    receiptNumber?: string;
-    items: {
-        productId: string;
-        name: string;
-        quantity: number;
-        price: number;
-        costPrice?: number;
-        /**
-         * True when the cashier typed this price over the shelf price, with
-         * `listPrice` recording what the shelf said at the time.
-         *
-         * Both are captured at the moment of sale because they cannot be
-         * recovered later: comparing a historic sale against the product's
-         * *current* price makes every honest price rise look like an override.
-         * Read by the loss-prevention scan (src/lib/forensics.ts, check D4).
-         * Absent on sales recorded before this was added.
-         */
-        priceOverridden?: boolean;
-        listPrice?: number;
-    }[];
-    customer?: { id: string, name: string, email: string } | null;
-    subtotal: number;
-    tax: number;
-    discount: number;
-    total: number;
-    totalCost?: number;
-    profit?: number;
-    paymentMethod: 'Cash' | 'Card' | 'Bank Transfer' | 'Invoice';
-    status?: 'paid' | 'unpaid' | 'pending';
-    createdAt: any; // Can be a Date or a Firestore Timestamp
-    /** True when an admin chose the sale date instead of using the sync clock. */
-    isBackdated?: boolean;
-    createdBy?: string;
-    flagged?: {
-        reason: string;
-        openTime?: string;
-        closeTime?: string;
-    } | null;
-    branchId?: string;
-    isOffline?: boolean;
-    syncedAt?: any;
-    wasScanned?: boolean;
-    receiptMethod?: 'printed' | 'digital' | 'none';
-}
 
-export interface OnlineOrder {
-    id: string;
-    businessId: string;
-    customerId?: string;
-    customerName: string;
-    customerEmail: string;
-    customerPhone: string;
-    customerAddress: string;
-    items: {
-        productId: string;
-        name: string;
-        quantity: number;
-        price: number;
-    }[];
-    total: number;
-    shippingDetails?: {
-        name: string;
-        price: number;
-        type: 'delivery' | 'pickup';
-        location?: string;
-    };
-    status: 'pending' | 'paid' | 'shipped' | 'cancelled';
-    paymentMethod?: 'Paystack' | 'Bank Transfer';
-    paymentReference?: string;
-    createdAt: any;
-    branchId?: string;
-}
 
-export interface QueuedAction {
-    id: string;
-    type: 'complete-sale' | 'update-product' | 'add-customer' | 'update-customer' | 'delete-customer' | 'bulk-update-products' | 'add-product' | 'delete-product' | 'update-settings' | 'add-audit-log' | 'delete-receipt';
-    description: string;
-    payload: any;
-    timestamp: number;
-    status: 'pending' | 'processing' | 'completed' | 'failed';
-    errorMessage?: string;
-}
 
-export interface AISuggestion {
-    title: string;
-    description: string;
-    severity: 'High' | 'Medium' | 'Low';
-}
 
-export interface AISuggestions {
-    suggestions: AISuggestion[];
-    createdAt: any; // Firestore Timestamp
-}
+
+
+
+
+
+
+
 
 // --- New AI Analysis Types ---
 
-export interface SmartStockRecommendation {
-    productId: string;
-    name: string;
-    recommendedStock: number;
-    confidence: number;
-    reason: string;
-}
 
-export interface DemandHeatmap {
-    title: string;
-    insight: string;
-}
 
-export interface RevenueOpportunity {
-    productId: string;
-    name: string;
-    lostRevenue: number;
-    reason: string;
-    suggestion: string;
-}
 
-export interface SmartMerchandising {
-    primaryProductName: string;
-    pairedProductName: string;
-    insight: string;
-    recommendation: string;
-}
 
-export interface SlowMovingInventory {
-    productId: string;
-    name: string;
-    daysUnsold: number;
-    capitalLocked: number;
-    suggestion: string;
-}
 
-export interface PricingRecommendation {
-    productId: string;
-    name: string;
-    currentPrice: number;
-    suggestedPrice: number;
-    strategy: 'Psychological' | 'Penetration' | 'Bundle';
-    reasoning: string;
-}
 
-export interface IrresistibleOffer {
-    offerName: string;
-    productIds: string[];
-    productNames: string[];
-    originalTotalPrice: number;
-    suggestedBundlePrice: number;
-    savings: number;
-    marketingPitch: string;
-}
 
-export interface BusinessHealth {
-    score: number; // 0-100
-    status: 'Healthy' | 'Needs Attention' | 'At Risk';
-    summary: string; // A brief sentence about the score.
-}
 
-export interface CustomerSegment {
-    segmentName: string;
-    description: string;
-    customers: {
-        name: string;
-        email?: string;
-    }[];
-    suggestedCampaign: {
-        title: string;
-        body: string;
-        ctaText: string;
-    };
-}
+
+
+
+
+
+
+
+
+
 
 
 export interface BlogHeadline {

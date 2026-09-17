@@ -1,0 +1,37 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="zenOrange" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FB923C"/>
+      <stop offset="50%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+    <linearGradient id="zenGlow" x1="40" y1="30" x2="160" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="zenShadow" x="10" y="15" width="180" height="180" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#EA580C" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#zenShadow)">
+    <!-- Back Sheet -->
+    <rect x="58" y="24" width="98" height="132" rx="14" fill="#FDBA74" opacity="0.6"/>
+
+    <!-- Main Front Document Sheet -->
+    <path d="M44 38C44 29.1634 51.1634 22 60 22H118L156 60V156C156 164.837 148.837 172 140 172H60C51.1634 172 44 164.837 44 156V38Z" fill="url(#zenOrange)"/>
+    
+    <!-- Top-Right Fold Corner -->
+    <path d="M118 22V50C118 55.5228 122.477 60 128 60H156L118 22Z" fill="#C2410C"/>
+    
+    <!-- Inner Highlighting Lines / Fold Glint -->
+    <path d="M60 23H117L155 61V156C155 164.284 148.284 171 140 171H60C51.7157 171 45 164.284 45 156V39C45 30.7157 51.7157 24 60 24Z" stroke="url(#zenGlow)" stroke-width="2"/>
+
+    <!-- Document Content Lines / Zen Signature Z -->
+    <path d="M66 84H110" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M66 110L134 110L76 138L134 138" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Modern Bullet Accent Dot -->
+    <circle cx="126" cy="84" r="5" fill="#FFFFFF"/>
+  </g>
+</svg>

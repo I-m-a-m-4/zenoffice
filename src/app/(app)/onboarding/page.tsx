@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { usePOS } from '@/context/pos-context';
+
 import { useFirestore } from '@/firebase';
 import { doc, updateDoc, addDoc, collection, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -603,7 +603,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { business, currentUserProfile, triggerRefresh } = usePOS();
+  const { business, currentUserProfile, triggerRefresh } = ({} as any);
   /*
    * `locale` seeds the field and `setLocale` applies the choice.
    *

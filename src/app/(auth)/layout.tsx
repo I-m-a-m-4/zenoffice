@@ -28,7 +28,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       // to avoid interrupting the signup flow.
       const isSignupPage = pathname === '/signup' || pathname.startsWith('/signup?');
       if (!isSignupPage) {
-        router.replace('/sales/pos/select-products');
+        router.replace('/dashboard');
       }
     }
 

@@ -40,7 +40,6 @@ export const createUserProfileDocument = async (
       
     let businessId: string;
     let userRole: UserRole;
-    let branchId: string | undefined;
     let surveyCompleted = true; // Default for invited users
 
     if (invitationCode) {
@@ -59,7 +58,6 @@ export const createUserProfileDocument = async (
 
       businessId = invitationData.businessId;
       userRole = invitationData.role;
-      branchId = invitationData.branchId;
       batch.delete(invDocRef);
     } else {
       const invitationQuery = query(collection(firestore, 'invitations'), where('email', '==', user.email));
@@ -88,7 +86,7 @@ export const createUserProfileDocument = async (
         ownerId: user.uid,
         plan: 'starter',
         status: 'active',
-        settings: { currency: 'NGN', timezone: localTimezone, defaultTaxRate: 0, productCategories: [] }
+        settings: { currency: 'NGN', timezone: localTimezone, defaultTaxRate: 0 }
       };
       batch.set(businessDocRef, newBusiness);
     }
@@ -106,9 +104,6 @@ export const createUserProfileDocument = async (
       authProvider: user.providerData?.[0]?.providerId === 'google.com' ? 'google' : 'email',
     };
 
-    if (branchId) {
-      userProfile.branchId = branchId;
-    }
     // Recorded so firestore.rules can verify this member was actually invited to
     // `businessId`, rather than taking the claim on trust. The invitation is
     // deleted in this same batch, but rules evaluate `get()` against the

@@ -1,12 +1,17 @@
 {
-    "name": "Zeneva",
-    "short_name": "Zeneva",
-    "description": "The all-in-one business management solution.",
+    "name": "ZenOffice",
+    "short_name": "ZenOffice",
+    "description": "The complete office suite for students and professionals. View, edit, and organize Word, Excel, and PDF documents.",
     "start_url": "/dashboard",
     "display": "standalone",
-    "background_color": "#241e1b",
-    "theme_color": "#241e1b",
+    "background_color": "#000000",
+    "theme_color": "#ea580c",
     "icons": [
+        {
+            "src": "/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        },
         {
             "src": "/icon-pwa.png",
             "sizes": "192x192",

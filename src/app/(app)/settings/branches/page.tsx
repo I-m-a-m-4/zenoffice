@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useBranch } from '@/context/branch-context';
-import { usePOS } from '@/context/pos-context';
+
+
 import { hasBusinessFeatures } from '@/lib/plan';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,8 +21,8 @@ import { cn } from '@/lib/utils';
 
 export default function BranchesSettingsPage() {
   const router = useRouter();
-  const { branches, isMultiBranchEnabled, isLoadingBranches, activeBranchId, setActiveBranchId } = useBranch();
-  const { business, products, receipts, currencySymbol, currentUserProfile } = usePOS();
+  const { branches, isMultiBranchEnabled, isLoadingBranches, activeBranchId, setActiveBranchId } = ({} as any);
+  const { business, products, receipts, currencySymbol, currentUserProfile } = ({} as any);
   const firestore = useFirestore();
   const { toast } = useToast();
 

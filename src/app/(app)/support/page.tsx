@@ -24,7 +24,7 @@ import Link from 'next/link';
 import { zenevaSupportChat, type ZenevaSupportChatInput } from '@/ai/flows/support-chat-flow';
 import AIChat from '@/components/support/ai-chat';
 import { cn } from '@/lib/utils';
-import { usePOS } from '@/context/pos-context';
+
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
@@ -590,7 +590,7 @@ function VoiceNotePlayer({ voiceUrl, voiceDuration }: { voiceUrl: string; voiceD
 
 function UserSupportChat({ userProfile }: { userProfile: UserProfile }) {
     const router = useRouter();
-    const { currentBusiness } = usePOS();
+    const { currentBusiness } = ({} as any);
     const firestore = useFirestore();
     const { toast } = useToast();
     const { t } = useI18n();

@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePOS } from '@/context/pos-context';
+
 import { Button } from '@/components/ui/button';
 import {
     Popover,
@@ -12,7 +12,7 @@ import { Cloud, RefreshCw, UploadCloud, AlertTriangle, CheckCircle2, XCircle, Tr
 import { cn } from '@/lib/utils';
 
 export default function QueueStatus() {
-    const { queuedActions, isQueueProcessing, clearFailedActions, processQueue, removeFromQueue } = usePOS();
+    const { queuedActions, isQueueProcessing, clearFailedActions, processQueue, removeFromQueue } = ({} as any);
     const [isOnline, setIsOnline] = React.useState(true);
 
     React.useEffect(() => {

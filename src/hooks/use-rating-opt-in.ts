@@ -40,7 +40,7 @@
 
 import * as React from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { usePOS } from '@/context/pos-context';
+
 import { useToast } from '@/hooks/use-toast';
 
 /**
@@ -63,7 +63,7 @@ export interface RatingOptIn {
 }
 
 export function useRatingOptIn(): RatingOptIn {
-  const { business, firestore, addToQueue, mutateBusiness, triggerRefresh } = usePOS();
+  const { business, firestore, addToQueue, mutateBusiness, triggerRefresh } = ({} as any);
   const { toast } = useToast();
   const [isSaving, setIsSaving] = React.useState(false);
 

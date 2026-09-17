@@ -2,7 +2,7 @@
 "use client";
 
 import dynamic from 'next/dynamic';
-import { usePOS } from '@/context/pos-context';
+
 import { Loader2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 
@@ -17,7 +17,7 @@ const CategoryPieChart = dynamic(() => import('@/components/dashboard/category-p
 });
 
 export default function DashboardClientContent() {
-    const { receipts, products, isLoading, currencySymbol } = usePOS();
+    const { receipts, products, isLoading, currencySymbol } = ({} as any);
 
     if (isLoading) {
         return (

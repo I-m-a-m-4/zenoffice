@@ -12,7 +12,7 @@ import {
   CommandSeparator,
 } from '@/components/ui/command';
 import { Home, Package, ShoppingCart, Users, LifeBuoy, CreditCard, Settings, FileText, Bot, Wallet, Truck } from 'lucide-react';
-import { usePOS } from '@/context/pos-context';
+
 
 interface CommandMenuProps {
     open: boolean;
@@ -36,7 +36,7 @@ const navLinks = [
 
 export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
     const router = useRouter();
-    const { products, currentUserProfile } = usePOS();
+    const { products, currentUserProfile } = ({} as any);
     const userRole = currentUserProfile?.role;
 
     const runCommand = React.useCallback((command: () => unknown) => {

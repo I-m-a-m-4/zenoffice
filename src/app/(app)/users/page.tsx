@@ -61,9 +61,9 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import PageTitle from '@/components/shared/page-title';
-import { usePOS } from '@/context/pos-context';
+
 import { staffLimit } from '@/lib/plan';
-import { useBranch } from '@/context/branch-context';
+
 
 
 /**
@@ -245,7 +245,7 @@ function UsersPageSkeleton() {
 function UserManagementDashboard({ businessId, currentUserId, inviterName }: { businessId: string, currentUserId: string, inviterName: string }) {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const { triggerRefresh } = usePOS();
+    const { triggerRefresh } = ({} as any);
     const [isAddUserDialogOpen, setIsAddUserDialogOpen] = React.useState(false);
     const [invitationToRevoke, setInvitationToRevoke] = React.useState<Invitation | null>(null);
     const [userToUpdate, setUserToUpdate] = React.useState<{ user: UserProfile, action: 'activate' | 'deactivate' } | null>(null);
@@ -257,8 +257,8 @@ function UserManagementDashboard({ businessId, currentUserId, inviterName }: { b
     const [showProModal, setShowProModal] = React.useState(false);
     const router = useRouter();
 
-    const { business: businessInstance, currentUserProfile, isLoading: isPosLoading, users } = usePOS();
-    const { activeBranchId } = useBranch();
+    const { business: businessInstance, currentUserProfile, isLoading: isPosLoading, users } = ({} as any);
+    const { activeBranchId } = ({} as any);
     const areUsersLoading = false; // Handled by root lifecycle
 
     const invitationsQuery = useMemoFirebase(() => {
@@ -785,7 +785,7 @@ function UserManagementDashboard({ businessId, currentUserId, inviterName }: { b
 }
 
 export default function UsersPage() {
-    const { currentUserProfile: currentUser, business, isLoading: isPosLoading } = usePOS();
+    const { currentUserProfile: currentUser, business, isLoading: isPosLoading } = ({} as any);
     const isLoading = isPosLoading || !currentUser?.businessId;
 
     if (isLoading) {

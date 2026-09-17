@@ -29,7 +29,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Flame, Target } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { usePOS } from '@/context/pos-context';
+
 import { useBusinessRating } from '@/hooks/use-business-rating';
 
 /** Compact currency, matching the Reports panel and the top-bar tooltip. */
@@ -45,7 +45,7 @@ function money(symbol: string, value: number): string {
 const STREAK_URGENCY_FLOOR = 3;
 
 export default function TodaysFocus() {
-  const { currencySymbol } = usePOS();
+  const { currencySymbol } = ({} as any);
   const { score, topOpportunity, streak, streakAtRisk, enabled } = useBusinessRating();
 
   const streakUrgent = streakAtRisk && streak >= STREAK_URGENCY_FLOOR;

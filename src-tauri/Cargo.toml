@@ -42,6 +42,8 @@ tauri-plugin-process = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-http = "2"
 tauri-plugin-notification = "2"
+notify = "8.2.0"
+dirs = "7.0.0"
 
 # UI Automation, for reading a legacy POS grid straight out of its window.
 # `windows` 0.61 is already in the tree via tauri, so this adds features rather than

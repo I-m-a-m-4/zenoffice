@@ -24,7 +24,7 @@
 
 import * as React from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { usePOS } from '@/context/pos-context';
+
 import { secureStorage } from '@/lib/secure-storage';
 import {
   BENCHMARK_COLLECTION,
@@ -53,7 +53,7 @@ interface CachedBenchmark {
  *   behaves as before.
  */
 export function useRatingBenchmark(enabled: boolean = true): RatingBenchmark | null {
-  const { firestore, business } = usePOS();
+  const { firestore, business } = ({} as any);
   const [benchmark, setBenchmark] = React.useState<RatingBenchmark | null>(null);
 
   React.useEffect(() => {

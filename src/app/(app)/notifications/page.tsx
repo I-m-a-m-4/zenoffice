@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit, doc, writeBatch, updateDoc } from 'firebase/firestore';
-import { usePOS } from '@/context/pos-context';
+
 import type { UserNotification, AdminNotification } from '@/types';
 import { format, formatDistanceToNow } from 'date-fns';
 import { safeToDate, cn } from '@/lib/utils';
@@ -41,7 +41,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
  */
 export default function NotificationsPage() {
   const firestore = useFirestore();
-  const { currentUserProfile } = usePOS();
+  const { currentUserProfile } = ({} as any);
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();

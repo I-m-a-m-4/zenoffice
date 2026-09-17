@@ -16,9 +16,6 @@ import type { UserProfile } from '@/types';
  * out of a theft report while still recording exactly what happened.
  */
 type AuditAction =
-    | 'product.create' | 'product.update' | 'product.delete' | 'product.bulk_update' | 'product.stock_adjustment'
-    | 'sale.create' | 'sale.void'
-    | 'customer.create' | 'customer.update' | 'customer.delete' | 'customer.merge'
     | 'user.invite' | 'user.update_status' | 'user.impersonate' | 'user.stop_impersonate'
     | 'settings.update'
     | 'billing.grant_lifetime' | 'billing.extend_trial' | 'billing.assign_plan';
@@ -73,7 +70,6 @@ export const logAuditEvent = async (
 
         const logData = {
             businessId,
-            branchId: user?.branchId || event.details?.branchId || null,
             userId: user?.id || 'unknown',
             userName: user?.name || 'Unknown User',
             userEmail: user?.email || 'N/A',

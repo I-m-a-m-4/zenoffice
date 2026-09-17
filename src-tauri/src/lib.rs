@@ -1,4 +1,5 @@
 mod win_grid;
+mod watcher;
 
 #[cfg(desktop)]
 use tauri::Manager;
@@ -99,6 +100,9 @@ pub fn run() {
             let quit_i = MenuItem::with_id(app, "quit", "Quit Zeneva", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "Show Zeneva Dashboard", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+
+            // Start the downloads watcher
+            watcher::start_downloads_watcher(app.handle().clone());
 
             // Build tray icon (non-fatal if icon is missing)
             if let Some(tray_icon) = app.default_window_icon().cloned() {

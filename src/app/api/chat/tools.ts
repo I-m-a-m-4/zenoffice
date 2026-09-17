@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 import { runForensicScan, summariseReport } from '@/lib/forensics';
-import { computeBusinessRating, RATING_WINDOW_DAYS } from '@/lib/business-rating';
+
 // Deterministic product matching and bulk arithmetic, shared with the importer. The
 // model supplies names and percentages; these decide which product and what number, so
 // a paraphrase can never resolve to the wrong row and no value is model-authored.

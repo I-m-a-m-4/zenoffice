@@ -13,8 +13,8 @@ import { Markdown } from '@/components/ai-insights/markdown';
 import { ToolResult } from '@/components/ai-insights/tool-renderer';
 import { validateProposal, buildSaleFromProposal } from '@/components/ai-insights/proposal-guard';
 import { ZenStatus } from '@/components/ai-insights/zen-status';
-import { trackFeature } from '@/lib/product-telemetry';
-import { usePOS } from '@/context/pos-context';
+
+
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,7 @@ export default function ZenAIWidget({ isOpen, onClose, dictationTrigger = 0 }: Z
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
-  const { addToQueue, products, customers, currentUserProfile } = usePOS();
+  const { addToQueue, products, customers, currentUserProfile } = ({} as any);
 
   const businessId = currentUserProfile?.businessId || (user as any)?.businessId || '';
   const [businessData, setBusinessData] = React.useState<any>(null);

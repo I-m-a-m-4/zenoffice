@@ -32,7 +32,7 @@ import { ArrowUpRight, Award, Flame, Lock, Trophy } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useBusinessRating } from '@/hooks/use-business-rating';
-import { TIERS, tierFor } from '@/lib/business-rating';
+
 
 interface Badge {
   id: string;

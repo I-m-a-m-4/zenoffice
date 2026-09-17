@@ -32,7 +32,7 @@ import { Button } from '@/components/ui/button';
 import { useFirestore, useUser } from '@/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { isNativeApp, isMobileApp } from '@/lib/platform';
-import { usePOS } from '@/context/pos-context';
+
 
 interface UpdateSettings {
   forceUpdateNative: boolean;
@@ -54,7 +54,7 @@ export function UpdateRequiredModal() {
   const [settings, setSettings] = useState<UpdateSettings | null>(null);
   const firestore = useFirestore();
   const { user } = useUser();
-  const { business } = usePOS();
+  const { business } = ({} as any);
 
   useEffect(() => {
     // Only run this on native apps (desktop/mobile)

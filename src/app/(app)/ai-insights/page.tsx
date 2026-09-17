@@ -27,8 +27,8 @@ import { ZenStatus, labelForTool } from '@/components/ai-insights/zen-status';
 import { Markdown } from '@/components/ai-insights/markdown';
 import { ToolResult } from '@/components/ai-insights/tool-renderer';
 import { validateProposal, buildSaleFromProposal } from '@/components/ai-insights/proposal-guard';
-import { trackFeature } from '@/lib/product-telemetry';
-import { usePOS } from '@/context/pos-context';
+
+
 import { cn } from '@/lib/utils';
 import { aiMonthlyLimit, effectivePlan } from '@/lib/plan';
 import { apiBase } from '@/lib/platform';
@@ -156,7 +156,7 @@ function ZenAIChat({ businessId, user, firestore }: { businessId: string; user: 
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { addToQueue, products, customers, currentUserProfile } = usePOS();
+  const { addToQueue, products, customers, currentUserProfile } = ({} as any);
 
   const [sessionId, setSessionId] = useState<string>(() => {
     return searchParams.get('session') || `session_${Date.now()}`;
@@ -1083,7 +1083,7 @@ function ZenAIChat({ businessId, user, firestore }: { businessId: string; user: 
 
 export default function ZenAIPage() {
   const { user } = useUser();
-  const { business } = usePOS();
+  const { business } = ({} as any);
   const firestore = useFirestore();
   const [mounted, setMounted] = useState(false);
 

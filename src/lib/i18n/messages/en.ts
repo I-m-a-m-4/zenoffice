@@ -2220,8 +2220,8 @@ const en = {
     loadingWorkspace: 'Loading your workspace...',
     serviceUnavailable: 'Authentication service not available.',
     tryAgainShort: 'Please try again.',
-    legalSignIn: 'Zeneva is a registered business application. Corporate Affairs Commission (CAC) Registration — BN: 9673520. All rights reserved. By signing in, you agree to our',
-    legalSignUp: 'Zeneva is a registered business application. Corporate Affairs Commission (CAC) Registration — BN: 9673520. All rights reserved. By signing up, you agree to our',
+    legalSignIn: 'Zen Office is a registered business application. Corporate Affairs Commission (CAC) Registration — BN: 9673520. All rights reserved. By signing in, you agree to our',
+    legalSignUp: 'Zen Office is a registered business application. Corporate Affairs Commission (CAC) Registration — BN: 9673520. All rights reserved. By signing up, you agree to our',
     legalAnd: 'and',
     // --- Welcome carousel. `\n` is the deliberate line break the design shows;
     // each locale places it where its own headline reads best. ---

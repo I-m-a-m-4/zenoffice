@@ -16,8 +16,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ChevronDown } from 'lucide-react';
 import { sendInvitationEmail } from '@/lib/email';
 import { v4 as uuidv4 } from 'uuid';
-import { usePOS } from '@/context/pos-context';
-import { useBranch } from '@/context/branch-context';
+
+
 
 interface AddUserDialogProps {
     isOpen: boolean;
@@ -49,8 +49,8 @@ const PLAN_USER_LIMITS: Record<string, number> = {
 export default function AddUserDialog({ isOpen, onOpenChange, businessId, businessName, inviterName, onSuccess, currentUserCount, pendingInvitationCount }: AddUserDialogProps) {
     const { toast } = useToast();
     const firestore = useFirestore();
-    const { business } = usePOS();
-    const { activeBranchId } = useBranch();
+    const { business } = ({} as any);
+    const { activeBranchId } = ({} as any);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const plan = business?.plan || 'starter';

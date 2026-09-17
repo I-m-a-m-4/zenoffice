@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { usePOS } from "@/context/pos-context";
+
 import {
   AlertTriangle,
   CheckCircle,
@@ -153,7 +153,7 @@ export default function ProductDataQualityTab() {
     items: Product[];
   } | null>(null);
 
-  const { products, isLoading } = usePOS();
+  const { products, isLoading } = ({} as any);
   
   const analysis = useMemo(() => {
     if (!products) return null;

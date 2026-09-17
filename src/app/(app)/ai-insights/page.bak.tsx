@@ -5,7 +5,7 @@ import { businessAnalysis } from "@/ai/flows/business-analysis-flow";
 import type { BusinessAnalysisOutput, SmartStockRecommendation, RevenueOpportunity, SmartMerchandising, SlowMovingInventory, Product, Customer, CustomerSegment, PricingRecommendation, BusinessInstance, IrresistibleOffer, BlogHeadline, ContentPlanner } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { usePOS } from "@/context/pos-context";
+
 import { Lightbulb, Loader2, Package, TrendingUp, ShoppingCart, AlertTriangle, Users, Bot, Layers, DollarSign, Send, Edit, Copy, Mail, Search, ShoppingBasket, TrendingDown, Info, PenTool, ShieldQuestion, Activity, CloudOff, Database, Wifi, Terminal } from "lucide-react";
 import React, { useState, useTransition, useEffect, useMemo } from "react";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
@@ -1119,7 +1119,7 @@ const ContentPlannerCard = ({ planner }: { planner: ContentPlanner }) => (
 
 function ExecutiveBriefingTab() {
     const [isPending, startTransition] = useTransition();
-    const { products, receipts, business, currencySymbol, onlineOrders, customers, triggerRefresh } = usePOS();
+    const { products, receipts, business, currencySymbol, onlineOrders, customers, triggerRefresh } = ({} as any);
     const [analysis, setAnalysis] = useState<BusinessAnalysisOutput | null>(business?.settings?.businessAnalysis || null);
     const [detailProduct, setDetailProduct] = React.useState<TopPerformingProduct | null>(null);
     const [stockRecProduct, setStockRecProduct] = React.useState<SmartStockRecommendation | null>(null);
@@ -1619,7 +1619,7 @@ function ExecutiveBriefingTab() {
 }
 
 export default function AiInsightsPage() {
-    const { isLoading: isPosLoading } = usePOS();
+    const { isLoading: isPosLoading } = ({} as any);
     return (
         <div className="space-y-6">
             <PageTitle

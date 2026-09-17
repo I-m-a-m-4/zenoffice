@@ -19,7 +19,7 @@ import useDodoPayments from '@/hooks/use-dodopayments';
 import { track } from '@vercel/analytics';
 import { AI_MONTHLY_LIMITS, effectivePlan, isPaidPlan, isPaidPlanExpired } from '@/lib/plan';
 import { apiBase } from '@/lib/platform';
-import { usePOS } from '@/context/pos-context';
+
 import { useI18n } from '@/context/i18n-context';
 
 const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
@@ -108,7 +108,7 @@ const PaystackSubscriptionButton = ({
     const { toast } = useToast();
     const firestore = useFirestore();
     const { initializePayment, isSdkReady: isScriptLoaded } = usePaystack();
-    const { isImpersonating } = usePOS();
+    const { isImpersonating } = ({} as any);
 
     const handleSuccessfulPayment = useCallback(async (transaction: any) => {
         if (!firestore || !userProfile || !businessInstance) {
@@ -306,7 +306,7 @@ const DodoSubscriptionButton = ({
     const { toast } = useToast();
     const firestore = useFirestore();
     const { initializeCheckout, isScriptLoaded } = useDodoPayments();
-    const { isImpersonating } = usePOS();
+    const { isImpersonating } = ({} as any);
 
     const handleSubscribe = useCallback(async () => {
         if (isImpersonating) {

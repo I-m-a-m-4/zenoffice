@@ -189,7 +189,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { Switch } from '@/components/ui/switch';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { usePOS } from '@/context/pos-context';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -1816,6 +1816,9 @@ function UsageAnalyticsTab({ users, businesses }: { users: UserProfile[]; busine
                                 const withSteps = visibleSignups.filter(s => s.steps.length > 0);
                                 const hitOnboarding = withSteps.filter(s => s.steps.some(p => p.label === '/onboarding')).length;
                                 const hitDashboard  = withSteps.filter(s => s.steps.some(p => p.label === '/dashboard')).length;
+                                const hitEditorDoc  = withSteps.filter(s => s.steps.some(p => p.label.includes('/editor/document'))).length;
+                                const hitEditorExcel = withSteps.filter(s => s.steps.some(p => p.label.includes('/editor/excel'))).length;
+                                const hitEditorPdf  = withSteps.filter(s => s.steps.some(p => p.label.includes('/editor/pdf'))).length;
                                 const hitPOS        = withSteps.filter(s => s.steps.some(p => p.label === '/sales/pos/select-products')).length;
                                 const loopedBack    = withSteps.filter(s => {
                                     const seen = new Set<string>();
@@ -1828,11 +1831,14 @@ function UsageAnalyticsTab({ users, businesses }: { users: UserProfile[]; busine
                                 const bounced = withSteps.filter(s => s.steps.length === 1).length;
                                 const pct = (n: number) => withSteps.length ? `${Math.round((n / withSteps.length) * 100)}%` : '—';
                                 const insights: { icon: string; text: string; tone: string }[] = [];
-                                if (hitOnboarding) insights.push({ icon: '🎯', text: `${pct(hitOnboarding)} of activated users reached /onboarding.`, tone: 'text-primary' });
-                                if (hitDashboard)  insights.push({ icon: '📊', text: `${pct(hitDashboard)} made it to the dashboard — good activation signal.`, tone: 'text-green-600' });
-                                if (hitPOS)        insights.push({ icon: '🛒', text: `${pct(hitPOS)} tried the POS in their first session — strong intent.`, tone: 'text-emerald-600' });
-                                if (loopedBack)    insights.push({ icon: '🔄', text: `${pct(loopedBack)} revisited the same page — possible confusion or deliberate exploration.`, tone: 'text-amber-600' });
-                                if (bounced)       insights.push({ icon: '🚪', text: `${bounced} user${bounced !== 1 ? 's' : ''} opened only one page before leaving.`, tone: 'text-destructive' });
+                                if (hitOnboarding)  insights.push({ icon: '🎯', text: `${pct(hitOnboarding)} of activated users reached /onboarding.`, tone: 'text-primary' });
+                                if (hitDashboard)   insights.push({ icon: '📊', text: `${pct(hitDashboard)} made it to the ZenOffice dashboard — good activation signal.`, tone: 'text-green-600' });
+                                if (hitEditorDoc)   insights.push({ icon: '📝', text: `${pct(hitEditorDoc)} opened Zen Document (Word) Editor — writing adoption.`, tone: 'text-blue-600' });
+                                if (hitEditorExcel) insights.push({ icon: '📈', text: `${pct(hitEditorExcel)} created/edited Zen Spreadsheets (Excel) — financial/data modeling.`, tone: 'text-emerald-600' });
+                                if (hitEditorPdf)   insights.push({ icon: '📑', text: `${pct(hitEditorPdf)} used Zen PDF Suite (signatures, receipts & conversion).`, tone: 'text-rose-600' });
+                                if (hitPOS)         insights.push({ icon: '🛒', text: `${pct(hitPOS)} tried the POS in their first session — strong commercial intent.`, tone: 'text-emerald-600' });
+                                if (loopedBack)     insights.push({ icon: '🔄', text: `${pct(loopedBack)} revisited the same page — possible confusion or deliberate exploration.`, tone: 'text-amber-600' });
+                                if (bounced)        insights.push({ icon: '🚪', text: `${bounced} user${bounced !== 1 ? 's' : ''} opened only one page before leaving.`, tone: 'text-destructive' });
                                 const loginLoop = withSteps.filter(s => {
                                     const seq = s.steps.map(p => p.label);
                                     for (let i = 0; i < seq.length - 1; i++) {
@@ -1975,6 +1981,9 @@ function UsageAnalyticsTab({ users, businesses }: { users: UserProfile[]; busine
                                 // Key journey stages
                                 const hitOnboarding = js.some(s => s.label === '/onboarding');
                                 const hitDashboard  = js.some(s => s.label === '/dashboard');
+                                const hitEditorDoc  = js.some(s => s.label.includes('/editor/document'));
+                                const hitEditorExcel = js.some(s => s.label.includes('/editor/excel'));
+                                const hitEditorPdf  = js.some(s => s.label.includes('/editor/pdf'));
                                 const hitPOS        = js.some(s => s.label === '/sales/pos/select-products');
                                 const hitInventory  = js.some(s => s.label === '/inventory');
                                 const hitBilling    = js.some(s => s.label === '/billing');
@@ -1996,6 +2005,9 @@ function UsageAnalyticsTab({ users, businesses }: { users: UserProfile[]; busine
 
                                 if (js.length === 0) observations.push({ icon: '👻', text: 'Never opened a page after signing up.', tone: 'text-destructive' });
                                 if (js.length === 1) observations.push({ icon: '🚪', text: `Bounced on the first page (${js[0]?.label}).`, tone: 'text-destructive' });
+                                if (hitEditorDoc) observations.push({ icon: '📝', text: 'Used Zen Document Editor (Word) — active creator.', tone: 'text-blue-600' });
+                                if (hitEditorExcel) observations.push({ icon: '📈', text: 'Used Zen Spreadsheet (Excel) — data & financial modeling.', tone: 'text-emerald-600' });
+                                if (hitEditorPdf) observations.push({ icon: '📑', text: 'Used Zen PDF Suite (Receipts, Signatures, Conversion).', tone: 'text-rose-600' });
                                 if (usedPOS && !onboardingCompleted) observations.push({ icon: '⚡', text: 'Skipped onboarding and went straight to the POS — likely has prior experience.', tone: 'text-emerald-600' });
                                 if (usedPOS && onboardingCompleted) observations.push({ icon: '✅', text: 'Completed onboarding and used the POS — strong activation.', tone: 'text-green-600' });
                                 if (!hitDashboard && js.length > 3) observations.push({ icon: '🗺️', text: 'Explored several pages but never reached the dashboard — may be disoriented.', tone: 'text-amber-600' });
@@ -2026,6 +2038,9 @@ function UsageAnalyticsTab({ users, businesses }: { users: UserProfile[]; busine
                                                     {[
                                                         { label: 'Onboarding', hit: hitOnboarding },
                                                         { label: 'Dashboard',  hit: hitDashboard },
+                                                        { label: 'Zen Docs',   hit: hitEditorDoc },
+                                                        { label: 'Zen Sheets', hit: hitEditorExcel },
+                                                        { label: 'Zen PDF',    hit: hitEditorPdf },
                                                         { label: 'POS',        hit: hitPOS },
                                                         { label: 'Inventory',  hit: hitInventory },
                                                         { label: 'Billing',    hit: hitBilling },
@@ -3829,7 +3844,7 @@ function AdminDashboardContent({
 
             if (currentUserProfile) {
                 await logAuditEvent(firestore, userData.businessId, currentUserProfile, {
-                    action: 'billing.revoke_lifetime',
+                    action: 'billing.revoke_lifetime' as any,
                     entity: { type: 'business', id: userData.businessId, name: userData.name },
                     details: { targetEmail: grantEmail }
                 });
@@ -4112,7 +4127,7 @@ function AdminDashboardContent({
         }
     };
 
-    const { impersonateUser, currentUserProfile } = usePOS();
+    const { impersonateUser, currentUserProfile } = ({} as any);
     const router = useRouter();
 
     const handleImpersonateUser = (user: UserProfile) => {

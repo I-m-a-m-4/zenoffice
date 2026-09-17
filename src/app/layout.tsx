@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import Loader from '@/components/ui/loader';
 import { NavigationEvents } from '@/components/ui/navigation-events';
-import { POSProvider } from '@/context/pos-context';
-import { BranchProvider } from '@/context/branch-context';
+
+
 import { I18nProvider } from '@/context/i18n-context';
 import { LocaleSync } from '@/components/shared/locale-sync';
 import { UserActivityTracker } from '@/components/UserActivityTracker';
@@ -89,7 +89,8 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: [
-      { url: '/icon-pwa.png', type: 'image/png', sizes: '512x512' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/zenoffice-icon.svg', type: 'image/svg+xml' },
       { url: '/favicon.ico', sizes: 'any' },
     ],
     apple: [
@@ -341,8 +342,6 @@ export default function RootLayout({
               <InstallPrompt />
               <TauriUpdater />
               <UpdatePrompt />
-              <BranchProvider>
-                <POSProvider>
                   <LocaleSync />
                   <TauriLayoutWrapper>
                      <DesktopTitleBar />
@@ -352,8 +351,6 @@ export default function RootLayout({
                      </Suspense>
                      {children}
                   </TauriLayoutWrapper>
-                </POSProvider>
-              </BranchProvider>
             </PWAProvider>
           </FirebaseClientProvider>
           </I18nProvider>

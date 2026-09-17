@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { useBranch } from '@/context/branch-context';
-import { usePOS } from '@/context/pos-context';
+
+
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,8 @@ interface BranchSwitcherProps {
 }
 
 export function BranchSwitcher({ variant = 'sidebar', className }: BranchSwitcherProps) {
-  const { activeBranchId, setActiveBranchId, branches, isLoadingBranches } = useBranch();
-  const { currentUserProfile, business } = usePOS();
+  const { activeBranchId, setActiveBranchId, branches, isLoadingBranches } = ({} as any);
+  const { currentUserProfile, business } = ({} as any);
   const { state } = useSidebar();
   const router = useRouter();
   const [showProModal, setShowProModal] = React.useState(false);

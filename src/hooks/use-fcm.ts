@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import { initializeMessaging } from '@/firebase/messaging';
 import { getToken, onMessage } from 'firebase/messaging';
-import { usePOS } from '@/context/pos-context';
+
 import { useFirestore } from '@/firebase';
 import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { updateChannel, isNativeApp } from '@/lib/platform';
 
 export function useFCM() {
-    const { user } = usePOS();
+    const { user } = ({} as any);
     const firestore = useFirestore();
     const { toast } = useToast();
     const [permission, setPermission] = useState<NotificationPermission>('default');

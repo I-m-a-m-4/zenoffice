@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { usePOS } from '@/context/pos-context';
+
 import { useI18n } from '@/context/i18n-context';
 
 /**
@@ -17,9 +17,8 @@ import { useI18n } from '@/context/i18n-context';
  * business default on the next load.
  */
 export function LocaleSync() {
-  const { business } = usePOS();
   const { adoptLocale } = useI18n();
-  const language = business?.settings?.language;
+  const language = 'en';
 
   React.useEffect(() => {
     if (language) adoptLocale(language);

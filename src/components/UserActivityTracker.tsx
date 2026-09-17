@@ -8,11 +8,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { usePathname } from 'next/navigation';
 import { AppConfig } from '@/lib/config';
 import { useI18n } from '@/context/i18n-context';
-import {
-    drainTelemetry,
-    recordDwell,
-    recordRoutePerf,
-} from '@/lib/product-telemetry';
+
 
 /**
  * Routes are keyed on the user doc's `pageViews` map, so the key has to survive
@@ -132,7 +128,7 @@ export function UserActivityTracker() {
             if (routeVisibleSinceRef.current !== null) {
                 routeDwellMsRef.current += at - routeVisibleSinceRef.current;
             }
-            recordDwell(prevRouteKeyRef.current, routeDwellMsRef.current);
+
         }
         routeDwellMsRef.current = 0;
         routeVisibleSinceRef.current = document.visibilityState === 'visible' ? at : null;
@@ -165,7 +161,7 @@ export function UserActivityTracker() {
         let innerFrame = 0;
         const outerFrame = requestAnimationFrame(() => {
             innerFrame = requestAnimationFrame(() => {
-                recordRoutePerf(key, performance.now() - startedAt);
+
             });
         });
         return () => {
@@ -367,11 +363,7 @@ export function UserActivityTracker() {
                         language: localeRef.current,
                         lastPage: pathname || '/',
                         ...pageViewFields,
-                        // Feature counters, dwell time and route render timings.
-                        // Nothing here costs a write of its own — the whole product
-                        // intelligence layer is a few more fields on a write that
-                        // was already happening. See src/lib/product-telemetry.ts.
-                        ...drainTelemetry(),
+
                     }, { merge: true });
 
                     batch.set(sessionRef, {
@@ -476,10 +468,10 @@ export function UserActivityTracker() {
                     routeDwellMsRef.current += Date.now() - routeVisibleSinceRef.current;
                     routeVisibleSinceRef.current = null;
                 }
-                recordDwell(prevRouteKeyRef.current, routeDwellMsRef.current);
+
                 routeDwellMsRef.current = 0;
             }
-            Object.assign(pageViewUpdate, drainTelemetry());
+
 
             const routeLog = sessionLogRef.current.slice(-400);
             if (routeLog.length > 0) {

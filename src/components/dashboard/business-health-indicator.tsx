@@ -40,13 +40,13 @@ import {
 } from "@/components/ui/tooltip"
 import { Flame, Gauge, TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePOS } from '@/context/pos-context';
+
 import { useBusinessRating } from '@/hooks/use-business-rating';
 import { Progress } from '../ui/progress';
 import { Skeleton } from '../ui/skeleton';
 
 export default function BusinessHealthIndicator() {
-  const { business, currencySymbol, isLoading } = usePOS();
+  const { business, currencySymbol, isLoading } = ({} as any);
   const { score, grade, tier, delta, movers, streak, streakAtRisk, topOpportunity, leveledUpTo, enabled } =
     useBusinessRating();
 

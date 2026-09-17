@@ -13,7 +13,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDes
 import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { createUserProfileDocument, waitForUserProfile } from '@/firebase/users';
-import { usePOS } from '@/context/pos-context';
+
 import Link from 'next/link';
 import { Eye, EyeOff, Loader, ChevronLeft, ChevronRight, Building, UserCheck, Play, Pause, Sparkles, ArrowRight, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -82,7 +82,7 @@ function SignupPageContent() {
   const auth = useAuth();
   const firestore = useFirestore();
   const searchParams = useSearchParams();
-  const { triggerRefresh } = usePOS();
+  const { triggerRefresh } = ({} as any);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
@@ -211,13 +211,13 @@ function SignupPageContent() {
             await waitForUserProfile(firestore, user.uid);
             triggerRefresh();
             await new Promise(resolve => setTimeout(resolve, 1500));
-            router.push(invitationCode ? '/sales/pos/select-products' : '/onboarding');
+            router.push(invitationCode ? '/dashboard' : '/onboarding');
           } else {
             const profileData = userDocSnap.data();
             triggerRefresh();
             await new Promise(resolve => setTimeout(resolve, 1500));
             if (profileData.surveyCompleted === false) {
-              router.push(invitationCode ? '/sales/pos/select-products' : '/onboarding');
+              router.push(invitationCode ? '/dashboard' : '/onboarding');
             } else {
               router.push('/dashboard');
             }
@@ -310,13 +310,13 @@ function SignupPageContent() {
 
         // Brief pause so the POS context has time to pick up the new auth state
         await new Promise(resolve => setTimeout(resolve, 1200));
-        router.push(invitationCode ? '/sales/pos/select-products' : '/onboarding');
+        router.push(invitationCode ? '/dashboard' : '/onboarding');
       } else {
         const profileData = userDocSnap.data();
         triggerRefresh();
         await new Promise(resolve => setTimeout(resolve, 1200));
         if (profileData.surveyCompleted === false) {
-          router.push(invitationCode ? '/sales/pos/select-products' : '/onboarding');
+          router.push(invitationCode ? '/dashboard' : '/onboarding');
         } else {
           router.push('/dashboard');
         }
@@ -386,7 +386,7 @@ function SignupPageContent() {
       }).catch(err => console.error('Failed to send welcome email:', err));
 
       await new Promise(resolve => setTimeout(resolve, 1500));
-      router.push(invitationCode ? '/sales/pos/select-products' : '/onboarding');
+      router.push(invitationCode ? '/dashboard' : '/onboarding');
 
     } catch (error: any) {
       let description = t('auth.tryAgainShort');

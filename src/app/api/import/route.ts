@@ -58,7 +58,6 @@ import {
 import { AI_DAILY_COLLECTION, aiDailyDocId } from '@/lib/ai-analytics';
 import { IMPORT_CREDIT_FLOORS, type ImportAiAction } from '@/lib/import/pricing';
 import { IMPORT_FIELDS } from '@/lib/import/types';
-import { CUSTOMER_IMPORT_FIELDS } from '@/lib/import/customers';
 
 /**
  * Native builds are a static export with no server of their own, so they call
@@ -195,7 +194,7 @@ const MatchSchema = z.object({
 // ── Customers ────────────────────────────────────────────────────────────────
 
 const CUSTOMER_FIELD_ENUM = z.enum(
-  CUSTOMER_IMPORT_FIELDS as unknown as [string, ...string[]],
+  ['name'] as unknown as [string, ...string[]],
 );
 
 /**

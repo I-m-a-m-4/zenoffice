@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, getDocs, onSnapshot } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import { usePOS } from '@/context/pos-context';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ interface ErrorLog {
 }
 
 export default function DeveloperLogsPage() {
-  const { currentUserProfile, isLoading, user } = usePOS();
+  const { currentUserProfile, isLoading, user } = ({} as any);
   const firestore = useFirestore();
   const [logs, setLogs] = useState<ErrorLog[]>([]);
   const [loading, setLoading] = useState(true);

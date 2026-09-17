@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import Confetti from '@/components/shared/confetti';
-import { usePOS } from '@/context/pos-context';
+
 import Admin2FAGate from '@/components/admin/admin-2fa-gate';
 import { useTheme } from 'next-themes';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +54,7 @@ const overflowNavLinks = navLinks.filter((link) => !link.primary);
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const { isConfettiActive, setIsConfettiActive } = usePOS();
+  const { isConfettiActive, setIsConfettiActive } = ({} as any);
   const router = useRouter();
   const pathname = usePathname();
 

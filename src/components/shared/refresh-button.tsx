@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { usePOS } from '@/context/pos-context';
+
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 const COOLDOWN_SECONDS = 60;
 
 export default function RefreshButton({ size = "sm" }: { size?: "sm" | "default" | "lg" | "icon" }) {
-  const { triggerRefresh } = usePOS();
+  const { triggerRefresh } = ({} as any);
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [cooldown, setCooldown] = React.useState(0);

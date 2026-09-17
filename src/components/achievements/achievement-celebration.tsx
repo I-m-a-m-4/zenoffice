@@ -17,12 +17,12 @@
 
 import * as React from 'react';
 import { format, isValid } from 'date-fns';
-import { usePOS } from '@/context/pos-context';
+
 import { useAchievements } from '@/hooks/use-achievements';
 import AchievementUnlockedModal from '@/components/achievements/achievement-unlocked-modal';
 
 export default function AchievementCelebration() {
-  const { business, currencySymbol, triggerConfetti } = usePOS();
+  const { business, currencySymbol, triggerConfetti } = ({} as any);
   const { unlock, acknowledgeUnlock } = useAchievements();
 
   // Confetti once per milestone, not once per render — and keyed by id so a second

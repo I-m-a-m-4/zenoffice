@@ -69,7 +69,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { usePOS } from '@/context/pos-context';
+
 import { useToast } from '@/hooks/use-toast';
 import { useAchievements } from '@/hooks/use-achievements';
 import { useCountUp } from '@/hooks/use-count-up';
@@ -80,7 +80,7 @@ import type { Achievement, AchievementKind, AchievementLadder, AchievementSet } 
 /* ───────────────────────────── shared formatting ──────────────────────────── */
 
 function useFigureFormatter() {
-  const { currencySymbol } = usePOS();
+  const { currencySymbol } = ({} as any);
   return React.useCallback(
     (value: number, isMoney: boolean) =>
       isMoney
@@ -406,7 +406,7 @@ function GoalSetting({
   set: AchievementSet;
   formatFigure: (value: number, isMoney: boolean) => string;
 }) {
-  const { business, isImpersonating, triggerConfetti } = usePOS();
+  const { business, isImpersonating, triggerConfetti } = ({} as any);
   const businessId = business?.id || null;
   const { toast } = useToast();
 
@@ -620,7 +620,7 @@ function GoalSetting({
 
 export default function AchievementsPage() {
   const { toast } = useToast();
-  const { business, triggerConfetti, currencySymbol } = usePOS();
+  const { business, triggerConfetti, currencySymbol } = ({} as any);
   const { set } = useAchievements();
   const searchParams = useSearchParams();
   const formatFigure = useFigureFormatter();

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePOS } from '@/context/pos-context';
+
 import { hasProFeatures } from '@/lib/plan';
 import PageTitle from '@/components/shared/page-title';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +30,7 @@ import { FeatureGateUpgradeCard } from '@/components/shared/feature-gate';
 import { useFirestore } from '@/firebase';
 import { safeToDate, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { DateRangePicker } from '@/components/reports/date-range-picker';
+
 import type { DateRange } from 'react-day-picker';
 import { startOfDay, endOfDay } from 'date-fns';
 import { NOTIFICATION_FETCH_LIMIT } from '@/lib/lifecycle-notifications';
@@ -92,7 +92,7 @@ const MOCK_STARTER_ALERTS: TerminalAlert[] = [
 ];
 
 export default function TerminalAlertsPage() {
-  const { currentUserProfile, currencySymbol, business } = usePOS();
+  const { currentUserProfile, currencySymbol, business } = ({} as any);
   const firestore = useFirestore();
   const { toast } = useToast();
 

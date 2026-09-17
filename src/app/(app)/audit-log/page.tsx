@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 import Link from 'next/link'; // Import Link
-import { usePOS } from '@/context/pos-context';
+
 import { hasBusinessFeatures } from '@/lib/plan';
-import { useBranch } from '@/context/branch-context';
+
 import { collection, query, orderBy, limit, startAfter, onSnapshot, getDocs } from 'firebase/firestore';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { terminalListenerErrorHandler } from '@/firebase/retry';
@@ -101,8 +101,8 @@ function UpgradeModal({ open, onOpenChange }: { open: boolean, onOpenChange: (op
 }
 
 function AuditLogPageContent() {
-    const { business, isLoading: isPosLoading, auditLogs: cachedAuditLogs, isOnline, receipts, products, customers, users, currencySymbol } = usePOS();
-    const { activeBranchId } = useBranch();
+    const { business, isLoading: isPosLoading, auditLogs: cachedAuditLogs, isOnline, receipts, products, customers, users, currencySymbol } = ({} as any);
+    const { activeBranchId } = ({} as any);
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isScanning, setIsScanning] = React.useState(false);
@@ -530,7 +530,7 @@ function AuditLogPageContent() {
 }
 
 export default function AuditLogPage() {
-    const { business } = usePOS();
+    const { business } = ({} as any);
 
     return (
         <div className="space-y-6">

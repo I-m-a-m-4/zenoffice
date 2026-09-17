@@ -40,15 +40,10 @@
 'use client';
 
 import * as React from 'react';
-import { usePOS } from '@/context/pos-context';
+
 import { secureStorage } from '@/lib/secure-storage';
 import { safeToDate } from '@/lib/utils';
-import {
-  computeBusinessRating,
-  type BusinessRating,
-  type PillarKey,
-  type RatingTier,
-} from '@/lib/business-rating';
+
 
 /**
  * `{ d: day key, s: score, p: pillar scores }` — short keys because this is a
@@ -183,14 +178,14 @@ export interface BusinessRatingView extends BusinessRating {
 }
 
 export function useBusinessRating(): BusinessRatingView {
-  const { business, products, receipts, customers, isLoading } = usePOS();
+  const { business, products, receipts, customers, isLoading } = ({} as any);
   const businessId = business?.id;
 
   // ── The opt-in ────────────────────────────────────────────────────────────
   // Three states, and the middle one is the reason this is not a plain boolean:
   // `undefined` (never asked), `false` (asked, declined), `true` (opted in). Only
   // the first may show the invitation. Read straight off the business doc, which
-  // `usePOS()` already holds — no extra Firestore read.
+  // `({} as any)` already holds — no extra Firestore read.
   //
   // `neverAsked` additionally requires the doc to have arrived: an absent field and
   // an unloaded document are the same `undefined`, so without that clause a shop
