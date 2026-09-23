@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "zeneva",
-  "version": "3.3.2",
-  "identifier": "com.zeneva.app",
+  "productName": "ZenOffice",
+  "version": "0.0.1",
+  "identifier": "com.zenoffice.app",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:9007",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Zeneva v3.3.2",
+        "title": "ZenOffice v0.0.1",
         "width": 1024,
         "height": 768,
         "resizable": true,

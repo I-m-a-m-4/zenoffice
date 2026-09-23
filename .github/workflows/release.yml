@@ -94,6 +94,10 @@ jobs:
             echo "::warning::NEXT_PUBLIC_FIREBASE_VAPID_KEY is missing - this build will install fine but can never register a device for push notifications."
           fi
 
+      - name: Generate App Icons
+        run: npm run tauri icon public/icon-pwa.png
+        continue-on-error: true
+
       - name: Build frontend
         shell: bash
         env:
@@ -112,8 +116,8 @@ jobs:
           RUSTFLAGS: "-C codegen-units=1"
         with:
           tagName: v__VERSION__
-          releaseName: 'Zeneva v__VERSION__'
-          releaseBody: 'Zeneva Multi-Platform Release (Windows/macOS). For the best experience, use the auto-updater within the application settings.'
+          releaseName: 'ZenOffice v__VERSION__'
+          releaseBody: 'ZenOffice Multi-Platform Release (Windows/macOS). For the best experience, use the auto-updater within the application settings.'
           releaseDraft: false
           prerelease: false
 
@@ -138,7 +142,7 @@ jobs:
       - name: Upload Built App Artifacts (Windows/macOS)
         uses: actions/upload-artifact@v4
         with:
-          name: zeneva-${{ matrix.platform }}-bundle
+          name: zenoffice-${{ matrix.platform }}-bundle
           path: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/nsis/*.exe
@@ -255,7 +259,7 @@ jobs:
         run: node scripts/patch-android-manifest.mjs
 
       - name: Generate App Icons
-        run: npm run tauri icon public/zeneva-app-icon.png
+        run: npm run tauri icon public/icon-pwa.png
         continue-on-error: true
 
       - name: Build Android App (APK & AAB)
@@ -310,16 +314,16 @@ jobs:
           
           if [ -n "$APK_PATH" ]; then
             echo "Found APK at: $APK_PATH"
-            cp "$APK_PATH" "./zeneva-v${{ env.APP_VERSION }}-Android.apk"
-            echo "APK ready at ./zeneva-v${{ env.APP_VERSION }}-Android.apk"
+            cp "$APK_PATH" "./zenoffice-v${{ env.APP_VERSION }}-Android.apk"
+            echo "APK ready at ./zenoffice-v${{ env.APP_VERSION }}-Android.apk"
           else
             echo "Warning: No APK file found!"
           fi
           
           if [ -n "$AAB_PATH" ]; then
             echo "Found AAB at: $AAB_PATH"
-            cp "$AAB_PATH" "./zeneva-v${{ env.APP_VERSION }}-Android.aab"
-            echo "AAB ready at ./zeneva-v${{ env.APP_VERSION }}-Android.aab"
+            cp "$AAB_PATH" "./zenoffice-v${{ env.APP_VERSION }}-Android.aab"
+            echo "AAB ready at ./zenoffice-v${{ env.APP_VERSION }}-Android.aab"
           else
             echo "Warning: No AAB file found!"
           fi
@@ -329,7 +333,7 @@ jobs:
           # Fingerprint Play expects for com.zeneva.app. Must match the
           # sha256_cert_fingerprints in public/.well-known/assetlinks.json.
           EXPECTED="5C:20:BF:52:BD:9A:C3:0A:5A:A3:C4:AF:D2:7A:C6:EA:14:23:7B:B0:CE:37:8A:BF:FE:E2:BC:AC:19:63:8F:D1"
-          AAB="./zeneva-v${{ env.APP_VERSION }}-Android.aab"
+          AAB="./zenoffice-v${{ env.APP_VERSION }}-Android.aab"
 
           if [ ! -f "$AAB" ]; then
             echo "::error::No AAB produced - nothing to verify."
@@ -358,8 +362,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./zeneva-v${{ env.APP_VERSION }}-Android.apk
-            ./zeneva-v${{ env.APP_VERSION }}-Android.aab
+            ./zenoffice-v${{ env.APP_VERSION }}-Android.apk
+            ./zenoffice-v${{ env.APP_VERSION }}-Android.aab
           tag_name: v${{ env.APP_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
@@ -367,10 +371,10 @@ jobs:
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: zeneva-android-artifacts
+          name: zenoffice-android-artifacts
           path: |
-            ./zeneva-*-Android.apk
-            ./zeneva-*-Android.aab
+            ./zenoffice-*-Android.apk
+            ./zenoffice-*-Android.aab
           if-no-files-found: warn
 
   release-ios:
@@ -446,8 +450,8 @@ jobs:
             APP_DIR=$(dirname "$APP_PATH")
             APP_NAME=$(basename "$APP_PATH")
             cd "$APP_DIR"
-            zip -r "$GITHUB_WORKSPACE/zeneva-v${{ env.APP_VERSION }}-ios.zip" "$APP_NAME"
-            echo "iOS App zipped successfully to $GITHUB_WORKSPACE/zeneva-v${{ env.APP_VERSION }}-ios.zip"
+            zip -r "$GITHUB_WORKSPACE/zenoffice-v${{ env.APP_VERSION }}-ios.zip" "$APP_NAME"
+            echo "iOS App zipped successfully to $GITHUB_WORKSPACE/zenoffice-v${{ env.APP_VERSION }}-ios.zip"
           else
             echo "Warning: No .app file found to compress!"
           fi
@@ -457,7 +461,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./zeneva-v${{ env.APP_VERSION }}-ios.zip
+            ./zenoffice-v${{ env.APP_VERSION }}-ios.zip
           tag_name: v${{ env.APP_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
@@ -466,7 +470,7 @@ jobs:
       - name: Upload iOS Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: zeneva-ios-artifacts
+          name: zenoffice-ios-artifacts
           path: |
             src-tauri/gen/apple/build/arm64/*.app
             src-tauri/gen/apple/build/**/*.app
