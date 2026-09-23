@@ -561,136 +561,31 @@ function SignupPageContent() {
         </div>
       </div>
       <div className="hidden bg-muted lg:block relative overflow-hidden bg-black">
-        {/* Background Videos */}
-        {signupVideoSlides.map((slide, index) => (
-          <video
-            key={index}
-            ref={(el) => { videoRefs.current[index] = el; }}
-            loop={false}
-            muted
-            playsInline
-            autoPlay={index === currentSlide}
-            preload="auto"
-            poster={slide.poster}
-            onEnded={() => handleVideoEnded(index)}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ease-in-out ${
-              index === currentSlide ? 'opacity-80 z-[0]' : 'opacity-0 z-[-1]'
-            }`}
-          >
-            <source src={slide.video} type="video/mp4" />
-          </video>
-        ))}
+        <img
+          src="/zen-office-bg.jpg"
+          alt="Zen Office Suite"
+          className="absolute inset-0 h-full w-full object-cover opacity-80"
+        />
 
         {/* Orangish filter overlay */}
-        <div className="absolute inset-0 bg-orange-600/60 mix-blend-multiply z-[1] pointer-events-none" />
+        <div className="absolute inset-0 bg-orange-600/40 mix-blend-multiply z-[1] pointer-events-none" />
 
         {/* Dark overlay gradient for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20 z-[2]" />
-
-        {/* Top Control Bar with Play/Pause & Arrow Buttons */}
-        <div className="absolute top-8 right-8 z-20 flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={toggleVideoPlayback}
-            className="bg-black/50 border-white/20 text-white backdrop-blur-md hover:bg-black/80 hover:text-white rounded-full text-xs font-semibold px-3 py-1.5 flex items-center gap-2 transition-all shadow-lg"
-          >
-            {isPlaying ? <Pause className="h-3.5 w-3.5 fill-current" /> : <Play className="h-3.5 w-3.5 fill-current" />}
-            {isPlaying ? t('auth.pauseVideoButton') : t('auth.playVideoButton')}
-          </Button>
-
-          <div className="flex items-center gap-1 bg-black/50 border border-white/20 backdrop-blur-md rounded-full p-1 shadow-lg">
-            <Button
-              variant="ghost"
-              size="icon"
-              type="button"
-              onClick={() => setCurrentSlide((prev) => (prev - 1 + signupVideoSlides.length) % signupVideoSlides.length)}
-              className="h-7 w-7 text-white hover:bg-white/20 rounded-full"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-[11px] font-bold text-white/90 px-1 font-mono">
-              0{currentSlide + 1} / 0{signupVideoSlides.length}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              type="button"
-              onClick={() => setCurrentSlide((prev) => (prev + 1) % signupVideoSlides.length)}
-              className="h-7 w-7 text-white hover:bg-white/20 rounded-full"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-[2]" />
 
         <div className="absolute bottom-12 left-12 right-12 p-0 bg-transparent z-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentSlide}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-            >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-primary text-xs font-bold uppercase tracking-wider mb-4 backdrop-blur-md shadow-md">
-                <Sparkles className="h-3.5 w-3.5" />
-                {t('auth.featuredExperience')}
-              </div>
-
-              <h2 className="text-white text-4xl font-bold font-headline leading-tight tracking-tight drop-shadow-lg">
-                {t(signupVideoSlides[currentSlide].titleKey).split(" ").map((word, i) => (
-                  <React.Fragment key={i}>
-                    {word === "Operations" || word === "Ecosystem" || word === "Entry" || word === "Reach" || word === "Point" ? (
-                      <span className="text-primary italic"> {word} </span>
-                    ) : (
-                      word + " "
-                    )}
-                  </React.Fragment>
-                ))}
-              </h2>
-              <p className="text-white/90 mt-4 text-xl font-light leading-relaxed drop-shadow-md max-w-[600px]">
-                {t(signupVideoSlides[currentSlide].descKey)}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Interactive Feature Video Selector Buttons */}
-          <div className="mt-8 flex flex-wrap items-center gap-2.5">
-            {signupVideoSlides.map((slide, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setCurrentSlide(i)}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-300 backdrop-blur-md border flex items-center gap-2 cursor-pointer",
-                  currentSlide === i
-                    ? "bg-primary text-primary-foreground border-primary shadow-[0_0_15px_rgba(255,165,0,0.5)] scale-105"
-                    : "bg-black/40 text-white/70 border-white/10 hover:bg-black/60 hover:text-white"
-                )}
-              >
-                <span className={cn("w-1.5 h-1.5 rounded-full", currentSlide === i ? "bg-primary-foreground" : "bg-primary")} />
-                {t(slide.titleKey)}
-              </button>
-            ))}
-          </div>
-
-          {/* Progress Indicators */}
-          <div className="mt-6 flex items-center gap-3">
-            {signupVideoSlides.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setCurrentSlide(i)}
-                aria-label={t('auth.goToSlide', { number: i + 1 })}
-                className={cn(
-                  "h-1.5 transition-all duration-500 rounded-full cursor-pointer shadow-[0_0_10px_rgba(255,165,0,0.5)] border-none p-0",
-                  currentSlide === i ? "w-12 bg-primary" : "w-2 bg-white/30 hover:bg-white/60"
-                )}
-              />
-            ))}
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+          >
+            <h2 className="text-white text-4xl font-bold font-headline leading-tight tracking-tight drop-shadow-lg">
+              The Ultimate <span className="text-primary italic">Workspace</span>
+            </h2>
+            <p className="text-white/90 mt-4 text-xl font-light leading-relaxed drop-shadow-md max-w-[600px]">
+              Seamlessly edit PDFs, manage documents, and crunch numbers in Excel. All in one powerful, unified interface designed for modern professionals.
+            </p>
+          </motion.div>
         </div>
       </div>
     </div>
