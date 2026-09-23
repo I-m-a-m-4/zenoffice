@@ -88,10 +88,10 @@ export function DesktopTitleBar() {
          {/* Premium Logo Container */}
          <div className="h-6 w-6 relative">
             <div className="absolute inset-0 bg-primary/20 rounded-lg blur-[2px] animate-pulse"></div>
-            <CachedImage src={displayLogo} alt="Zeneva" className="h-6 w-6 relative z-10 drop-shadow-sm" />
+            <CachedImage src={displayLogo} alt="Zen Office" className="h-6 w-6 relative z-10 drop-shadow-sm" />
          </div>
          <div className="flex flex-col" data-tauri-drag-region>
-            <span className="text-[10px] font-black tracking-[0.25em] text-primary/90 leading-none">ZENEVA</span>
+            <span className="text-[10px] font-black tracking-[0.25em] text-primary/90 leading-none">ZEN OFFICE</span>
             <div className="flex items-center gap-1.5 mt-0.5">
                <span className="text-[8px] font-semibold text-muted-foreground uppercase tracking-widest leading-none">Desktop v{AppConfig.version}</span>
                <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse"></div>
