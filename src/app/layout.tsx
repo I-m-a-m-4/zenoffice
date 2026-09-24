@@ -240,6 +240,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)" />
         <Script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js" strategy="afterInteractive" />
+        <Script src="https://checkout.flutterwave.com/v3.js" strategy="afterInteractive" />
         
         {/* Google Analytics */}
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (

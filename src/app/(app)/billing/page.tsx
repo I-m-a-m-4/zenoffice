@@ -67,47 +67,90 @@ export default function BillingPage() {
     setSelectedPlan(planId);
     setIsProcessing(true);
 
-    setTimeout(() => {
-      handleFlutterPayment({
-        callback: async (response: any) => {
-          closePaymentModal();
-          setIsProcessing(false);
+    const publicKey = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK-33162c3bb2bb347a6606f3e44645f1c9-X';
+    const amount = PRICES[planId][currency];
+    const userEmail = user?.email || 'user@zenoffice.app';
 
-          const txId = response.transaction_id || response.tx_ref || response.flw_ref;
+    const onPaymentSuccess = async (txId: string) => {
+      try {
+        if (user?.uid) {
+          await fetch('/api/upgrade/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              transaction_id: txId,
+              userId: user.uid,
+              plan: planId,
+            }),
+          });
+        }
+      } catch (e) {
+        console.error('Verification error:', e);
+      }
 
-          if (response.status === 'successful' || response.status === 'completed') {
-            try {
-              if (user?.uid) {
-                const res = await fetch('/api/upgrade/verify', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    transaction_id: txId,
-                    userId: user.uid,
-                    plan: planId,
-                  }),
-                });
-                const verifyRes = await res.json();
-                if (!verifyRes.success) {
-                  console.warn('Server verification warning:', verifyRes.error);
-                }
-              }
-            } catch (e) {
-              console.error('Verification request error:', e);
+      setActivePlan(planId);
+      localStorage.setItem('zenoffice_subscription_plan', planId);
+      localStorage.setItem('zenoffice_subscription_date', new Date().toISOString());
+      showToast(`🎉 Payment successful! Welcome to ${planId.toUpperCase()}. Ref: ${txId}`);
+    };
+
+    // Resilient fallback using direct window.FlutterwaveCheckout if hook script fails
+    const launchDirectly = () => {
+      if (typeof (window as any).FlutterwaveCheckout === 'function') {
+        (window as any).FlutterwaveCheckout({
+          public_key: publicKey,
+          tx_ref: `zenoffice_${planId}_${Date.now()}`,
+          amount,
+          currency: currency,
+          payment_options: currency === 'NGN' ? 'card,banktransfer,ussd' : 'card',
+          customer: {
+            email: userEmail,
+            name: user?.displayName || userEmail.split('@')[0],
+          },
+          customizations: {
+            title: 'ZenOffice',
+            description: `ZenOffice ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
+            logo: 'https://zeneva.space/logo.png',
+          },
+          callback: (data: any) => {
+            setIsProcessing(false);
+            const txId = data.transaction_id || data.tx_ref || data.flw_ref;
+            if (data.status === 'successful' || data.status === 'completed') {
+              onPaymentSuccess(txId);
+            } else {
+              showToast('Payment was not completed.');
             }
+          },
+          onclose: () => setIsProcessing(false),
+        });
+        return true;
+      }
+      return false;
+    };
 
-            setActivePlan(planId);
-            localStorage.setItem('zenoffice_subscription_plan', planId);
-            localStorage.setItem('zenoffice_subscription_date', new Date().toISOString());
-            showToast(`🎉 Payment successful! Welcome to ${planId.toUpperCase()}. Ref: ${txId}`);
-          } else {
-            showToast('Payment was not completed.');
-          }
-        },
-        onClose: () => {
+    setTimeout(() => {
+      try {
+        handleFlutterPayment({
+          callback: async (response: any) => {
+            closePaymentModal();
+            setIsProcessing(false);
+            const txId = response.transaction_id || response.tx_ref || response.flw_ref;
+            if (response.status === 'successful' || response.status === 'completed') {
+              onPaymentSuccess(txId);
+            } else {
+              showToast('Payment was not completed.');
+            }
+          },
+          onClose: () => {
+            setIsProcessing(false);
+          },
+        });
+      } catch (err) {
+        if (!launchDirectly()) {
           setIsProcessing(false);
-        },
-      });
+          showToast('Payment modal loading timed out. Please check your connection and try again.');
+        }
+      }
     }, 50);
   };
 
