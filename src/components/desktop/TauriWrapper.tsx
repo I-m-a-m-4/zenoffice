@@ -50,8 +50,7 @@ export function TauriLayoutWrapper({ children }: { children: React.ReactNode }) 
       )}
       style={{ '--tauri-title-height': isTauri ? '2.25rem' : '0px' } as React.CSSProperties}
     >
-      {/* Spacer for Tauri TitleBar (h-9 = 2.25rem) */}
-      {isTauri && <div className="h-9 w-full shrink-0" />}
+      {/* Custom TitleBar disabled */}
       <div className={cn(
         "flex-1 flex flex-col relative h-full",
         isTauri && "min-h-0"

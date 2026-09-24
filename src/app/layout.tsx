@@ -344,7 +344,6 @@ export default function RootLayout({
               <UpdatePrompt />
                   <LocaleSync />
                   <TauriLayoutWrapper>
-                     <DesktopTitleBar />
                      <DesktopLauncher />
                      <Suspense>
                        <NavigationEvents />

@@ -204,7 +204,7 @@ function DocumentEditorInner() {
       </table><p><br></p>
     `;
     applyFormat('insertHTML', tableHtml);
-    showToast('Inserted 3x3 table into document');
+    // removed toast
   };
 
   // Insert Callout Blockquote
@@ -215,7 +215,7 @@ function DocumentEditorInner() {
       </blockquote><p><br></p>
     `;
     applyFormat('insertHTML', calloutHtml);
-    showToast('Inserted academic blockquote');
+    // removed toast
   };
 
   // Insert Timestamp
@@ -226,19 +226,19 @@ function DocumentEditorInner() {
       day: 'numeric' 
     });
     applyFormat('insertText', ` [${now}] `);
-    showToast('Inserted current date');
+    // removed toast
   };
 
   // Insert Citation Placeholder
   const insertCitation = () => {
     applyFormat('insertText', ' (Author et al., 2026)');
-    showToast('Inserted citation placeholder');
+    // removed toast
   };
 
   // Insert Page Break Divider
   const insertHorizontalDivider = () => {
     applyFormat('insertHorizontalRule');
-    showToast('Inserted section divider');
+    // removed toast
   };
 
   // Insert AI generated text into document
@@ -630,21 +630,46 @@ function DocumentEditorInner() {
             {/* Extended WPS Style Tools */}
             <div className="flex gap-1 border-r border-zinc-200 dark:border-zinc-800 pr-4">
               <button 
-                onClick={() => showToast('Find and Replace feature is coming soon.')}
+                onClick={() => {
+                  const query = window.prompt('Enter text to find:');
+                  if (query) {
+                    const found = window.find(query);
+                    if (!found) showToast(`"${query}" not found.`);
+                  }
+                }}
                 className="flex flex-col items-center justify-center gap-1.5 p-2 w-14 rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 <Search className="w-5 h-5 text-blue-500" />
                 <span className="text-[9px]">Find</span>
               </button>
               <button 
-                onClick={() => showToast('Check spelling feature is coming soon.')}
-                className="flex flex-col items-center justify-center gap-1.5 p-2 w-16 rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                onClick={() => {
+                  setSpellCheckEnabled(!spellCheckEnabled);
+                  showToast(`Spell check ${!spellCheckEnabled ? 'enabled' : 'disabled'}`);
+                }}
+                className={`flex flex-col items-center justify-center gap-1.5 p-2 w-16 rounded-md ${spellCheckEnabled ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'} text-zinc-700 dark:text-zinc-300 transition-colors`}
               >
                 <SpellCheck className="w-5 h-5 text-emerald-500" />
                 <span className="text-[9px]">Spell<br/>Check</span>
               </button>
               <button 
-                onClick={() => showToast('Dictation coming soon.')}
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = (e: any) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (re) => {
+                        applyFormat('insertImage', re.target?.result as string);
+                        showToast('Image inserted');
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  };
+                  input.click();
+                }}
                 className="flex flex-col items-center justify-center gap-1.5 p-2 w-14 rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 <ImageIcon className="w-5 h-5 text-slate-500" />
@@ -928,9 +953,7 @@ function DocumentEditorInner() {
               {docTitle.replace(/\.[^/.]+$/, '')}
             </h1>
 
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Welcome to ZenOffice Academic Document Editor. Start drafting your research paper, lecture notes, or project proposal here. Features full offline persistence, real-time word counting, table insertion, and Zen AI academic editing.
-            </p>
+            <p><br></p>
           </div>
         </div>
       </div>

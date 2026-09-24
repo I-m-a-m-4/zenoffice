@@ -77,6 +77,7 @@ function PDFEditorInner() {
   const [showSignModal, setShowSignModal] = useState(false);
   const [signTab, setSignTab] = useState<'type' | 'draw'>('type');
   const [signatureText, setSignatureText] = useState('Bello Imam');
+  const [signatureColor, setSignatureColor] = useState('#ea580c');
   
   // Signature Canvas Ref for Drawing
   const signCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,7 +86,7 @@ function PDFEditorInner() {
   // Dragging state
   const [draggedAnnId, setDraggedAnnId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [appliedSignatures, setAppliedSignatures] = useState<Array<{ id: string; type: 'text' | 'image'; text?: string; imageUrl?: string; x: number; y: number }>>([]);
+  const [appliedSignatures, setAppliedSignatures] = useState<Array<{ id: string; type: 'text' | 'image'; text?: string; imageUrl?: string; x: number; y: number; color?: string }>>([]);
 
   // Payment / upgrade state
   const [isUpgrading, setIsUpgrading] = useState(false);
@@ -447,24 +448,51 @@ function PDFEditorInner() {
   // Rotate page
   const handleRotate = () => {
     setRotation(prev => (prev + 90) % 360);
-    showToast(`Rotated ${(rotation + 90) % 360}°`);
   };
 
   // Download PDF
-  const handleDownload = () => {
-    if (currentDoc) {
-      ZenFileSyncService.downloadDocument(currentDoc);
-      showToast(`Exported ${currentDoc.name}`);
-    } else if (pdfBlobUrl) {
-      const a = document.createElement('a');
-      a.href = pdfBlobUrl;
-      a.download = docTitle.endsWith('.pdf') ? docTitle : `${docTitle}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      showToast(`Exported ${docTitle}`);
-    } else {
-      showToast('No PDF loaded to export.');
+  const handleDownload = async () => {
+    try {
+      let dataToSave = pdfDataBytes;
+      if (!dataToSave && currentDoc && currentDoc.fileData) {
+         const parsed = parsePdfData(currentDoc.fileData);
+         if (parsed) dataToSave = parsed.bytes;
+      }
+      
+      if (dataToSave) {
+        try {
+          const { save } = await import('@tauri-apps/plugin-dialog');
+          const { writeFile } = await import('@tauri-apps/plugin-fs');
+          const filePath = await save({
+            defaultPath: docTitle.endsWith('.pdf') ? docTitle : `${docTitle}.pdf`,
+            filters: [{ name: 'PDF', extensions: ['pdf'] }]
+          });
+          if (filePath) {
+            await writeFile(filePath, dataToSave);
+            showToast(`Exported ${docTitle} successfully!`);
+            return;
+          }
+        } catch (tauriErr) {
+          // Fallback to web
+        }
+      }
+      
+      if (currentDoc) {
+        ZenFileSyncService.downloadDocument(currentDoc);
+        showToast(`Exported ${currentDoc.name}`);
+      } else if (pdfBlobUrl) {
+        const a = document.createElement('a');
+        a.href = pdfBlobUrl;
+        a.download = docTitle.endsWith('.pdf') ? docTitle : `${docTitle}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showToast(`Exported ${docTitle}`);
+      } else {
+        showToast('No PDF loaded to export.');
+      }
+    } catch(e) {
+      showToast('Error exporting PDF.');
     }
   };
 
@@ -551,9 +579,9 @@ function PDFEditorInner() {
         text: signatureText,
         x: window.innerWidth / 2 - 50,
         y: window.innerHeight / 2 - 20,
+        color: signatureColor,
       };
       setAppliedSignatures(prev => [...prev, newSign]);
-      showToast(`Signature placed. You can now drag it.`);
     } else {
       if (!signCanvasRef.current) return;
       const dataUrl = signCanvasRef.current.toDataURL('image/png');
@@ -565,7 +593,6 @@ function PDFEditorInner() {
         y: window.innerHeight / 2 - 50,
       };
       setAppliedSignatures(prev => [...prev, newSign]);
-      showToast(`Drawn signature placed. You can now drag it.`);
     }
     setShowSignModal(false);
   };
@@ -587,7 +614,7 @@ function PDFEditorInner() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-    ctx.strokeStyle = '#ea580c';
+    ctx.strokeStyle = signatureColor;
     ctx.lineWidth = 3;
     ctx.stroke();
   };
@@ -808,7 +835,6 @@ function PDFEditorInner() {
             variant="outline"
             onClick={() => {
               setReadingMode(true);
-              showToast('Reading Mode activated. Enjoy your Zen Zone.');
             }}
             className="h-7 px-2.5 text-zinc-700 dark:text-zinc-300 text-xs font-semibold shadow-xs gap-1.5 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             title="Maximize Reading Experience"
@@ -1094,7 +1120,7 @@ function PDFEditorInner() {
             <span className="text-[10px] leading-tight font-medium">Sign</span>
           </button>
           <button 
-            onClick={() => showToast('Fill Form mode activated.')}
+            onClick={() => setSelectedTool('fill-form')}
             className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             <LayoutTemplate className="w-5 h-5" strokeWidth={1.2} />
@@ -1370,7 +1396,7 @@ function PDFEditorInner() {
                   style={{ top: `${sig.y}px`, left: `${sig.x}px` }}
                 >
                   {sig.type === 'text' ? (
-                    <span className="text-zinc-900 dark:text-zinc-100 font-serif italic text-xl drop-shadow-none">{sig.text}</span>
+                    <span className="font-serif italic text-xl drop-shadow-none" style={{ color: sig.color || '#ea580c' }}>{sig.text}</span>
                   ) : (
                     <img src={sig.imageUrl} className="h-12 w-auto pointer-events-none filter drop-shadow-sm" alt="Drawn Signature" />
                   )}
@@ -1445,7 +1471,7 @@ function PDFEditorInner() {
                     className={`w-full flex flex-col items-center pb-24 ${selectedTool === 'pan' ? 'cursor-grab active:cursor-grabbing' : selectedTool === 'text' ? 'cursor-text' : 'cursor-default'}`}
                   />
                   {/* Floating Zoom & Page Controls (WPS Style overlay) */}
-                  <div className="fixed bottom-6 right-6 z-40 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full shadow-lg flex items-center p-1.5 gap-1">
+                  <div className="fixed bottom-24 right-6 z-40 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full shadow-lg flex items-center p-1.5 gap-1">
                     <button onClick={() => handleZoom(-10)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300">
                       <ZoomOut className="w-4 h-4" />
                     </button>
@@ -1590,7 +1616,7 @@ function PDFEditorInner() {
 
                   <div className="p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-dashed border-zinc-300 dark:border-zinc-700 text-center">
                     <span className="text-xs text-zinc-400 block mb-2">Signature Preview:</span>
-                    <span className="text-2xl font-serif italic text-orange-600 dark:text-orange-400 tracking-wider">
+                    <span className="text-2xl font-serif italic tracking-wider" style={{ color: signatureColor }}>
                       {signatureText || 'Your Signature'}
                     </span>
                   </div>
@@ -1620,22 +1646,35 @@ function PDFEditorInner() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowSignModal(false)}
-                  className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  size="sm"
-                  onClick={handleAddSignature}
-                  className="bg-orange-600 hover:bg-orange-700 text-white font-medium"
-                >
-                  Place Signature Stamp
-                </Button>
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex gap-2">
+                  {['#ea580c', '#000000', '#2563eb', '#16a34a', '#dc2626'].map(c => (
+                    <button 
+                      key={c}
+                      onClick={() => setSignatureColor(c)}
+                      className={`w-6 h-6 rounded-full border-2 ${signatureColor === c ? 'border-orange-500' : 'border-transparent'}`}
+                      style={{ backgroundColor: c }}
+                      title="Select Color"
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowSignModal(false)}
+                    className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={handleAddSignature}
+                    className="bg-orange-600 hover:bg-orange-700 text-white font-medium"
+                  >
+                    Place Signature Stamp
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

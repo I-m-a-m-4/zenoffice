@@ -8,7 +8,6 @@ import {
   BookOpen, Table2, ScanText, Users, Headphones
 } from 'lucide-react';
 import { useUser } from '@/firebase';
-import Script from 'next/script';
 
 type Currency = 'USD' | 'NGN';
 type PlanId = 'student' | 'pro' | 'max';
@@ -38,6 +37,17 @@ export default function BillingPage() {
       const stored = localStorage.getItem('zenoffice_subscription_plan');
       if (stored === 'student' || stored === 'pro' || stored === 'max') {
         setActivePlan(stored as PlanId);
+      }
+      
+      if (!document.getElementById('flutterwave-script')) {
+        const script = document.createElement('script');
+        script.id = 'flutterwave-script';
+        script.src = 'https://checkout.flutterwave.com/v3.js';
+        script.async = true;
+        script.onerror = () => {
+          showToast('Payment gateway blocked. Please disable your adblocker.');
+        };
+        document.body.appendChild(script);
       }
     }
   }, []);
@@ -182,7 +192,6 @@ export default function BillingPage() {
 
   return (
     <>
-      <Script src="https://checkout.flutterwave.com/v3.js" strategy="beforeInteractive" />
       <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-orange-50/20 to-zinc-100 dark:from-[#0a0a0a] dark:via-[#0d0900] dark:to-[#0a0a0a] text-zinc-900 dark:text-zinc-100 font-sans">
       <div className="max-w-6xl mx-auto px-4 py-10 sm:px-8">
 

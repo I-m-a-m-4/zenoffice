@@ -76,10 +76,13 @@ export default function ToolsPage() {
   const [activeTool, setActiveTool] = useState<any | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<'upload' | 'processing' | 'done' | 'premium'>('upload');
+  const [history, setHistory] = useState<any[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleToolClick = (tool: any) => {
+    setHistory(prev => [tool, ...prev.filter(t => t.id !== tool.id)].slice(0, 4));
+    
     if (tool.id === 'edit-pdf' || tool.id === 'sign-pdf') {
       router.push(`/editor/pdf`);
       return;
@@ -133,6 +136,34 @@ export default function ToolsPage() {
             Every tool you need to work with PDFs in one place. Convert, edit, merge, and split with ease.
           </p>
         </div>
+
+        {history.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-200 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+              Recently Used
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {history.map((tool) => (
+                <button
+                  key={`hist-${tool.id}`}
+                  onClick={() => handleToolClick(tool)}
+                  className="group flex flex-col text-left bg-white dark:bg-[#121214] border border-orange-500/30 dark:border-orange-500/30 rounded-xl p-5 hover:border-orange-500 hover:shadow-md transition-all duration-200"
+                >
+                  <div className={`w-10 h-10 rounded-lg ${tool.bgColor} ${tool.color} flex items-center justify-center mb-3 transition-transform group-hover:scale-105`}>
+                    <tool.icon className="w-5 h-5" strokeWidth={1.5} />
+                  </div>
+                  <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{tool.name}</h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 mb-4 flex-1 leading-relaxed">
+                    {tool.description}
+                  </p>
+                  <div className="flex items-center text-[11px] font-semibold text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity mt-auto">
+                    Open Tool <ArrowRight className="w-3 h-3 ml-1" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {CATEGORIES.map((category, idx) => (
           <div key={idx} className="space-y-4">

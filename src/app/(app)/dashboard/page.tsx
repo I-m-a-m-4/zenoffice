@@ -68,8 +68,50 @@ export default function DashboardPage() {
     setTimeout(() => setNotification(null), 3500);
   };
 
-  const loadDocs = () => {
-    const docs = ZenFileSyncService.getLocalDocuments();
+  const loadDocs = async () => {
+    let docs = ZenFileSyncService.getLocalDocuments();
+    
+    if (locationParam && ['Downloads', 'Documents', 'Desktop'].includes(locationParam)) {
+      try {
+        const { readDir } = await import('@tauri-apps/plugin-fs');
+        const { downloadDir, documentDir, desktopDir } = await import('@tauri-apps/api/path');
+        let dirPath = '';
+        if (locationParam === 'Downloads') dirPath = await downloadDir();
+        else if (locationParam === 'Documents') dirPath = await documentDir();
+        else if (locationParam === 'Desktop') dirPath = await desktopDir();
+        
+        if (dirPath) {
+          const entries = await readDir(dirPath);
+          const tauriDocs: ZenDocumentItem[] = entries
+            .filter(e => e.isFile && e.name)
+            .filter(e => e.name!.match(/\\.(pdf|docx?|xlsx?|csv|pptx?|txt)$/i))
+            .map(e => {
+              const lower = e.name!.toLowerCase();
+              const docType = lower.endsWith('.pdf') ? 'pdf' : (lower.match(/\\.(xlsx?|csv)$/) ? 'excel' : (lower.match(/\\.(pptx?)$/) ? 'presentation' : 'word'));
+              return {
+                id: 'native-' + e.name!,
+                name: e.name!,
+                type: docType as any,
+                sizeBytes: 0,
+                size: 'Native',
+                modified: 'Local File',
+                location: locationParam,
+                creator: 'System',
+                isLocal: true,
+                syncedToCloud: false,
+                isStarred: false,
+              };
+            });
+            
+          const existingNames = new Set(docs.map(d => d.name));
+          const newNativeDocs = tauriDocs.filter(d => !existingNames.has(d.name));
+          docs = [...newNativeDocs.slice(0, 100), ...docs];
+        }
+      } catch (err) {
+        console.error('Tauri native FS read failed:', err);
+      }
+    }
+
     setDocuments(docs);
     setTrashDocuments(ZenFileSyncService.getTrashDocuments());
     setCloudSyncActive(ZenFileSyncService.isCloudSyncEnabled());

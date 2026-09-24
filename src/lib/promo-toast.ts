@@ -27,15 +27,15 @@ export const PRESET_BANNERS = [
       <circle cx="500" cy="80" r="140" fill="%2338bdf8" opacity="0.25" filter="url(%23glow)"/>
       <circle cx="80" cy="240" r="110" fill="%2360a5fa" opacity="0.2" filter="url(%23glow)"/>
       <path d="M480 70 L495 100 L530 105 L505 130 L510 165 L480 145 L450 165 L455 130 L430 105 L465 100 Z" fill="url(%23gold)" opacity="0.9"/>
-      <text x="40" y="80" fill="%2338bdf8" font-family="system-ui, sans-serif" font-weight="900" font-size="20" letter-spacing="2">ZENEVA DESKTOP VIP</text>
+      <text x="40" y="80" fill="%2338bdf8" font-family="system-ui, sans-serif" font-weight="900" font-size="20" letter-spacing="2">ZENOFFICE DESKTOP VIP</text>
       <text x="40" y="145" fill="%23ffffff" font-family="system-ui, sans-serif" font-weight="900" font-size="44">Back to School</text>
       <text x="40" y="195" fill="%23fef08a" font-family="system-ui, sans-serif" font-weight="800" font-size="34">59% OFF SPECIAL</text>
       <text x="40" y="245" fill="%23bae6fd" font-family="system-ui, sans-serif" font-size="16">Unlimited multi-branch inventory & AI stock analytics</text>
     </svg>`,
   },
   {
-    id: 'zeneva-orange',
-    label: 'Zeneva Sunset Orange',
+    id: 'zenoffice-orange',
+    label: 'ZenOffice Sunset Orange',
     themeColor: 'orange' as PromoToastColor,
     previewColor: '#FF6B00',
     dataUrl: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="320" viewBox="0 0 600 320">
@@ -94,7 +94,7 @@ export const PRESET_BANNERS = [
       </defs>
       <rect width="600" height="320" fill="url(%23bg)" rx="16"/>
       <circle cx="500" cy="100" r="120" fill="%23c084fc" opacity="0.3"/>
-      <text x="40" y="80" fill="%23d8b4fe" font-family="system-ui, sans-serif" font-weight="900" font-size="20" letter-spacing="2">ZENEVA ZEN-AI PRO</text>
+      <text x="40" y="80" fill="%23d8b4fe" font-family="system-ui, sans-serif" font-weight="900" font-size="20" letter-spacing="2">ZENOFFICE ZEN-AI PRO</text>
       <text x="40" y="145" fill="%23ffffff" font-family="system-ui, sans-serif" font-weight="900" font-size="44">Smart AI Copilot</text>
       <text x="40" y="195" fill="%23f3e8ff" font-family="system-ui, sans-serif" font-weight="800" font-size="34">Instant Sales Insights</text>
       <text x="40" y="245" fill="%23e9d5ff" font-family="system-ui, sans-serif" font-size="16">Ask AI about restocking, best-selling items, and profit trends</text>
@@ -108,7 +108,7 @@ export const DEFAULT_PROMO_CONFIG: PromoToastConfig = {
   displayMode: 'card',
   imageUrl: PRESET_BANNERS[0].dataUrl,
   badgeText: '59% OFF · BACK TO SCHOOL',
-  title: 'Upgrade to Zeneva Pro',
+  title: 'Upgrade to ZenOffice Pro',
   description: 'Supercharge your store with multi-branch synchronization, offline POS, and AI sales predictions.',
   buttonText: 'Get my OFFER',
   targetUrl: '/settings?tab=subscription',

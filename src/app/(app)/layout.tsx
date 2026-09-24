@@ -477,7 +477,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   className="w-full flex items-center gap-2 px-2.5 py-1 rounded-md text-xs text-orange-600 dark:text-orange-400 font-medium hover:bg-orange-50/50 dark:hover:bg-zinc-900 transition-colors"
                 >
                   <Cloud className="w-3.5 h-3.5 opacity-90 text-orange-600" />
-                  <span>ZenDrive (Firebase)</span>
+                  <span>ZenDrive</span>
                 </button>
 
                 <button
