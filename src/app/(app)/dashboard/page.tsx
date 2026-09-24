@@ -192,6 +192,13 @@ export default function DashboardPage() {
     showToast('Moved to Recycle Bin');
   };
 
+  const handleRemoveFromRecents = (e: React.MouseEvent, docId: string) => {
+    e.stopPropagation();
+    ZenFileSyncService.removeFromRecents(docId);
+    loadDocs();
+    showToast('Removed from Recents');
+  };
+
   const handleRestoreDoc = (e: React.MouseEvent, docId: string) => {
     e.stopPropagation();
     ZenFileSyncService.restoreFromTrash(docId);
@@ -648,9 +655,14 @@ export default function DashboardPage() {
                             </DropdownMenuItem>
                           </>
                         ) : (
-                          <DropdownMenuItem onClick={(e) => handleTrashDoc(e, doc.id)} className="text-rose-600">
-                            <Trash2 className="w-3.5 h-3.5 mr-2" /> Move to Recycle Bin
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuItem onClick={(e) => handleRemoveFromRecents(e, doc.id)} className="text-orange-600 dark:text-orange-400">
+                              <X className="w-3.5 h-3.5 mr-2" /> Remove from Recents
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => handleTrashDoc(e, doc.id)} className="text-rose-600">
+                              <Trash2 className="w-3.5 h-3.5 mr-2" /> Move to Recycle Bin
+                            </DropdownMenuItem>
+                          </>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -679,12 +691,21 @@ export default function DashboardPage() {
                     <button 
                       onClick={(e) => handleToggleStar(e, doc.id)}
                       className="p-1 text-slate-300 dark:text-zinc-600 hover:text-amber-400"
+                      title={doc.isStarred ? 'Unstar document' : 'Star document'}
                     >
                       <Star className={`w-3.5 h-3.5 ${doc.isStarred ? 'text-amber-400 fill-amber-400' : ''}`} />
                     </button>
                     <button 
+                      onClick={(e) => handleRemoveFromRecents(e, doc.id)}
+                      className="p-1 text-slate-400 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove from Recents"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
                       onClick={(e) => handleTrashDoc(e, doc.id)}
                       className="p-1 text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Move to Recycle Bin"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

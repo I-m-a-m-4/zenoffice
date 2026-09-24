@@ -346,6 +346,14 @@ export const ZenFileSyncService = {
     return updated.filter(d => !d.isDeleted);
   },
 
+  // Remove document directly from Recents list
+  removeFromRecents(docId: string): ZenDocumentItem[] {
+    const all = this.getAllStored();
+    const updated = all.filter(d => d.id !== docId);
+    this.saveAllDocuments(updated);
+    return updated.filter(d => !d.isDeleted);
+  },
+
   // Restore document from Recycle Bin
   restoreFromTrash(docId: string): ZenDocumentItem[] {
     const all = this.getAllStored();
