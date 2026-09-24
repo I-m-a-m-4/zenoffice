@@ -60,7 +60,7 @@ export default function PrivacyPolicyPage() {
             Privacy <span className="text-primary text-5xl sm:text-[70px] italic">Policy</span>
           </h1>
           <p className="mx-auto mt-4 max-w-[640px] text-lg leading-[26px] tracking-[-0.4px] text-slate-500 dark:text-slate-400">
-            What we collect, why we collect it, and how you stay in control.
+            What we collect, how your documents are protected, and how you stay in complete control.
           </p>
           <p className="mt-5 text-sm tracking-[-0.3px] text-slate-500 dark:text-slate-400">
             Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -124,7 +124,7 @@ export default function PrivacyPolicyPage() {
             <div id="intro" className="scroll-mt-32">
               <h2>Introduction</h2>
               <p>
-                Welcome to Zeneva ("we," "us," or "our"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our software-as-a-service platform (the "Service"). Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the service.
+                Welcome to <strong>Zen Office</strong> ("we," "us," or "our"). We are committed to protecting your privacy and ensuring the security of your documents and workspace. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our document reading, editing, and office management platform (the "Service"). Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the service.
               </p>
 
               <div className="not-prose my-8 p-5 rounded-2xl border bg-slate-50/50 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm backdrop-blur-sm shadow-sm">
@@ -134,7 +134,7 @@ export default function PrivacyPolicyPage() {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                   </span>
                   <div>
-                    Zeneva Retail OS is operated by <strong className="text-primary">ZENEVATECH SOLUTIONS</strong>
+                    Zen Office is operated by <strong className="text-primary">ZENEVATECH SOLUTIONS</strong>
                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-normal">CAC Registered Entity — BN: 9673520</div>
                   </div>
                 </div>
@@ -147,97 +147,93 @@ export default function PrivacyPolicyPage() {
             <div id="collect" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>What we collect</h2>
               <p>
-                We may collect information about you in a variety of ways. The information we may collect via the Service includes:
+                We collect information to provide and enhance your document editing and management experience:
               </p>
               
-              <h3>A. Personal Data</h3>
+              <h3>A. Account Data</h3>
               <p>
-                Personally identifiable information, such as your <strong>name, email address, and telephone number</strong>, that you voluntarily give to us when you register with the Service or when you choose to participate in various activities related to the Service.
+                Personally identifiable information, such as your <strong>name, email address, and profile preferences</strong>, provided voluntarily during registration.
               </p>
               
-              <h3>B. Business Data</h3>
+              <h3>B. Document Data & Files</h3>
               <p>
-                Information related to your business that you provide or generate, including but not limited to:
+                Information related to the documents, spreadsheets, PDFs, and files you create, edit, or upload to the Service:
               </p>
               <ul>
-                <li>Product details (names, SKUs, prices, stock levels, images)</li>
-                <li>Sales transaction records (receipts, items sold, totals)</li>
-                <li>Customer information (names, emails, phone numbers, purchase history)</li>
-                <li>Business settings and configurations</li>
+                <li>Document files (PDFs, Word files, Excel spreadsheets, text notes)</li>
+                <li>Document metadata (file names, sizes, creation/edit timestamps, annotations)</li>
+                <li>User workspace settings and preference configurations</li>
               </ul>
               <p>
-                <strong>This Business Data is considered your confidential property. We will not use it for any purpose other than providing and improving the Service.</strong>
+                <strong>Your Document Content is your strict confidential property. Zen Office processes your files locally on your device or via encrypted vault sync. We never read, monetize, or train external AI models on your private documents.</strong>
               </p>
               
-              <h3>C. Derivative Data</h3>
+              <h3>C. Derivative & Telemetry Data</h3>
               <p>
-                Information our servers automatically collect when you access the Service, such as your IP address, your browser type, your operating system, your access times, and the pages you have viewed directly before and after accessing the Service.
+                System logs automatically collected when accessing the Service, including browser type, operating system, application performance metrics, and feature usage counts.
               </p>
 
-              <h3>D. Device Permissions (Camera)</h3>
+              <h3>D. Device Permissions (Camera & Filesystem)</h3>
               <p>
-                We may request access or permission to certain features from your mobile device, including your device's camera. The camera is used solely to scan barcodes and product QR codes during checkout and inventory actions. Image frames processed by the camera are analyzed locally on your device in real-time and are never uploaded, stored, or shared on our servers.
+                Local app features may request device camera access (e.g., to scan physical document QR codes or capture paper pages into PDF) and storage access (to open and save local files). Camera feeds and local storage processing remain entirely on your device and are never broadcast or shared.
               </p>
             </div>
 
             <div id="use" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>How we use it</h2>
               <p>
-                Having accurate information permits us to provide you with a smooth, efficient, and customized experience. Specifically, we may use information collected about you via the Service to:
+                We use the collected information solely to provide a reliable, high-performance workspace experience:
               </p>
               <ul>
-                <li>Create and manage your account.</li>
-                <li>Process your transactions and subscriptions.</li>
-                <li>Provide you with the core functionality of inventory management, POS, and CRM.</li>
-                <li>Email you regarding your account or order.</li>
-                <li>Monitor and analyze usage and trends to improve your experience with the Service.</li>
-                <li>Notify you of updates to the Service.</li>
-                <li>Provide customer support and respond to your requests.</li>
+                <li>Create and secure your account across your desktop and mobile devices.</li>
+                <li>Provide core functionality: PDF viewing, Word document editing, Excel spreadsheet processing, and file management.</li>
+                <li>Synchronize document edits securely across your authorized devices.</li>
+                <li>Send essential operational updates, account alerts, and security notifications.</li>
+                <li>Diagnose performance issues, optimize local storage caching, and improve UI responsiveness.</li>
+                <li>Provide dedicated customer support and address technical inquiries.</li>
               </ul>
             </div>
 
             <div id="share" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Disclosure</h2>
               <p>
-                We do not share, sell, rent, or trade your Personal Data or Business Data with third parties for their commercial purposes. We may share information we have collected about you in certain situations:
+                We do not sell, rent, or trade your personal data or document content to third parties. We may disclose information only under the following limited circumstances:
               </p>
               <ul>
-                <li><strong>By Law or to Protect Rights:</strong> If we believe the release of information about you is necessary to respond to legal process, to investigate or remedy potential violations of our policies, or to protect the rights, property, and safety of others.</li>
-                <li><strong>Third-Party Service Providers:</strong> We may share your information with third parties that perform services for us, including local and international payment processing (Paystack), data analysis, email delivery, and hosting services.</li>
-                <li><strong>Business Transfers:</strong> We may share or transfer your information in connection with, or during negotiations of, any merger, sale of company assets, financing, or acquisition of all or a portion of our business to another company.</li>
+                <li><strong>By Law or Legal Process:</strong> When required to comply with valid legal obligations, subpoenas, or official court orders.</li>
+                <li><strong>Infrastructure Service Providers:</strong> Trusted third-party vendors performing necessary backend services on our behalf (e.g., Google Cloud/Firebase for encrypted data storage, Resend for email delivery, and Paystack for subscription billing).</li>
+                <li><strong>Business Transfers:</strong> In the event of a merger, acquisition, or sale of company assets, subject to strict confidentiality agreements.</li>
               </ul>
             </div>
 
             <div id="security" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Data Security</h2>
               <p>
-                We use administrative, technical, and physical security measures to protect your personal information and Business Data. This includes:
+                We implement robust administrative, technical, and local encryption controls to protect your documents:
               </p>
               <ul>
-                <li><strong>Enterprise-Grade Cloud Infrastructure:</strong> Zeneva is securely hosted on Google Cloud and Firebase. Our infrastructure complies with rigorous international security standards, including <strong>ISO/IEC 27001, 27017, and 27018</strong> certifications, and undergoes regular <strong>AICPA SOC 2 and SOC 3</strong> audits.</li>
-                <li><strong>GDPR & HIPAA Readiness:</strong> Our backend architecture provides the data controls necessary to help your business meet stringent privacy regulations like GDPR (General Data Protection Regulation) and HIPAA (Health Insurance Portability and Accountability Act), including comprehensive data export and erasure capabilities.</li>
-                <li><strong>Encryption at Rest:</strong> Sensitive business and transaction data is protected using 256-bit AES bank-grade encryption to ensure information remains confidential even when stored locally.</li>
-                <li><strong>Secure Transmission:</strong> All data transmitted between your device and our servers is encrypted using industry-standard SSL/TLS protocols.</li>
-                <li><strong>Multi-Tenant Isolation:</strong> We use strict logical boundaries to ensure your data is accessible only by you and your authorized staff.</li>
+                <li><strong>Enterprise Cloud Security:</strong> Hosted on Google Cloud and Firebase with strict international compliance certifications, including <strong>ISO/IEC 27001, 27017, 27018</strong>, and <strong>AICPA SOC 2/3</strong> audits.</li>
+                <li><strong>Local-First Encryption:</strong> Offline document vaults and application credentials are stored locally with 256-bit AES encryption.</li>
+                <li><strong>Encrypted Transmission:</strong> All data exchanged between client applications and cloud sync servers uses TLS 1.3/SSL encryption.</li>
+                <li><strong>Multi-Tenant Isolation:</strong> Logical boundaries guarantee that your document workspace is accessible exclusively by your authenticated account.</li>
               </ul>
             </div>
 
             <div id="rights" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
-              <h2>Your Rights</h2>
+              <h2>Your Rights & Data Control</h2>
               <p>
-                You have the right to:
+                You retain complete control over your account and files:
               </p>
               <ul>
-                <li>Review or change the information in your account by logging into your account settings and updating your account.</li>
-                <li>Terminate your account, which will result in the deletion of your Personal Data and the archiving or deletion of your Business Data according to our data retention policies.</li>
-                <li><strong>Request Data Deletion:</strong> You can request the complete deletion of your account and all associated personal and business data at any time by emailing us at <strong>zenevapos@gmail.com</strong>. Upon receiving your request, we will verify your identity and delete all your hosted data from our active databases within 30 days.</li>
+                <li><strong>Access & Export:</strong> You can download or export your documents and data at any time in standard formats (PDF, XLSX, DOCX, JSON).</li>
+                <li><strong>Account Termination & Data Deletion:</strong> You can request complete deletion of your account and hosted files by emailing <strong>zenevapos@gmail.com</strong>. Upon request, all hosted records will be permanently erased from our active servers within 30 days.</li>
               </ul>
             </div>
 
             <div id="contact" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Contact Us</h2>
               <p>
-                If you have questions or comments about this Privacy Policy, or if you need to request data deletion, please contact us at:
+                If you have questions regarding this Privacy Policy or wish to submit a data request, please reach out to us at:
               </p>
               <div className="not-prose mt-6 flex items-center gap-3 text-primary font-medium bg-primary/5 border border-primary/10 rounded-xl px-4 py-3 w-fit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
@@ -250,3 +246,4 @@ export default function PrivacyPolicyPage() {
     </div>
   );
 }
+

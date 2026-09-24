@@ -8,7 +8,7 @@ const sections = [
   { id: 'description', num: 'II', label: 'Description of Service' },
   { id: 'accounts', num: 'III', label: 'User Accounts' },
   { id: 'billing', num: 'IV', label: 'Subscriptions and Billing' },
-  { id: 'conduct', num: 'V', label: 'User Conduct' },
+  { id: 'conduct', num: 'V', label: 'User Conduct & Content' },
   { id: 'intellectual', num: 'VI', label: 'Intellectual Property' },
   { id: 'termination', num: 'VII', label: 'Termination' },
   { id: 'disclaimer', num: 'VIII', label: 'Disclaimer of Warranties' },
@@ -65,7 +65,7 @@ export default function TermsOfServicePage() {
             Terms of <span className="text-primary text-5xl sm:text-[70px] italic">Service</span>
           </h1>
           <p className="mx-auto mt-4 max-w-[640px] text-lg leading-[26px] tracking-[-0.4px] text-slate-500 dark:text-slate-400">
-            The rules and guidelines for using the Zeneva Retail OS platform.
+            The rules and guidelines for using the Zen Office document platform.
           </p>
           <p className="mt-5 text-sm tracking-[-0.3px] text-slate-500 dark:text-slate-400">
             Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -129,7 +129,7 @@ export default function TermsOfServicePage() {
             <div id="acceptance" className="scroll-mt-32">
               <h2>Acceptance of Terms</h2>
               <p>
-                By accessing or using the Zeneva software-as-a-service platform (the "Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not use the Service. These Terms apply to all users of the Service, including administrators, managers, and operators ("Users").
+                By accessing or using the <strong>Zen Office</strong> platform (the "Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not use the Service. These Terms apply to all users of the Service, including account holders, workspace members, and administrators.
               </p>
 
               <div className="not-prose my-8 p-5 rounded-2xl border bg-slate-50/50 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm backdrop-blur-sm shadow-sm">
@@ -139,7 +139,7 @@ export default function TermsOfServicePage() {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                   </span>
                   <div>
-                    Zeneva Retail OS is operated by <strong className="text-primary">ZENEVATECH SOLUTIONS</strong>
+                    Zen Office is operated by <strong className="text-primary">ZENEVATECH SOLUTIONS</strong>
                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-normal">CAC Registered Entity — BN: 9673520</div>
                   </div>
                 </div>
@@ -152,99 +152,98 @@ export default function TermsOfServicePage() {
             <div id="description" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Description of Service</h2>
               <p>
-                Zeneva provides a comprehensive business management platform that includes inventory management, a Point of Sale (POS) system, customer relationship management (CRM), sales analytics, and an optional public-facing e-commerce storefront.
+                Zen Office provides an integrated, local-first document workspace application featuring PDF viewing and editing, Word document processing, Excel spreadsheet editing, document annotation, and optional encrypted cloud backup.
               </p>
               <p>
-                <strong>Security and Compliance:</strong> We are committed to providing a highly secure environment for your business data. The Service is hosted on enterprise-grade infrastructure that maintains strict international security certifications, including <strong>ISO/IEC 27001</strong>, and undergoes regular <strong>AICPA SOC 2</strong> and <strong>SOC 3</strong> audits. The platform also provides the necessary administrative and technical safeguards to support <strong>GDPR</strong> and <strong>HIPAA</strong> compliance requirements.
+                <strong>Security and Infrastructure:</strong> The Service is hosted on enterprise-grade cloud infrastructure meeting international security benchmarks, including <strong>ISO/IEC 27001</strong> and <strong>AICPA SOC 2/3</strong> audits.
               </p>
             </div>
             
             <div id="accounts" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>User Accounts</h2>
               <p>
-                To use the Service, you must register for an account. You are responsible for maintaining the confidentiality of your account password and for all activities that occur under your account. You agree to:
+                To access cloud sync and advanced workspace features, you must register for an account. You are responsible for maintaining the confidentiality of your account credentials and for all activities under your account. You agree to:
               </p>
               <ul>
-                <li>Provide true, accurate, current, and complete information about yourself as prompted by the registration form.</li>
-                <li>Promptly update your registration data to keep it true, accurate, current, and complete.</li>
-                <li>Immediately notify us of any unauthorized use of your password or account or any other breach of security.</li>
+                <li>Provide accurate information during account registration.</li>
+                <li>Keep your account information current and secure.</li>
+                <li>Notify us immediately of any unauthorized account access or security breach.</li>
               </ul>
             </div>
 
             <div id="billing" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Subscriptions and Billing</h2>
               <p>
-                The Service is offered under various subscription plans.
+                Zen Office is offered under tiered service options:
               </p>
               <ul>
-                <li><strong>Free Starter Plan:</strong> The 'Starter' tier is free of charge and does not expire. No trial period applies and no payment details are required to use it. If a paid subscription ('Pro' or 'Business') is not renewed, the business instance reverts to the free 'Starter' tier — access to your existing data, including products, sales history and receipts, is retained, and only paid-tier features become unavailable until the subscription is renewed.</li>
-                <li><strong>Billing:</strong> Fees for paid plans are billed on a subscription basis (e.g., monthly, annually). You will be billed in advance on a recurring, periodic basis.</li>
-                <li><strong>Payment:</strong> We use a third-party payment processor (Paystack) to handle payments. By subscribing, you agree to their terms and conditions.</li>
-                <li><strong>Cancellation:</strong> You may cancel your subscription at any time through your account's billing page. The cancellation will take effect at the end of the current billing cycle.</li>
+                <li><strong>Free Starter Tier:</strong> Free of charge and non-expiring. Includes full local document viewing, PDF reading, and basic document tools with zero payment required.</li>
+                <li><strong>Paid Tiers:</strong> Premium subscriptions (monthly or annual) unlock advanced cloud vault sync, AI document insights, and expanded export features.</li>
+                <li><strong>Payment & Cancellation:</strong> Subscription payments are processed via Paystack. You may cancel subscription renewals at any time from your billing settings.</li>
               </ul>
             </div>
 
             <div id="conduct" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
-              <h2>User Conduct and Responsibilities</h2>
+              <h2>User Conduct & Document Ownership</h2>
               <p>
-                You are solely responsible for all data, information, and content that you upload, post, or otherwise transmit via the Service ("Your Content"). You agree not to use the Service to:
+                You retain 100% full ownership rights to all documents, files, data, and content you create, view, or upload via Zen Office ("Your Content"). Zen Office makes no claim of ownership over your private documents.
+              </p>
+              <p>
+                You agree not to use the Service to:
               </p>
               <ul>
-                <li>Upload or transmit any content that is unlawful, harmful, or infringes on the rights of others.</li>
-                <li>Impersonate any person or entity or falsely state or otherwise misrepresent your affiliation with a person or entity.</li>
-                <li>Interfere with or disrupt the Service or servers or networks connected to the Service.</li>
+                <li>Distribute illegal, harmful, or malicious files.</li>
+                <li>Attempt to bypass local encryption controls or compromise platform servers.</li>
+                <li>Interfere with network connectivity or cloud synchronization services.</li>
               </ul>
-              <p>
-                You retain all ownership rights to Your Content. We do not claim any ownership rights over Your Content.
-              </p>
             </div>
 
             <div id="intellectual" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Intellectual Property</h2>
               <p>
-                The Service and its original content (excluding Your Content), features, and functionality are and will remain the exclusive property of Zeneva and its licensors. The Service is protected by copyright, trademark, and other laws of both Nigeria and foreign countries.
+                The Zen Office application software, branding, UI components, code, and trademarks are the exclusive property of ZENEVATECH SOLUTIONS and its licensors.
               </p>
             </div>
 
             <div id="termination" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Termination</h2>
               <p>
-                We may terminate or suspend your account and bar access to the Service immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms. If you wish to terminate your account, you may do so from the "Danger Zone" section in your settings page.
+                You may terminate your account at any time. We reserve the right to suspend or terminate accounts that breach these Terms or engage in illegal software manipulation.
               </p>
             </div>
 
             <div id="disclaimer" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Disclaimer of Warranties</h2>
               <p>
-                The Service is provided on an "AS IS" and "AS AVAILABLE" basis. Your use of the Service is at your sole risk. We expressly disclaim all warranties of any kind, whether express or implied, including, but not limited to, the implied warranties of merchantability, fitness for a particular purpose, and non-infringement.
+                The Service is provided "AS IS" and "AS AVAILABLE." While we prioritize data safety and offline reliability, users are advised to maintain independent backups of critical files.
               </p>
             </div>
 
             <div id="liability" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Limitation of Liability</h2>
               <p>
-                In no event shall Zeneva, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from (i) your access to or use of or inability to access or use the Service; (ii) any conduct or content of any third party on the Service; (iii) any content obtained from the Service; and (iv) unauthorized access, use or alteration of your transmissions or content, whether based on warranty, contract, tort (including negligence) or any other legal theory, whether or not we have been informed of the possibility of such damage.
+                To the maximum extent permitted by law, Zen Office and ZENEVATECH SOLUTIONS shall not be liable for indirect, incidental, or consequential damages resulting from platform use or file handling.
               </p>
             </div>
 
             <div id="governing" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Governing Law</h2>
               <p>
-                These Terms shall be governed and construed in accordance with the laws of the Federal Republic of Nigeria, without regard to its conflict of law provisions.
+                These Terms are governed by the laws of the Federal Republic of Nigeria.
               </p>
             </div>
 
             <div id="changes" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Changes to Terms</h2>
               <p>
-                We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will provide at least 30 days' notice prior to any new terms taking effect. By continuing to access or use our Service after those revisions become effective, you agree to be bound by the revised terms.
+                We may revise these Terms from time to time. Continued use of the platform after updates take effect constitutes acceptance of revised terms.
               </p>
             </div>
 
             <div id="contact" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Contact Us</h2>
               <p>
-                If you have any questions about these Terms, please contact us at:
+                If you have questions about these Terms of Service, please contact us at:
               </p>
               <div className="not-prose mt-6 flex items-center gap-3 text-primary font-medium bg-primary/5 border border-primary/10 rounded-xl px-4 py-3 w-fit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
@@ -257,3 +256,4 @@ export default function TermsOfServicePage() {
     </div>
   );
 }
+
