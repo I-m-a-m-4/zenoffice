@@ -126,11 +126,10 @@ export default function LoginPage() {
 
         if (
           popupError?.code === 'auth/operation-not-supported-in-this-environment' ||
-          (popupError?.code === 'auth/popup-blocked' && !isDesktop) || 
+          popupError?.code === 'auth/popup-blocked' ||
           (!isDesktop && popupError?.code === 'auth/network-request-failed')
         ) {
-          // The webview cannot host a popup, or mobile browser blocked it.
-          // This branch navigates the whole shell away.
+          // The webview cannot host a popup, or browser blocked it.
           void trackLaunchStage(
             'login_failed',
             `popup-fallback:${popupError?.code ?? 'unknown'}`,

@@ -266,7 +266,7 @@ function SignupPageContent() {
 
         if (
           popupError?.code === 'auth/operation-not-supported-in-this-environment' ||
-          (popupError?.code === 'auth/popup-blocked' && !isDesktop)
+          popupError?.code === 'auth/popup-blocked'
         ) {
           // Browser blocked the popup — fall back to redirect silently.
           // Recorded before the call, which navigates the whole shell away.
