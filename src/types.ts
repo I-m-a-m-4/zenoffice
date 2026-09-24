@@ -7,8 +7,6 @@
 
 
 
-};
-
 export type UserRole = 'admin' | 'manager' | 'vendor_operator';
 
 export interface UserProfile {

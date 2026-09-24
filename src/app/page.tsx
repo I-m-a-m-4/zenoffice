@@ -496,7 +496,7 @@ export default function Home() {
               </div>
               <div className="flex justify-between py-2 border-b border-neutral-200">
                 <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Search Speed</span>
-                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>< 50ms</span>
+                <span className="text-sm font-instrument-serif text-slate-900" style={{}}>&lt; 50ms</span>
               </div>
               <div className="flex justify-between py-2 border-b border-neutral-200">
                 <span className="text-sm font-instrument-serif text-slate-600" style={{}}>Encryption</span>

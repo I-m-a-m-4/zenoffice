@@ -953,7 +953,7 @@ function DocumentEditorInner() {
               {docTitle.replace(/\.[^/.]+$/, '')}
             </h1>
 
-            <p><br></p>
+            <p><br /></p>
           </div>
         </div>
       </div>
