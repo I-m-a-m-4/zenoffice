@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import {
   CheckCircle2, Crown, Sparkles, Download, ArrowRight, Check,
   GraduationCap, Zap, Rocket, Globe, Shield, FileText, Brain,
@@ -23,6 +24,7 @@ const CURRENCY_SYMBOLS: Record<Currency, string> = { USD: '$', NGN: '₦' };
 export default function BillingPage() {
   const { user } = useUser();
   const [activePlan, setActivePlan] = useState<'free' | PlanId>('free');
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>('pro');
   const [isProcessing, setIsProcessing] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [currency, setCurrency] = useState<Currency>('USD');
@@ -38,100 +40,75 @@ export default function BillingPage() {
       if (stored === 'student' || stored === 'pro' || stored === 'max') {
         setActivePlan(stored as PlanId);
       }
-      
-      if (!document.getElementById('flutterwave-script')) {
-        const script = document.createElement('script');
-        script.id = 'flutterwave-script';
-        script.src = 'https://checkout.flutterwave.com/v3.js';
-        script.async = true;
-        script.onerror = () => {
-          showToast('Payment gateway blocked. Please disable your adblocker.');
-        };
-        document.body.appendChild(script);
-      }
     }
   }, []);
 
-  const launchFlutterwave = (planId: PlanId, amount: number, curr: Currency) => {
-    const userEmail = user?.email || 'user@example.com';
-    const publicKey = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK-33162c3bb2bb347a6606f3e44645f1c9-X';
-
-    (window as any).FlutterwaveCheckout({
-      public_key: publicKey,
-      tx_ref: `zenoffice_${planId}_${Date.now()}`,
-      amount,
-      currency: curr,
-      payment_options: curr === 'NGN' ? 'card,banktransfer,ussd' : 'card',
-      customer: {
-        email: userEmail,
-        name: user?.displayName || userEmail.split('@')[0],
-      },
-      customizations: {
-        title: 'ZenOffice',
-        description: `ZenOffice ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
-        logo: 'https://zeneva.space/logo.png',
-      },
-      callback: async (data: any) => {
-        setIsProcessing(false);
-        const txId = data.transaction_id || data.tx_ref || data.flw_ref;
-
-        if (data.status === 'successful' || data.status === 'completed') {
-          // Attempt server verification & Firestore upgrade
-          try {
-            if (user?.uid) {
-              const res = await fetch('/api/upgrade/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  transaction_id: txId,
-                  userId: user.uid,
-                  plan: planId,
-                }),
-              });
-              const verifyRes = await res.json();
-              if (!verifyRes.success) {
-                console.warn('Server verification warning:', verifyRes.error);
-              }
-            }
-          } catch (e) {
-            console.error('Verification request error:', e);
-          }
-
-          setActivePlan(planId);
-          localStorage.setItem('zenoffice_subscription_plan', planId);
-          localStorage.setItem('zenoffice_subscription_date', new Date().toISOString());
-          showToast(`🎉 Payment successful! Welcome to ${planId.toUpperCase()}. Ref: ${txId}`);
-        } else {
-          showToast('Payment was not completed.');
-        }
-      },
-      onclose: () => setIsProcessing(false),
-    });
+  const config = {
+    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK-33162c3bb2bb347a6606f3e44645f1c9-X',
+    tx_ref: `zenoffice_${selectedPlan}_${Date.now()}`,
+    amount: PRICES[selectedPlan][currency],
+    currency: currency,
+    payment_options: currency === 'NGN' ? 'card,banktransfer,ussd' : 'card',
+    customer: {
+      email: user?.email || 'user@zenoffice.app',
+      phone_number: '',
+      name: user?.displayName || user?.email?.split('@')[0] || 'ZenOffice User',
+    },
+    customizations: {
+      title: 'ZenOffice',
+      description: `ZenOffice ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} Plan`,
+      logo: 'https://zeneva.space/logo.png',
+    },
   };
 
-  const handleCheckout = (planId: PlanId) => {
-    setIsProcessing(true);
-    const amount = PRICES[planId][currency];
-    
-    // Safety timeout in case Flutterwave modal fails to load or close properly
-    setTimeout(() => {
-      setIsProcessing(false);
-    }, 15000);
+  const handleFlutterPayment = useFlutterwave(config);
 
-    // Slight delay to ensure UI updates and script is ready
+  const handleCheckout = (planId: PlanId) => {
+    setSelectedPlan(planId);
+    setIsProcessing(true);
+
     setTimeout(() => {
-      try {
-        if (typeof (window as any).FlutterwaveCheckout !== 'undefined') {
-          launchFlutterwave(planId, amount, currency);
-        } else {
+      handleFlutterPayment({
+        callback: async (response: any) => {
+          closePaymentModal();
           setIsProcessing(false);
-          showToast('Payment gateway is blocked or loading. Try disabling adblockers.');
-        }
-      } catch(e) {
-        setIsProcessing(false);
-        showToast('Error launching checkout gateway');
-      }
-    }, 200);
+
+          const txId = response.transaction_id || response.tx_ref || response.flw_ref;
+
+          if (response.status === 'successful' || response.status === 'completed') {
+            try {
+              if (user?.uid) {
+                const res = await fetch('/api/upgrade/verify', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    transaction_id: txId,
+                    userId: user.uid,
+                    plan: planId,
+                  }),
+                });
+                const verifyRes = await res.json();
+                if (!verifyRes.success) {
+                  console.warn('Server verification warning:', verifyRes.error);
+                }
+              }
+            } catch (e) {
+              console.error('Verification request error:', e);
+            }
+
+            setActivePlan(planId);
+            localStorage.setItem('zenoffice_subscription_plan', planId);
+            localStorage.setItem('zenoffice_subscription_date', new Date().toISOString());
+            showToast(`🎉 Payment successful! Welcome to ${planId.toUpperCase()}. Ref: ${txId}`);
+          } else {
+            showToast('Payment was not completed.');
+          }
+        },
+        onClose: () => {
+          setIsProcessing(false);
+        },
+      });
+    }, 50);
   };
 
   const handleDownloadInvoice = () => {
