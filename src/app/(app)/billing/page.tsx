@@ -54,8 +54,10 @@ export default function BillingPage() {
 
   const launchFlutterwave = (planId: PlanId, amount: number, curr: Currency) => {
     const userEmail = user?.email || 'user@example.com';
+    const publicKey = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK-33162c3bb2bb347a6606f3e44645f1c9-X';
+
     (window as any).FlutterwaveCheckout({
-      public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK-33162c3bb2bb347a6606f3e44645f1c9-X',
+      public_key: publicKey,
       tx_ref: `zenoffice_${planId}_${Date.now()}`,
       amount,
       currency: curr,
@@ -67,14 +69,40 @@ export default function BillingPage() {
       customizations: {
         title: 'ZenOffice',
         description: `ZenOffice ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
+        logo: 'https://zeneva.space/logo.png',
       },
-      callback: (data: any) => {
+      callback: async (data: any) => {
         setIsProcessing(false);
+        const txId = data.transaction_id || data.tx_ref || data.flw_ref;
+
         if (data.status === 'successful' || data.status === 'completed') {
+          // Attempt server verification & Firestore upgrade
+          try {
+            if (user?.uid) {
+              const res = await fetch('/api/upgrade/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  transaction_id: txId,
+                  userId: user.uid,
+                  plan: planId,
+                }),
+              });
+              const verifyRes = await res.json();
+              if (!verifyRes.success) {
+                console.warn('Server verification warning:', verifyRes.error);
+              }
+            }
+          } catch (e) {
+            console.error('Verification request error:', e);
+          }
+
           setActivePlan(planId);
           localStorage.setItem('zenoffice_subscription_plan', planId);
           localStorage.setItem('zenoffice_subscription_date', new Date().toISOString());
-          showToast(`🎉 Payment successful! Welcome to ${planId.toUpperCase()}. Ref: ${data.transaction_id}`);
+          showToast(`🎉 Payment successful! Welcome to ${planId.toUpperCase()}. Ref: ${txId}`);
+        } else {
+          showToast('Payment was not completed.');
         }
       },
       onclose: () => setIsProcessing(false),

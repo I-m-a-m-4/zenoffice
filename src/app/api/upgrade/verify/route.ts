@@ -4,7 +4,7 @@ import { adminFirestore } from '@/firebase/admin';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { transaction_id, userId } = body;
+    const { transaction_id, userId, plan = 'pro' } = body;
 
     if (!transaction_id || !userId) {
       return NextResponse.json(
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify payment with Flutterwave
+    // Verify payment with Flutterwave API
     const verifyResponse = await fetch(
       `https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`,
       {
@@ -38,11 +38,11 @@ export async function POST(req: NextRequest) {
 
     if (
       verifyData.status !== 'success' ||
-      verifyData.data?.status !== 'successful'
+      (verifyData.data?.status !== 'successful' && verifyData.data?.status !== 'completed')
     ) {
       console.warn('Flutterwave verification failed:', verifyData);
       return NextResponse.json(
-        { success: false, error: 'Payment verification failed. Please contact support.' },
+        { success: false, error: verifyData.message || 'Payment verification failed. Please contact support.' },
         { status: 402 }
       );
     }
@@ -56,33 +56,34 @@ export async function POST(req: NextRequest) {
 
     // Look up user to find their businessId
     const userDoc = await adminFirestore.collection('users').doc(userId).get();
-    if (!userDoc.exists) {
-      return NextResponse.json(
-        { success: false, error: 'User not found.' },
-        { status: 404 }
-      );
-    }
+    let businessId = userDoc.exists ? userDoc.data()?.businessId : null;
 
-    const businessId = userDoc.data()?.businessId;
     if (!businessId) {
-      return NextResponse.json(
-        { success: false, error: 'User business not found.' },
-        { status: 404 }
-      );
+      const snap = await adminFirestore.collection('businessInstances').where('ownerId', '==', userId).limit(1).get();
+      if (!snap.empty) {
+        businessId = snap.docs[0].id;
+      }
     }
 
-    // Upgrade the business plan to 'pro' in Firestore
-    const businessRef = adminFirestore.collection('businessInstances').doc(businessId);
-    await businessRef.update({
-      plan: 'pro',
-      upgradedAt: new Date().toISOString(),
-      lastPaymentTransactionId: transaction_id,
-      lastPaymentAmount: verifyData.data?.amount,
-      lastPaymentCurrency: verifyData.data?.currency,
-    });
+    if (businessId) {
+      const businessRef = adminFirestore.collection('businessInstances').doc(businessId);
+      await businessRef.set({
+        plan: plan,
+        upgradedAt: new Date().toISOString(),
+        lastPaymentTransactionId: transaction_id,
+        lastPaymentAmount: verifyData.data?.amount,
+        lastPaymentCurrency: verifyData.data?.currency,
+      }, { merge: true });
+    }
 
-    console.log(`Business ${businessId} (User ${userId}) upgraded to Pro. Transaction: ${transaction_id}`);
-    return NextResponse.json({ success: true, plan: 'pro' });
+    // Also update user document
+    await adminFirestore.collection('users').doc(userId).set({
+      plan: plan,
+      upgradedAt: new Date().toISOString(),
+    }, { merge: true });
+
+    console.log(`Business ${businessId || 'N/A'} (User ${userId}) upgraded to ${plan}. Transaction: ${transaction_id}`);
+    return NextResponse.json({ success: true, plan });
   } catch (error: any) {
     console.error('Upgrade verification error:', error);
     return NextResponse.json(
