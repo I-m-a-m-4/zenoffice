@@ -314,13 +314,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
           {/* User Profile Avatar Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1.5 pl-2 pr-2 border-l border-slate-300 dark:border-zinc-800 outline-none h-8">
-                <Avatar className="h-8 w-8 border border-slate-300 dark:border-zinc-700">
-                  <AvatarImage src="" />
-                  <AvatarFallback className="bg-orange-600 text-white text-xs font-bold">
-                    BI
-                  </AvatarFallback>
-                </Avatar>
+              <button className="flex items-center gap-1.5 pl-2 pr-2 border-l border-slate-300 dark:border-zinc-800 outline-none h-8 cursor-pointer">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-orange-600 to-amber-500 p-[1.5px] shadow-xs hover:scale-105 transition-transform flex items-center justify-center">
+                  <div className="h-full w-full rounded-full bg-white dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
+                    <User className="h-4 w-4 text-orange-600 dark:text-orange-500" />
+                  </div>
+                </div>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 dark:bg-[#18181b] dark:border-zinc-800 text-xs">
@@ -338,31 +337,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Window controls */}
-          <div className="hidden lg:flex items-center gap-1 pl-1">
-            <button 
-              onClick={() => showToast('ZenOffice running in local background')}
-              className="w-6 h-6 flex items-center justify-center hover:bg-slate-300/60 dark:hover:bg-zinc-800 rounded text-slate-500"
-              title="Minimize"
-            >
-              <Minus className="w-3 h-3" />
-            </button>
-            <button 
-              onClick={handleToggleFullscreen}
-              className="w-6 h-6 flex items-center justify-center hover:bg-slate-300/60 dark:hover:bg-zinc-800 rounded text-slate-500"
-              title="Maximize / Toggle Fullscreen"
-            >
-              <Square className="w-2.5 h-2.5" />
-            </button>
-            <button 
-              onClick={() => router.push('/dashboard')}
-              className="w-6 h-6 flex items-center justify-center hover:bg-rose-500 hover:text-white rounded text-slate-500"
-              title="Close to Home"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
         </div>
       </header>
 

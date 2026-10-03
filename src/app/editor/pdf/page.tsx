@@ -39,6 +39,8 @@ function PDFEditorInner() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const blankEditorRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const docViewportRef = useRef<HTMLDivElement>(null);
 
   // Document & view state
   const [docTitle, setDocTitle] = useState(docParam ? decodeURIComponent(docParam) : 'Document.pdf');
@@ -388,7 +390,7 @@ function PDFEditorInner() {
 
         // Page wrapper container
         const pageWrapper = document.createElement('div');
-        pageWrapper.className = 'relative mb-6 rounded-lg overflow-hidden bg-white shadow-sm border border-zinc-200 dark:border-zinc-800 transition-all flex flex-col items-center cursor-pointer';
+        pageWrapper.className = 'relative mb-6 rounded-lg overflow-hidden bg-white shadow-sm border border-zinc-200 dark:border-zinc-800 transition-all flex flex-col items-center';
         pageWrapper.id = `pdf-page-${pageNum}`;
 
         // Page header indicator
@@ -397,14 +399,121 @@ function PDFEditorInner() {
         pageHeader.innerHTML = `<span>Page ${pageNum} of ${pdf.numPages}</span><span class="text-[10px] font-mono text-orange-600 dark:text-orange-400 font-semibold">${docTitle}</span>`;
         pageWrapper.appendChild(pageHeader);
 
+        // Canvas & Interactive Text Layer Wrapper
+        const pageCanvasWrapper = document.createElement('div');
+        pageCanvasWrapper.className = 'relative w-full flex justify-center bg-white';
+        pageCanvasWrapper.style.width = `${viewport.width}px`;
+        pageCanvasWrapper.style.height = `${viewport.height}px`;
+        pageCanvasWrapper.style.maxWidth = '100%';
+
         // Canvas
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        canvas.className = 'max-w-full h-auto block bg-white';
-        pageWrapper.appendChild(canvas);
+        canvas.className = 'block bg-white';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        pageCanvasWrapper.appendChild(canvas);
 
+        // Interactive Click-To-Edit Text Layer
+        const textLayer = document.createElement('div');
+        textLayer.className = 'absolute inset-0 overflow-hidden pointer-events-auto select-text';
+        textLayer.style.width = '100%';
+        textLayer.style.height = '100%';
+
+        try {
+          const textContent = await page.getTextContent();
+          if (textContent && textContent.items) {
+            textContent.items.forEach((item: any) => {
+              if (!item.str || !item.str.trim()) return;
+
+              const vp = viewport.transform;
+              const it = item.transform;
+              // 2D affine transform matrix multiplication: vp * it
+              const a = vp[0] * it[0] + vp[2] * it[1];
+              const b = vp[1] * it[0] + vp[3] * it[1];
+              const e = vp[0] * it[4] + vp[2] * it[5] + vp[4];
+              const f = vp[1] * it[4] + vp[3] * it[5] + vp[5];
+
+              const fontSize = Math.max(9, Math.hypot(a, b));
+              const top = f - fontSize * 0.85;
+              const left = e;
+              const itemWidth = Math.max(item.width * (viewport.scale || scale), 10);
+              const itemHeight = fontSize * 1.25;
+
+              const span = document.createElement('span');
+              span.className = 'pdf-text-item absolute transition-all cursor-text select-text';
+              span.style.left = `${left}px`;
+              span.style.top = `${top}px`;
+              span.style.fontSize = `${fontSize}px`;
+              span.style.lineHeight = `${itemHeight}px`;
+              span.style.minWidth = `${itemWidth}px`;
+              span.style.height = `${itemHeight}px`;
+              span.style.whiteSpace = 'pre';
+              span.style.color = 'transparent';
+              span.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+              span.innerText = item.str;
+              span.title = 'Click to edit text';
+
+              // Hover indicator
+              span.onmouseenter = () => {
+                if (span.getAttribute('contenteditable') !== 'true' && !span.dataset.edited) {
+                  span.style.backgroundColor = 'rgba(59, 130, 246, 0.12)';
+                  span.style.outline = '1px dashed rgba(59, 130, 246, 0.6)';
+                  span.style.borderRadius = '2px';
+                }
+              };
+              span.onmouseleave = () => {
+                if (span.getAttribute('contenteditable') !== 'true' && !span.dataset.edited) {
+                  span.style.backgroundColor = 'transparent';
+                  span.style.outline = 'none';
+                }
+              };
+
+              // Click to inline edit
+              span.onclick = (ev) => {
+                ev.stopPropagation();
+                span.contentEditable = 'true';
+                span.style.color = '#18181b';
+                span.style.backgroundColor = '#ffffff'; // Cleanly masks underlying canvas text
+                span.style.outline = '2px solid #ea580c';
+                span.style.borderRadius = '2px';
+                span.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                span.style.zIndex = '30';
+                span.focus();
+              };
+
+              span.onblur = () => {
+                span.contentEditable = 'false';
+                span.dataset.edited = 'true';
+                span.style.color = '#18181b';
+                span.style.backgroundColor = '#ffffff'; // Maintain white mask so original canvas text stays replaced
+                span.style.outline = '1px solid rgba(234, 88, 12, 0.3)';
+                span.style.boxShadow = 'none';
+                span.style.zIndex = '10';
+                showToast('Document text updated');
+              };
+
+              span.onkeydown = (ev) => {
+                if (ev.key === 'Enter') {
+                  ev.preventDefault();
+                  span.blur();
+                }
+                if (ev.key === 'Escape') {
+                  span.blur();
+                }
+              };
+
+              textLayer.appendChild(span);
+            });
+          }
+        } catch (e) {
+          // Non-blocking text layer error
+        }
+
+        pageCanvasWrapper.appendChild(textLayer);
+        pageWrapper.appendChild(pageCanvasWrapper);
         container.appendChild(pageWrapper);
 
         // Render page to canvas context
@@ -621,14 +730,20 @@ function PDFEditorInner() {
 
   // Add signature
   const handleAddSignature = () => {
+    const scrollContainer = scrollContainerRef.current;
+    const docViewport = docViewportRef.current;
+    const currentScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+    const defaultX = docViewport ? Math.max(40, (docViewport.clientWidth - 220) / 2) : 200;
+    const defaultY = currentScrollTop + 180;
+
     if (signTab === 'type') {
       if (!signatureText.trim()) return;
       const newSign = {
         id: `sign-${Date.now()}`,
         type: 'text' as const,
         text: signatureText,
-        x: window.innerWidth / 2 - 50,
-        y: window.innerHeight / 2 - 20,
+        x: defaultX,
+        y: defaultY,
         color: signatureColor,
       };
       setAppliedSignatures(prev => [...prev, newSign]);
@@ -639,12 +754,13 @@ function PDFEditorInner() {
         id: `sign-${Date.now()}`,
         type: 'image' as const,
         imageUrl: dataUrl,
-        x: window.innerWidth / 2 - 100,
-        y: window.innerHeight / 2 - 50,
+        x: defaultX,
+        y: defaultY,
       };
       setAppliedSignatures(prev => [...prev, newSign]);
     }
     setShowSignModal(false);
+    showToast('Signature placed on document.');
   };
 
   // Drawing logic for Signature Canvas
@@ -681,8 +797,12 @@ function PDFEditorInner() {
   // Global Dragging Logic
   const handleGlobalMouseMove = (e: React.MouseEvent) => {
     if (!draggedAnnId) return;
-    const newX = e.clientX - dragOffset.x;
-    const newY = e.clientY - dragOffset.y;
+    const docRect = docViewportRef.current?.getBoundingClientRect();
+    const currentContainerX = docRect ? e.clientX - docRect.left : e.clientX;
+    const currentContainerY = docRect ? e.clientY - docRect.top : e.clientY;
+
+    const newX = Math.max(0, currentContainerX - dragOffset.x);
+    const newY = Math.max(0, currentContainerY - dragOffset.y);
 
     if (draggedAnnId.startsWith('sign-')) {
       setAppliedSignatures(prev => prev.map(s => s.id === draggedAnnId ? { ...s, x: newX, y: newY } : s));
@@ -700,13 +820,15 @@ function PDFEditorInner() {
   // Add study note
   const handleAddNote = () => {
     if (!newNoteContent.trim()) return;
+    const scrollContainer = scrollContainerRef.current;
+    const currentScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
     const newNote: PdfAnnotation = {
       id: `note-${Date.now()}`,
       type: 'note',
       text: newNoteContent.trim(),
       page: pendingCoords?.page || 1,
       x: pendingCoords?.x || 100,
-      y: pendingCoords?.y || 140,
+      y: (pendingCoords?.y || 140) + currentScrollTop,
     };
     setAnnotations(prev => [...prev, newNote]);
     setNewNoteContent('');
@@ -764,13 +886,15 @@ function PDFEditorInner() {
             const reader = new FileReader();
             reader.onload = (event) => {
               if (event.target?.result) {
+                const scrollContainer = scrollContainerRef.current;
+                const currentScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
                 const newAnn: PdfAnnotation = {
                   id: `img-${Date.now()}`,
                   type: 'image',
                   imageUrl: event.target.result as string,
                   page: 1,
                   x: 150,
-                  y: 150,
+                  y: currentScrollTop + 160,
                 };
                 setAnnotations(prev => [...prev, newAnn]);
                 showToast('Image inserted. You can now drag it.');
@@ -961,8 +1085,12 @@ function PDFEditorInner() {
           <div className="flex items-center gap-0.5">
             <button 
               onClick={() => {
+                const scrollContainer = scrollContainerRef.current;
+                const docViewport = docViewportRef.current;
+                const currentScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+                const defaultX = docViewport ? Math.max(40, (docViewport.clientWidth - 200) / 2) : 150;
                 const newAnn: PdfAnnotation = {
-                  id: `txt-${Date.now()}`, type: 'text', text: '', page: 1, x: window.innerWidth / 2 - 50, y: window.innerHeight / 2,
+                  id: `txt-${Date.now()}`, type: 'text', text: '', page: 1, x: defaultX, y: currentScrollTop + 160,
                 };
                 setAnnotations(prev => [...prev, newAnn]);
                 showToast('Text box added. Click to edit.');
@@ -985,8 +1113,10 @@ function PDFEditorInner() {
 
             <button 
               onClick={() => {
+                const scrollContainer = scrollContainerRef.current;
+                const currentScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
                 const newAnn: PdfAnnotation = {
-                  id: `hl-${Date.now()}`, type: 'highlight', text: `Key Concept`, page: 1, x: 120, y: 160,
+                  id: `hl-${Date.now()}`, type: 'highlight', text: `Key Concept`, page: 1, x: 120, y: currentScrollTop + 160,
                 };
                 setAnnotations(prev => [...prev, newAnn]);
                 showToast('Highlight stamp placed.');
@@ -1000,8 +1130,12 @@ function PDFEditorInner() {
 
             <button 
               onClick={() => {
+                const scrollContainer = scrollContainerRef.current;
+                const docViewport = docViewportRef.current;
+                const currentScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+                const defaultX = docViewport ? Math.max(40, (docViewport.clientWidth - 200) / 2) : 150;
                 const newAnn: PdfAnnotation = {
-                  id: `redact-${Date.now()}`, type: 'redact', text: '', page: 1, x: window.innerWidth / 2 - 50, y: window.innerHeight / 2,
+                  id: `redact-${Date.now()}`, type: 'redact', text: '', page: 1, x: defaultX, y: currentScrollTop + 160,
                 };
                 setAnnotations(prev => [...prev, newAnn]);
                 showToast('Redact block added.');
@@ -1283,7 +1417,7 @@ function PDFEditorInner() {
         )}
 
         {/* Central Document Canvas */}
-        <div className="flex-1 h-full w-full overflow-y-auto flex flex-col items-center p-2 sm:p-6 relative">
+        <div ref={scrollContainerRef} className="flex-1 h-full w-full overflow-y-auto flex flex-col items-center p-2 sm:p-6 relative">
           
           {isLoading ? (
             <div className="flex flex-col items-center justify-center my-auto gap-3 text-zinc-500 dark:text-zinc-400">
@@ -1291,17 +1425,21 @@ function PDFEditorInner() {
               <span className="text-sm font-medium">Loading {docTitle}...</span>
             </div>
           ) : (pdfBlobUrl || pdfDataBytes) ? (
-            <div className="w-full max-w-4xl flex flex-col items-center relative">
+            <div ref={docViewportRef} className="w-full max-w-4xl flex flex-col items-center relative">
               
-              {/* Overlay Signatures */}
+              {/* Overlay Signatures (Anchored to Document, scrolls naturally) */}
               {appliedSignatures.map(sig => (
                 <div 
                   key={sig.id}
                   onMouseDown={(e) => {
+                    e.stopPropagation();
                     setDraggedAnnId(sig.id);
-                    setDragOffset({ x: e.clientX - sig.x, y: e.clientY - sig.y });
+                    const docRect = docViewportRef.current?.getBoundingClientRect();
+                    const currentContainerX = docRect ? e.clientX - docRect.left : e.clientX;
+                    const currentContainerY = docRect ? e.clientY - docRect.top : e.clientY;
+                    setDragOffset({ x: currentContainerX - sig.x, y: currentContainerY - sig.y });
                   }}
-                  className="fixed z-30 pointer-events-auto px-1 py-0.5 flex items-center gap-2 cursor-grab active:cursor-grabbing group"
+                  className="absolute z-30 pointer-events-auto px-1 py-0.5 flex items-center gap-2 cursor-grab active:cursor-grabbing group select-none"
                   style={{ top: `${sig.y}px`, left: `${sig.x}px` }}
                 >
                   {sig.type === 'text' ? (
@@ -1318,15 +1456,19 @@ function PDFEditorInner() {
                 </div>
               ))}
 
-              {/* Overlay Study Notes & Highlights */}
+              {/* Overlay Study Notes & Highlights (Anchored to Document, scrolls naturally) */}
               {annotations.map(ann => (
                 <div 
                   key={ann.id}
                   onMouseDown={(e) => {
+                    e.stopPropagation();
                     setDraggedAnnId(ann.id);
-                    setDragOffset({ x: e.clientX - ann.x, y: e.clientY - ann.y });
+                    const docRect = docViewportRef.current?.getBoundingClientRect();
+                    const currentContainerX = docRect ? e.clientX - docRect.left : e.clientX;
+                    const currentContainerY = docRect ? e.clientY - docRect.top : e.clientY;
+                    setDragOffset({ x: currentContainerX - ann.x, y: currentContainerY - ann.y });
                   }}
-                  className={`fixed z-30 pointer-events-auto px-3 py-1.5 rounded-lg shadow-xl flex items-center gap-2 border cursor-grab active:cursor-grabbing group ${
+                  className={`absolute z-30 pointer-events-auto px-3 py-1.5 rounded-lg shadow-xl flex items-center gap-2 border cursor-grab active:cursor-grabbing group ${
                     ann.type === 'highlight' 
                       ? 'bg-amber-200/90 text-amber-900 border-amber-400 font-semibold text-xs' 
                       : ann.type === 'text'
@@ -1684,13 +1826,15 @@ function PDFEditorInner() {
         documentTitle={docTitle}
         editorType="pdf"
         onInsert={(text) => {
+          const scrollContainer = scrollContainerRef.current;
+          const currentScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
           const newAnn: PdfAnnotation = {
             id: `ai-${Date.now()}`,
             type: 'note',
             text: `AI Study Note: ${text.slice(0, 80)}...`,
             page: 1,
             x: 100,
-            y: 120,
+            y: currentScrollTop + 120,
           };
           setAnnotations(prev => [...prev, newAnn]);
           setShowAiModal(false);
