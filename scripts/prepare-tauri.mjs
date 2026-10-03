@@ -225,15 +225,16 @@ const rootPagePath = path.resolve(process.cwd(), 'src/app/page.tsx');
 const redirectContent = `'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signedOutLandingRoute } from '@/lib/platform';
 
 export default function Home() {
   const router = useRouter();
   useEffect(() => {
-    router.replace(signedOutLandingRoute());
+    router.replace('/dashboard');
   }, [router]);
-  return null;
-}`;
+  return (
+    <div className="fixed inset-0 h-screen w-screen bg-[#121214] flex items-center justify-center" />
+  );
+};`;
 
 if (fs.existsSync(rootPagePath)) {
     fs.writeFileSync(rootPagePath, redirectContent);

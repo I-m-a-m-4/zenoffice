@@ -298,7 +298,7 @@ export default function DashboardPage() {
       <div className="flex-1 min-w-0 flex flex-col gap-6">
 
         {/* 1. CLEAN ZENOFFICE QUICK ACTION BAR (Orange Brand, No Commercial WPS Clutter) */}
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-500/20 dark:border-orange-500/15 dark:bg-[#0c0c0e] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="p-5 rounded-lg bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-500/20 dark:border-orange-500/15 dark:bg-[#0c0c0e] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-orange-600 animate-pulse" />
@@ -526,8 +526,8 @@ export default function DashboardPage() {
 
         {/* 4. DOCUMENTS DISPLAY (PURE LOCAL & CLEAN ZERO-SLOP STATE) */}
         {displayedDocs.length === 0 ? (
-          <div className="py-16 px-6 border-2 border-dashed border-slate-200 dark:border-zinc-850 rounded-2xl text-center flex flex-col items-center justify-center space-y-4 bg-slate-50/50 dark:bg-[#08080a]">
-            <div className="w-14 h-14 rounded-2xl bg-orange-500/10 text-orange-600 flex items-center justify-center shadow-xs">
+          <div className="py-16 px-6 border-2 border-dashed border-slate-200 dark:border-zinc-850 rounded-lg text-center flex flex-col items-center justify-center space-y-4 bg-slate-50/50 dark:bg-[#08080a]">
+            <div className="w-14 h-14 rounded-lg bg-orange-500/10 text-orange-600 flex items-center justify-center shadow-xs">
               <FolderOpen className="w-7 h-7" />
             </div>
             
@@ -678,7 +678,7 @@ export default function DashboardPage() {
               <div
                 key={doc.id}
                 onClick={() => openDocument(doc)}
-                className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#121214] hover:border-orange-500 dark:hover:border-orange-500 shadow-2xs hover:shadow-sm cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
+                className="p-4 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#121214] hover:border-orange-500 dark:hover:border-orange-500 shadow-2xs hover:shadow-sm cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
               >
                 <div className="flex items-start justify-between">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold ${
@@ -740,7 +740,7 @@ export default function DashboardPage() {
       <aside className="w-full xl:w-72 shrink-0 flex flex-col gap-4 ">
         
         {/* Zen Office Suite Tools */}
-        <div className="bg-white dark:bg-[#121214] border border-slate-200 dark:border-zinc-800 rounded-xl p-4 space-y-3 shadow-2xs">
+        <div className="bg-white dark:bg-[#121214] border border-slate-200 dark:border-zinc-800 rounded-lg p-4 space-y-3 shadow-2xs">
           <div className="text-xs font-bold text-slate-800 dark:text-zinc-100 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-orange-600" />
             <span>Productivity Utilities</span>
@@ -799,7 +799,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Local Storage Status Box */}
-        <div className="bg-white dark:bg-[#121214] border border-slate-200 dark:border-zinc-800 rounded-xl p-4 space-y-2 text-xs">
+        <div className="bg-white dark:bg-[#121214] border border-slate-200 dark:border-zinc-800 rounded-lg p-4 space-y-2 text-xs">
           <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-zinc-200">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             <span>Privacy &amp; Offline Mode</span>

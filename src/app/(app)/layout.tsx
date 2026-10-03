@@ -373,7 +373,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <aside className="w-24 bg-[#F0EDE6] dark:bg-[#121214] border-r border-slate-300 dark:border-zinc-800 flex flex-col items-center py-4 gap-4 shrink-0 ">
           <Link 
             href="/dashboard"
-            className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-xs font-semibold transition-all ${
+            className={`w-14 h-14 rounded-lg flex flex-col items-center justify-center text-xs font-semibold transition-all ${
               isHomeActive 
                 ? 'bg-orange-600 text-white shadow-md' 
                 : 'text-slate-600 dark:text-zinc-400 hover:bg-orange-200 dark:hover:bg-zinc-800'
@@ -386,7 +386,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
           <Link 
             href="/editor/document"
-            className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-xs font-semibold text-slate-600 hover:text-orange-600 dark:text-zinc-400 hover:bg-orange-200 dark:hover:bg-zinc-800 transition-all"
+            className="w-14 h-14 rounded-lg flex flex-col items-center justify-center text-xs font-semibold text-slate-600 hover:text-orange-600 dark:text-zinc-400 hover:bg-orange-200 dark:hover:bg-zinc-800 transition-all"
             title="Zen Document (Word)"
           >
             <FileText className="w-6 h-6 mb-1 text-orange-600 dark:text-orange-500" />
@@ -395,7 +395,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
           <Link 
             href="/editor/excel"
-            className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-xs font-semibold text-slate-600 hover:text-emerald-600 dark:text-zinc-400 hover:bg-emerald-100 dark:hover:bg-zinc-800 transition-all"
+            className="w-14 h-14 rounded-lg flex flex-col items-center justify-center text-xs font-semibold text-slate-600 hover:text-emerald-600 dark:text-zinc-400 hover:bg-emerald-100 dark:hover:bg-zinc-800 transition-all"
             title="Zen Spreadsheet (Excel)"
           >
             <FileSpreadsheet className="w-6 h-6 mb-1 text-emerald-600 dark:text-emerald-500" />
@@ -404,7 +404,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
           <Link 
             href="/editor/pdf"
-            className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-xs font-semibold text-slate-600 hover:text-rose-600 dark:text-zinc-400 hover:bg-rose-100 dark:hover:bg-zinc-800 transition-all"
+            className="w-14 h-14 rounded-lg flex flex-col items-center justify-center text-xs font-semibold text-slate-600 hover:text-rose-600 dark:text-zinc-400 hover:bg-rose-100 dark:hover:bg-zinc-800 transition-all"
             title="Zen PDF Suite"
           >
             <FileIcon className="w-6 h-6 mb-1 text-rose-600 dark:text-rose-500" />
@@ -413,7 +413,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
           <Link 
             href="/tools"
-            className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-xs font-semibold transition-all ${
+            className={`w-14 h-14 rounded-lg flex flex-col items-center justify-center text-xs font-semibold transition-all ${
               pathname.startsWith('/tools')
                 ? 'bg-purple-600 text-white shadow-md' 
                 : 'text-slate-600 dark:text-zinc-400 hover:bg-purple-200 dark:hover:bg-zinc-800 hover:text-purple-600'

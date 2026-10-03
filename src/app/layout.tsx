@@ -89,8 +89,8 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/zenoffice-icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-pwa.png', sizes: '512x512', type: 'image/png' },
       { url: '/favicon.ico', sizes: 'any' },
     ],
     apple: [
@@ -321,7 +321,6 @@ export default function RootLayout({
       <body className={cn('font-body antialiased bg-background text-foreground')} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <I18nProvider>
-          <SplashScreen />
           <ClientSideInitializer />
           {/* Outside FirebaseClientProvider on purpose — it measures people who
               never sign in, and it has to keep reporting on a build where the
