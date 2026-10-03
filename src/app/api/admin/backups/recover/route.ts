@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         const destDb = admin.firestore();
         let sourceDb: admin.firestore.Firestore;
         try {
-          sourceDb = admin.firestore(admin.apps[0], sourceDbId);
+          sourceDb = (admin.firestore as any)(admin.apps[0], sourceDbId);
         } catch (err: any) {
           throw new Error(`Failed to connect to source database "${sourceDbId}": ${err.message}`);
         }

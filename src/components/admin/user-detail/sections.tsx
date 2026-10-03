@@ -49,13 +49,15 @@ import {
     Smartphone,
 } from 'lucide-react';
 
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFirestore } from '@/firebase';
 import { withFirestoreRetry } from '@/firebase/retry';
 import { toNgn } from '@/lib/platform-revenue';
-import type { BusinessInstance, Receipt, UserProfile } from '@/types';
+import type { BusinessInstance, UserProfile } from '@/types';
 import { toDate } from './user-primitives';
 
 /** How far back each windowed query looks. Surfaced in the UI, not hidden. */
@@ -168,128 +170,9 @@ const money = (n: number, currency = 'NGN') =>
 export function SalesSection({
     user, business, active,
 }: { user: UserProfile; business: BusinessInstance | null; active: boolean }) {
-    const firestore = useFirestore();
-    const bid = user.businessId;
-
-    const { rows, isLoading, error } = useLazyQuery(
-        active,
-        !!firestore && !!bid,
-        user.id,
-        () => (firestore && bid
-            ? query(
-                collection(firestore, 'receipts'),
-                where('businessId', '==', bid),
-                orderBy('createdAt', 'desc'),
-                fsLimit(SALES_WINDOW),
-            )
-            : null),
-        'sales',
-    );
-
-    const currency = (business as any)?.settings?.currency || 'NGN';
-
-    // Filtered in memory: there is no `createdBy` index, so the query above can
-    // only be scoped by business.
-    const mine = useMemo(
-        () => (rows as Receipt[]).filter(r => (r as any).createdBy === user.id),
-        [rows, user.id],
-    );
-
-    const totals = useMemo(() => {
-        const gross = mine.reduce((s, r) => s + (r.total || 0), 0);
-        const items = mine.reduce(
-            (s, r) => s + (r.items || []).reduce((n: number, i: any) => n + (i.quantity || 0), 0),
-            0,
-        );
-        return {
-            count: mine.length,
-            gross,
-            items,
-            avg: mine.length ? gross / mine.length : 0,
-            offline: mine.filter(r => (r as any).isOffline).length,
-            scanned: mine.filter(r => (r as any).wasScanned).length,
-        };
-    }, [mine]);
-
-    if (!bid) {
-        return <div className="py-10 text-center text-sm text-muted-foreground">This user has no business, so no sales can be attributed.</div>;
-    }
-
-    // `SectionState` returns null when there is nothing to say, but the element
-    // wrapping it is always truthy — so branch on the conditions themselves.
-    const settled = !isLoading && !error && mine.length > 0;
-
     return (
-        <div className="space-y-4">
-            <p className="text-xs text-muted-foreground">
-                Scanned from this business's most recent <strong>{SALES_WINDOW.toLocaleString()}</strong> sales
-                {rows.length ? ` (${rows.length.toLocaleString()} found)` : ''} and matched on
-                <code className="mx-1 rounded bg-muted px-1 py-0.5">createdBy</code>.
-                Older sales, and sales recorded before that field existed, are not counted here.
-            </p>
-
-            {!isLoading && !error && (
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    <Stat label="Sales rung up" value={totals.count.toLocaleString()} />
-                    <Stat label="Value" value={money(totals.gross, currency)} />
-                    <Stat label="Avg sale" value={money(totals.avg, currency)} />
-                    <Stat label="Items sold" value={totals.items.toLocaleString()} />
-                </div>
-            )}
-
-            <SectionState
-                isLoading={isLoading}
-                error={error}
-                empty={!mine.length}
-                emptyText="No sales attributed to this user in the window above."
-            />
-
-            {settled && (
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Recent sales</CardTitle>
-                        <CardDescription className="text-xs">
-                            {totals.offline} offline · {totals.scanned} used a scanner
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="max-h-[420px] overflow-y-auto">
-                            <Table>
-                                <TableHeader className="sticky top-0 z-10 bg-background">
-                                    <TableRow>
-                                        <TableHead className="text-xs">Receipt</TableHead>
-                                        <TableHead className="text-xs">When</TableHead>
-                                        <TableHead className="text-xs">Method</TableHead>
-                                        <TableHead className="text-right text-xs">Total</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {mine.slice(0, 100).map(r => {
-                                        const when = toDate(r.createdAt);
-                                        return (
-                                            <TableRow key={r.id}>
-                                                <TableCell className="font-mono text-xs">
-                                                    {r.receiptNumber || r.id.slice(0, 8)}
-                                                    {(r as any).isOffline && (
-                                                        <Badge variant="outline" className="ml-1.5 text-[9px]">offline</Badge>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="whitespace-nowrap text-xs">
-                                                    {when ? format(when, 'PPp') : '—'}
-                                                </TableCell>
-                                                <TableCell className="text-xs">{r.paymentMethod || '—'}</TableCell>
-                                                <TableCell className="text-right text-xs font-semibold tabular-nums">
-                                                    {money(r.total || 0, currency)}
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+        <div className="py-10 text-center text-sm text-muted-foreground">
+            No sales or POS records for this workspace.
         </div>
     );
 }

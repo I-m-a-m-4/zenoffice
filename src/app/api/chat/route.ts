@@ -629,7 +629,7 @@ export async function POST(req: Request) {
     // as Zen ignoring the question. 24 leaves room to finish and still bounds
     // a runaway loop.
     stopWhen: stepCountIs(24),
-    onFinish: async ({ toolCalls, usage }) => {
+    onFinish: async ({ text, toolCalls, usage }: any) => {
       // `usage` is undefined on some provider errors; a missing token count should
       // leave the running total alone rather than add NaN to it.
       const inTok = (usage as any)?.inputTokens ?? (usage as any)?.promptTokens;
@@ -803,7 +803,7 @@ export async function POST(req: Request) {
           const firstUserMsg = messages.find((m: any) => m?.role === 'user');
           const title = (textOf(firstUserMsg).slice(0, 60) || promptText.slice(0, 60) || 'Zen AI Chat').trim();
 
-          const formattedMessages = messages.map((m: any) => ({
+          const formattedMessages: any[] = messages.map((m: any) => ({
             role: m?.role || 'user',
             content: textOf(m),
             createdAt: m?.createdAt || new Date().toISOString(),

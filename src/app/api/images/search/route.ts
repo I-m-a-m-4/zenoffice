@@ -125,7 +125,7 @@ async function searchDuckDuckGo(query: string, limit: number): Promise<ImageResu
   if (!vqdMatch) throw new Error('No DDG vqd found');
 
   const rawCookies = tokenRes.headers.getSetCookie ? tokenRes.headers.getSetCookie() : [tokenRes.headers.get('set-cookie')];
-  const cookieHeader = rawCookies.filter(Boolean).map(c => c.split(';')[0]).join('; ');
+  const cookieHeader = rawCookies.filter((c): c is string => Boolean(c)).map(c => c.split(';')[0]).join('; ');
 
   // 2. Fetch image JSON
   const apiRes = await fetch(`https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqdMatch[1]}&f=,,,`, {

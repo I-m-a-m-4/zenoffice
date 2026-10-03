@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Check, Zap, Barcode, Package, Box, Tag, Receipt } from "lucide-react";
+import { Check, Zap, FileText, FileSpreadsheet, HardDrive, FileCheck } from "lucide-react";
 import { getCountryFromIP } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import MarketingHeader from "@/components/layout/marketing-header";
@@ -68,28 +68,28 @@ export default function PricingContent() {
                                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                                 className="absolute -top-10 left-[10%]"
                             >
-                                <Barcode className="w-16 h-16 text-slate-400" />
+                                <FileText className="w-16 h-16 text-slate-400" />
                             </motion.div>
                             <motion.div 
                                 animate={{ y: [0, 30, 0], rotate: [0, -15, 0] }}
                                 transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                                 className="absolute top-20 right-[5%]"
                             >
-                                <Package className="w-20 h-20 text-slate-400" />
+                                <FileSpreadsheet className="w-20 h-20 text-slate-400" />
                             </motion.div>
                             <motion.div 
                                 animate={{ y: [0, -20, 0], scale: [1, 1.1, 1] }}
                                 transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                                 className="absolute bottom-20 left-[5%]"
                             >
-                                <Box className="w-14 h-14 text-slate-400" />
+                                <HardDrive className="w-14 h-14 text-slate-400" />
                             </motion.div>
                             <motion.div 
                                 animate={{ y: [0, 35, 0], rotate: [0, 20, 0] }}
                                 transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
                                 className="absolute -bottom-10 right-[10%]"
                             >
-                                <Tag className="w-24 h-24 text-slate-400" />
+                                <FileCheck className="w-24 h-24 text-slate-400" />
                             </motion.div>
                         </div>
 

@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect, Suspense, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { 
   ArrowLeft, Download, Printer, Search, 
   ZoomIn, ZoomOut, RotateCw, Highlighter, 
@@ -13,7 +12,8 @@ import {
   Sparkles, StickyNote, Type, ImageIcon, FileSignature, 
   FileArchive, ScanText, Scissors, Languages,
   MousePointer2, Hand, TextSelect, MoveVertical, Square, Image, FileInput, 
-  LayoutTemplate, ImagePlus, Combine, Split, PenBox, TypeOutline
+  LayoutTemplate, ImagePlus, Combine, Split, PenBox, TypeOutline,
+  Undo2, Redo2, Cloud
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ZenFileSyncService, ZenDocumentItem } from '@/lib/firebase-sync';
@@ -38,9 +38,11 @@ function PDFEditorInner() {
   // File input & canvas container refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const blankEditorRef = useRef<HTMLDivElement>(null);
 
   // Document & view state
   const [docTitle, setDocTitle] = useState(docParam ? decodeURIComponent(docParam) : 'Document.pdf');
+  const [blankDocText, setBlankDocText] = useState('');
   const [currentDoc, setCurrentDoc] = useState<ZenDocumentItem | null>(null);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfDataBytes, setPdfDataBytes] = useState<Uint8Array | null>(null);
@@ -55,7 +57,7 @@ function PDFEditorInner() {
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [numPages, setNumPages] = useState(0);
-  const [selectedTool, setSelectedTool] = useState<'select' | 'pan' | 'text' | 'highlight' | 'sign'>('select');
+  const [selectedTool, setSelectedTool] = useState<'select' | 'pan' | 'text' | 'highlight' | 'sign' | 'fill-form'>('select');
   const [showProModal, setShowProModal] = useState(false);
   const [proFeatureName, setProFeatureName] = useState('');
   const [viewMode, setViewMode] = useState<'canvas' | 'embed'>('canvas');
@@ -92,67 +94,105 @@ function PDFEditorInner() {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [upgradeSuccess, setUpgradeSuccess] = useState(false);
 
-  // Flutterwave payment config
-  const flutterwaveConfig = {
-    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || '',
-    tx_ref: `zenoffice-pro-${Date.now()}`,
-    amount: 9999,       // ₦9,999 – change to your desired price
-    currency: 'NGN',
-    payment_options: 'card,mobilemoney,ussd,banktransfer',
-    customer: {
-      email: getAuth().currentUser?.email || 'user@zenoffice.app',
-      phone_number: '',
-      name: getAuth().currentUser?.displayName || 'ZenOffice User',
-    },
-    customizations: {
-      title: 'ZenOffice Premium',
-      description: 'Upgrade to ZenOffice Premium for unlimited PDF tools.',
-      logo: 'https://zeneva.space/favicon.ico',
-    },
+  const loadFlutterwaveScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(false);
+      if (typeof (window as any).FlutterwaveCheckout === 'function') {
+        return resolve(true);
+      }
+
+      const existingScript = document.getElementById('flutterwave-checkout-script') as HTMLScriptElement;
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(true));
+        existingScript.addEventListener('error', () => resolve(false));
+        if (typeof (window as any).FlutterwaveCheckout === 'function') return resolve(true);
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.id = 'flutterwave-checkout-script';
+      script.src = 'https://checkout.flutterwave.com/v3.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => {
+        console.error('Failed to load Flutterwave checkout script');
+        resolve(false);
+      };
+      document.body.appendChild(script);
+    });
   };
 
-  const handleFlutterPayment = useFlutterwave(flutterwaveConfig);
-
-  const handleUpgrade = () => {
+  const handleUpgrade = async () => {
     const user = getAuth().currentUser;
     if (!user) {
       showToast('You must be logged in to upgrade.');
       return;
     }
 
-    handleFlutterPayment({
-      callback: async (response) => {
-        closePaymentModal();
-        if (response.status === 'successful') {
-          setIsUpgrading(true);
-          try {
-            const res = await fetch('/api/upgrade/verify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                transaction_id: response.transaction_id,
-                userId: user.uid,
-              }),
-            });
-            const data = await res.json();
-            if (data.success) {
-              setUpgradeSuccess(true);
-              setShowProModal(false);
-              showToast('🎉 You are now on ZenOffice Premium!');
-            } else {
-              showToast('Payment received, but upgrade failed. Please contact support.');
+    const scriptLoaded = await loadFlutterwaveScript();
+    if (!scriptLoaded || typeof (window as any).FlutterwaveCheckout !== 'function') {
+      showToast('Could not load payment gateway. Please check your internet connection.');
+      return;
+    }
+
+    const publicKey = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK-33162c3bb2bb347a6606f3e44645f1c9-X';
+
+    try {
+      (window as any).FlutterwaveCheckout({
+        public_key: publicKey,
+        tx_ref: `zenoffice-pro-${Date.now()}`,
+        amount: 9999,
+        currency: 'NGN',
+        payment_options: 'card,mobilemoney,ussd,banktransfer',
+        customer: {
+          email: user.email || 'user@zenoffice.app',
+          name: user.displayName || user.email?.split('@')[0] || 'ZenOffice User',
+          phone_number: '08000000000',
+        },
+        customizations: {
+          title: 'ZenOffice Premium',
+          description: 'Upgrade to ZenOffice Premium for unlimited PDF tools.',
+          logo: 'https://zeneva.space/logo.png',
+        },
+        callback: async (response: any) => {
+          const txId = response.transaction_id || response.tx_ref || response.flw_ref;
+          if (response.status === 'successful' || response.status === 'completed') {
+            setIsUpgrading(true);
+            try {
+              const res = await fetch('/api/upgrade/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  transaction_id: txId,
+                  userId: user.uid,
+                  plan: 'pro',
+                }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                setUpgradeSuccess(true);
+                setShowProModal(false);
+                showToast('🎉 You are now on ZenOffice Premium!');
+              } else {
+                showToast('Payment received, but upgrade failed. Please contact support.');
+              }
+            } catch {
+              showToast('Upgrade verification failed. Please contact support.');
+            } finally {
+              setIsUpgrading(false);
             }
-          } catch {
-            showToast('Upgrade verification failed. Please contact support.');
-          } finally {
-            setIsUpgrading(false);
+          } else {
+            showToast('Payment was not completed.');
           }
-        } else {
-          showToast('Payment was not completed.');
-        }
-      },
-      onClose: () => {},
-    });
+        },
+        onclose: () => {
+          setIsUpgrading(false);
+        },
+      });
+    } catch (err) {
+      console.error('FlutterwaveCheckout invocation error:', err);
+      showToast('Payment initiation failed. Please try again.');
+    }
   };
 
   const showToast = (msg: string) => {
@@ -188,12 +228,15 @@ function PDFEditorInner() {
     }
   };
 
-  // Load document dynamically based on docParam
+  // Keyboard shortcuts (Ctrl+E for AI copilot, Escape to exit reading mode)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
         e.preventDefault();
         setShowAiModal(prev => !prev);
+      }
+      if (e.key === 'Escape') {
+        setReadingMode(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -308,7 +351,7 @@ function PDFEditorInner() {
           });
 
           let pageStr = '';
-          let lastY = null;
+          let lastY: number | null = null;
           let lastX = 0;
           
           items.forEach((item: any) => {
@@ -498,6 +541,13 @@ function PDFEditorInner() {
 
   // Convert PDF to Editable Document
   const handleEditDocument = async () => {
+    // If no PDF file is loaded, immediately navigate to the blank document editor where the user can type
+    if (!pdfBlobUrl && !pdfDataBytes) {
+      const docName = docTitle.replace(/\.pdf$/i, '.docx');
+      router.push(`/editor/document?doc=${encodeURIComponent(docName)}`);
+      return;
+    }
+
     setIsExtracting(true);
     setOcrProgress(0);
     let finalExtractedText = extractedPdfText;
@@ -687,7 +737,7 @@ function PDFEditorInner() {
 
   return (
     <div 
-      className="flex flex-col h-screen w-screen overflow-hidden bg-zinc-100 dark:bg-[#000000] font-sans select-none text-zinc-800 dark:text-zinc-200"
+      className="flex flex-col h-screen w-screen overflow-hidden bg-zinc-100 dark:bg-[#000000] font-sans text-zinc-800 dark:text-zinc-200"
       onMouseMove={handleGlobalMouseMove}
       onMouseUp={handleGlobalMouseUp}
       onMouseLeave={handleGlobalMouseUp}
@@ -732,457 +782,314 @@ function PDFEditorInner() {
         }} 
       />
 
-      {/* 1. TOP WINDOW BAR / TABS */}
+      {/* 1. GOOGLE DOCS STYLE HEADER */}
       {!readingMode && (
         <>
-        <div className="h-14 bg-slate-200 dark:bg-[#0c0c0e] border-b border-zinc-300 dark:border-zinc-800/80 flex items-center justify-between px-2 shrink-0 select-none">
-          
-          {/* Left: App Brand & Tab Strip */}
-        <div className="flex items-center gap-1 h-full overflow-x-auto no-scrollbar items-end pt-2">
-          <Link 
-            href="/dashboard" 
-            className="flex items-center gap-1.5 px-4 h-11 rounded-t-md hover:bg-slate-300/60 dark:hover:bg-zinc-800/60 transition-colors mr-1"
-          >
-            <div className="w-5 h-5 rounded bg-orange-600 flex items-center justify-center text-white shadow-xs">
-              <svg width="12" height="12" viewBox="0 0 200 200" fill="none">
-                <path d="M44 38C44 29 51 22 60 22H118L156 60V156C156 165 149 172 140 172H60C51 172 44 165 44 156V38Z" fill="#FFFFFF"/>
-                <path d="M118 22V50C118 55 122 60 128 60H156L118 22Z" fill="#FDBA74"/>
-                <path d="M66 110L134 110L76 138L134 138" stroke="#EA580C" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <span className="text-xs font-bold text-zinc-900 dark:text-white tracking-tight">ZenOffice</span>
-          </Link>
-
-          {/* Active Document Tab */}
-          <div className="flex items-center gap-2 px-4 h-11 rounded-t-md text-sm font-medium border-t border-x bg-white dark:bg-[#121214] border-[#e2dcd0] dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold shadow-xs">
-            <div className="w-5 h-5 rounded bg-rose-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-              P
-            </div>
-            <span className="max-w-[220px] truncate" title={docTitle}>
-              {docTitle}
-            </span>
-            {numPages > 0 && (
-              <span className="text-[10px] text-zinc-400 font-normal">({numPages}p)</span>
-            )}
-            <button 
-              onClick={(e) => { 
-                e.preventDefault(); 
-                e.stopPropagation(); 
-                window.location.href = '/dashboard'; 
-              }}
-              className="hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 ml-1 z-10 relative cursor-pointer"
-              title="Close and return to Dashboard"
+        <div className="h-14 bg-white dark:bg-[#0c0c0e] border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-3 shrink-0 select-none">
+          {/* Left: App Brand, Document Title, and Menu Bar */}
+          <div className="flex items-center gap-3">
+            <Link 
+              href="/dashboard" 
+              className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              title="Return to Dashboard"
             >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Open New File Tab Dropdown */}
-          <div className="relative">
-            <button 
-              onClick={() => setShowTabDropdown(!showTabDropdown)}
-              className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-orange-500 hover:bg-slate-300/60 dark:hover:bg-zinc-800 rounded transition-colors mb-1 ml-1"
-              title="Open a new tab"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-            {showTabDropdown && (
-              <div className="absolute top-10 left-0 mt-1 w-52 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-xl z-50 flex flex-col py-1">
-                <div className="px-3 py-1.5 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Open in New Tab</div>
-                <button 
-                  onClick={() => {
-                    setShowTabDropdown(false);
-                    const el = document.createElement('input');
-                    el.type = 'file';
-                    el.accept = 'application/pdf';
-                    el.onchange = async (e: any) => {
-                       if (e.target.files && e.target.files.length > 0) {
-                          const file = e.target.files[0];
-                          const newDoc = await ZenFileSyncService.addUploadedFile(file, 'Downloads');
-                          window.open(`/editor/pdf?doc=${encodeURIComponent(newDoc.name)}`, '_blank');
-                       }
-                    };
-                    el.click();
-                  }}
-                  className="px-3 py-2 text-xs text-left text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center"
-                >
-                  <Plus className="w-3.5 h-3.5 mr-2 text-orange-500" /> New Local File
-                </button>
-                <Link
-                  href="/dashboard"
-                  target="_blank"
-                  onClick={() => setShowTabDropdown(false)}
-                  className="px-3 py-2 text-xs text-left text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center"
-                >
-                  <FileText className="w-3.5 h-3.5 mr-2 text-orange-500" /> Browse Recent...
-                </Link>
+              <div className="w-8 h-8 rounded-lg bg-orange-600 flex items-center justify-center text-white shadow-xs">
+                <svg width="18" height="18" viewBox="0 0 200 200" fill="none">
+                  <path d="M44 38C44 29 51 22 60 22H118L156 60V156C156 165 149 172 140 172H60C51 172 44 165 44 156V38Z" fill="#FFFFFF"/>
+                  <path d="M118 22V50C118 55 122 60 128 60H156L118 22Z" fill="#FDBA74"/>
+                  <path d="M66 110L134 110L76 138L134 138" stroke="#EA580C" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
-            )}
+            </Link>
+
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text"
+                  value={docTitle}
+                  onChange={(e) => setDocTitle(e.target.value)}
+                  className="font-medium text-sm text-zinc-900 dark:text-zinc-100 bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 border border-transparent focus:border-zinc-300 dark:focus:border-zinc-700 rounded px-1.5 py-0.5 max-w-[280px] truncate outline-none transition-colors"
+                />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-900">
+                  PDF
+                </span>
+                <span className="hidden sm:flex items-center gap-1 text-[11px] text-zinc-400">
+                  <Cloud className="w-3 h-3 text-zinc-400" />
+                  <span>Saved</span>
+                </span>
+              </div>
+
+              {/* Menu items like Google Docs */}
+              <div className="flex items-center gap-0.5 text-xs text-zinc-600 dark:text-zinc-400 -ml-1 mt-0.5">
+                <button onClick={() => fileInputRef.current?.click()} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">File</button>
+                <button onClick={() => setSelectedTool('select')} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Edit</button>
+                <button onClick={() => setReadingMode(true)} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">View</button>
+                <button onClick={() => document.getElementById('image-insert-input')?.click()} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Insert</button>
+                <button onClick={() => setShowAiModal(true)} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Tools</button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2">
-          {/* Cloud Sync Status */}
-          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Local &amp; Secure</span>
-          </div>
-
-          {/* Reading Mode Toggle */}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setReadingMode(true);
-            }}
-            className="h-7 px-2.5 text-zinc-700 dark:text-zinc-300 text-xs font-semibold shadow-xs gap-1.5 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            title="Maximize Reading Experience"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">Reading Mode</span>
-          </Button>
-
-          {/* Zen AI Academic Study Assistant */}
-          <Button
-            size="sm"
-            onClick={() => setShowAiModal(true)}
-            className="h-7 px-2.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white text-xs font-semibold shadow-xs gap-1.5"
-            title="ZenAI Academic Study Copilot"
-          >
-            <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-200" />
-            <span>ZenAI Study Copilot</span>
-          </Button>
-
-          {/* View in New Tab Button */}
-          {pdfBlobUrl && (
+          {/* Right side: Clean Google Docs Actions */}
+          <div className="flex items-center gap-2">
             <Button
-              variant="outline"
               size="sm"
-              onClick={handleOpenInNewTab}
-              className="h-7 text-xs px-2 bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-              title="Open raw PDF in new browser tab"
+              onClick={() => setShowAiModal(true)}
+              className="h-8 px-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-medium rounded-full shadow-xs gap-1.5 transition-all"
             >
-              <ExternalLink className="w-3 h-3 mr-1 text-orange-500" /> New Tab
+              <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-100" />
+              <span className="hidden sm:inline">ZenAI Copilot</span>
             </Button>
-          )}
 
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => fileInputRef.current?.click()}
-            className="h-7 text-xs px-2.5 bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-orange-500"
-          >
-            <Upload className="w-3 h-3 mr-1 text-orange-500" /> Open PDF
-          </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => fileInputRef.current?.click()}
+              className="h-8 text-xs px-3 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            >
+              <Upload className="w-3.5 h-3.5 mr-1.5 text-zinc-500" /> Open PDF
+            </Button>
 
-          {/* Edit Document Button */}
-          <Button 
-            size="sm" 
-            onClick={handleEditDocument}
-            disabled={isExtracting}
-            className="h-7 text-xs px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
-          >
-            {isExtracting ? (
-              <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-            ) : (
-              <FileText className="w-3 h-3 mr-1" />
-            )}
-            {isExtracting ? 'Converting...' : 'Edit Document'}
-          </Button>
+            <Button 
+              size="sm" 
+              onClick={handleDownload}
+              className="h-8 text-xs px-3 bg-orange-600 hover:bg-orange-700 text-white shadow-xs font-medium"
+            >
+              <Download className="w-3.5 h-3.5 mr-1.5" /> Export
+            </Button>
 
-          {/* Export Button */}
-          <Button 
-            size="sm" 
-            onClick={handleDownload}
-            className="h-7 text-xs px-2.5 bg-orange-600 hover:bg-orange-700 text-white shadow-xs"
-          >
-            <Download className="w-3 h-3 mr-1" /> Export
-          </Button>
-
-          {/* Fullscreen Button */}
-          <button 
-            onClick={handleFullscreen}
-            className="p-1.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-            title="Toggle Fullscreen"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* 2. RIBBON MENU & WORKSPACE BAR (WPS Exact Match) */}
-      <div className="bg-[#F0EDE6] dark:bg-[#121214] border-b border-[#e2dcd0] dark:border-zinc-800 px-3 flex items-end shrink-0 gap-1 overflow-x-auto no-scrollbar pt-1 h-9">
-        
-        {/* WPS Style Tabs */}
-        {[
-          { id: 'home', label: 'Home' },
-          { id: 'edit', label: 'Edit' },
-          { id: 'page', label: 'Page' },
-          { id: 'comment', label: 'Comment' },
-          { id: 'text', label: 'Text' },
-          { id: 'fill', label: 'Fill & Sign' },
-          { id: 'protect', label: 'Protect' },
-          { id: 'ai', label: 'AI Assistant', icon: Sparkles },
-          { id: 'tools', label: 'Tools' },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => {
-              if (tab.id === 'ai') setShowAiModal(true);
-            }}
-            className={`px-4 py-1.5 text-xs font-medium transition-all relative rounded-t-sm flex items-center gap-1.5 ${
-              tab.id === 'home'
-                ? 'bg-white dark:bg-[#18181b] text-red-600 font-bold border-x border-t border-[#e2dcd0] dark:border-zinc-800 shadow-xs z-10'
-                : 'text-zinc-600 dark:text-zinc-400 hover:bg-black/5 dark:hover:bg-zinc-800/50'
-            }`}
-            style={tab.id === 'home' ? { borderTopColor: '#ef4444', borderTopWidth: '2px' } : {}}
-          >
-            {tab.icon && <tab.icon className="w-3.5 h-3.5 text-amber-500" strokeWidth={1.5} />}
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 3. RICH RIBBON ACTION TOOLBAR (WPS Clone) */}
-      <div className="bg-[#F0EDE6] dark:bg-[#18181b] border-b border-[#e2dcd0] dark:border-zinc-800 px-4 py-1.5 flex items-center justify-between w-full overflow-x-auto no-scrollbar min-h-[85px]">
-        
-        {/* Group 1: Select / Hand */}
-        <div className="flex gap-2 border-r border-zinc-200 dark:border-zinc-800 px-4 h-full items-center justify-center flex-1">
-          <button 
-            onClick={() => setSelectedTool('select')}
-            className={`flex flex-col items-center justify-center gap-1 p-1.5 w-12 rounded transition-colors ${
-              selectedTool === 'select' 
-                ? 'bg-red-50 dark:bg-red-950/30 text-red-600' 
-                : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-            }`}
-          >
-            <MousePointer2 className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Select</span>
-          </button>
-          <button 
-            onClick={() => setSelectedTool('pan')}
-            className={`flex flex-col items-center justify-center gap-1 p-1.5 w-12 rounded transition-colors ${
-              selectedTool === 'pan' 
-                ? 'bg-red-50 dark:bg-red-950/30 text-red-600' 
-                : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-            }`}
-          >
-            <Hand className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Hand</span>
-          </button>
-          <button 
-            onClick={() => setSelectedTool('text')}
-            className={`flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded transition-colors ${
-              selectedTool === 'text' 
-                ? 'bg-red-50 dark:bg-red-950/30 text-red-600' 
-                : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-            }`}
-          >
-            <TextSelect className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Select Text</span>
-          </button>
-          <button 
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <MoveVertical className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Auto Scroll</span>
-          </button>
+            <button 
+              onClick={handleFullscreen}
+              className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
+              title="Toggle Fullscreen"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Group 2: Edit Content */}
-        <div className="flex gap-2 border-r border-zinc-200 dark:border-zinc-800 px-4 h-full items-center justify-center flex-1">
-          <button 
-            onClick={() => {
-              router.push('/tools?tool=image-to-pdf');
-              showToast('Redirecting to Image to PDF tool...');
-            }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <ImageIcon className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Image to PDF</span>
-          </button>
-          <button 
-            onClick={() => {
-              const newAnn: PdfAnnotation = {
-                id: `txt-${Date.now()}`, type: 'text', text: '', page: 1, x: window.innerWidth / 2 - 50, y: window.innerHeight / 2,
-              };
-              setAnnotations(prev => [...prev, newAnn]);
-              showToast('Text box added. Type to edit.');
-            }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <TypeOutline className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Add Text</span>
-          </button>
-          <button 
-            onClick={() => document.getElementById('image-insert-input')?.click()}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-16 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <ImagePlus className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Insert Picture</span>
-          </button>
-          <button 
-            onClick={() => {
-              const newAnn: PdfAnnotation = {
-                id: `redact-${Date.now()}`, type: 'redact', text: '', page: 1, x: window.innerWidth / 2 - 50, y: window.innerHeight / 2,
-              };
-              setAnnotations(prev => [...prev, newAnn]);
-              showToast('Redact block added. You can type in it and drag it.');
-            }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <Square className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Redact</span>
-          </button>
-          <button 
-            onClick={() => {
-              document.documentElement.classList.toggle('bg-zinc-200');
-              showToast('Canvas background toggled.');
-            }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <Square className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Background</span>
-          </button>
-        </div>
+        {/* 2. COMPACT, TIGHTLY GROUPED TOOLBAR (Google Docs Style) */}
+        <div className="bg-white dark:bg-[#121214] border-b border-zinc-200 dark:border-zinc-800 px-3 py-1 flex items-center gap-1 overflow-x-auto no-scrollbar min-h-[42px]">
+          {/* History */}
+          <div className="flex items-center gap-0.5">
+            <button 
+              onClick={() => showToast('Undo')}
+              className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              title="Undo"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => showToast('Redo')}
+              className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              title="Redo"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={handlePrint}
+              className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              title="Print"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
+          </div>
 
-        {/* Group 3: Highlight / Comment */}
-        <div className="flex gap-2 border-r border-zinc-200 dark:border-zinc-800 px-4 h-full items-center justify-center flex-1">
-          <button 
-            onClick={() => {
-              const newAnn: PdfAnnotation = {
-                id: `hl-${Date.now()}`, type: 'highlight', text: `Key Concept`, page: 1, x: 120, y: 160,
-              };
-              setAnnotations(prev => [...prev, newAnn]);
-              showToast('Highlighter stamp placed.');
-            }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-12 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <Highlighter className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Highlight</span>
-          </button>
-          <button 
-            onClick={() => {
-              setPendingCoords({ page: 1, x: 140, y: 200 });
-              setShowNoteModal(true);
-            }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <MessageSquare className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Comment</span>
-          </button>
-          <button 
-            onClick={() => {
-              const newAnn: PdfAnnotation = {
-                id: `hl-area-${Date.now()}`, type: 'highlight', text: `Area Highlight...`, page: 1, x: window.innerWidth / 2 - 100, y: window.innerHeight / 2 - 50,
-              };
-              setAnnotations(prev => [...prev, newAnn]);
-              showToast('Area Highlight added. Drag to move.');
-            }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-16 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <Square className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Area Highlight</span>
-          </button>
-          <button 
-            onClick={() => {
-              const newAnn: PdfAnnotation = {
-                id: `txt-${Date.now()}`, type: 'text', text: 'Typewriter Text', page: 1, x: window.innerWidth / 2 - 50, y: window.innerHeight / 2,
-              };
-              setAnnotations(prev => [...prev, newAnn]);
-              showToast('Typewriter text added.');
-            }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <Type className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Typewriter</span>
-          </button>
-          <button 
-            onClick={() => {
-              setPendingCoords({ page: 1, x: window.innerWidth / 2, y: window.innerHeight / 2 });
-              setShowNoteModal(true);
-            }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <StickyNote className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Sticky Note</span>
-          </button>
-        </div>
+          <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
 
-        {/* Group 4: Fill & Sign */}
-        <div className="flex gap-2 border-r border-zinc-200 dark:border-zinc-800 px-4 h-full items-center justify-center flex-1">
-          <button 
-            onClick={() => setShowSignModal(true)}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-12 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <FileSignature className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Sign</span>
-          </button>
-          <button 
-            onClick={() => setSelectedTool('fill-form')}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <LayoutTemplate className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Fill Form</span>
-          </button>
-        </div>
+          {/* Zoom */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setZoom(prev => Math.max(50, prev - 15))}
+              className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 w-10 text-center select-none">{zoom}%</span>
+            <button
+              onClick={() => setZoom(prev => Math.min(200, prev + 15))}
+              className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-        {/* Group 5: Advanced PDF Tools */}
-        <div className="flex gap-2 px-4 h-full items-center justify-center flex-1">
-          <button 
-            onClick={() => { setProFeatureName('PDF to Word'); setShowProModal(true); }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-16 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <FileText className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">PDF to Word</span>
-          </button>
-          <button 
-            onClick={() => { setProFeatureName('PDF to Excel'); setShowProModal(true); }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-16 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <FileArchive className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">PDF to Excel</span>
-          </button>
-          <button 
-            onClick={() => { setProFeatureName('PDF to PPT'); setShowProModal(true); }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-16 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <LayoutTemplate className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">PDF to PPT</span>
-          </button>
-          <button 
-            onClick={() => { setProFeatureName('Picture to PDF'); setShowProModal(true); }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-16 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <Image className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Picture to PDF</span>
-          </button>
-          <button 
-            onClick={() => { setProFeatureName('PDF to Picture'); setShowProModal(true); }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-16 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <ImageIcon className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">PDF to Picture</span>
-          </button>
-          <button 
-            onClick={() => { setProFeatureName('Split PDF'); setShowProModal(true); }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <Split className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Split PDF</span>
-          </button>
-          <button 
-            onClick={() => { setProFeatureName('Merge PDF'); setShowProModal(true); }}
-            className="flex flex-col items-center justify-center gap-1 p-1.5 w-14 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <Combine className="w-5 h-5" strokeWidth={1.2} />
-            <span className="text-[10px] leading-tight font-medium">Merge PDF</span>
-          </button>
+          <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
+
+          {/* Cursor Modes */}
+          <div className="flex items-center gap-0.5">
+            <button 
+              onClick={() => setSelectedTool('select')}
+              className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
+                selectedTool === 'select' 
+                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold' 
+                  : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <MousePointer2 className="w-3.5 h-3.5" />
+              <span>Select</span>
+            </button>
+            <button 
+              onClick={() => setSelectedTool('pan')}
+              className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
+                selectedTool === 'pan' 
+                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold' 
+                  : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <Hand className="w-3.5 h-3.5" />
+              <span>Hand</span>
+            </button>
+            <button 
+              onClick={() => setSelectedTool('text')}
+              className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
+                selectedTool === 'text' 
+                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold' 
+                  : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <TextSelect className="w-3.5 h-3.5" />
+              <span>Text Select</span>
+            </button>
+          </div>
+
+          <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
+
+          {/* Insert & Markup Tools */}
+          <div className="flex items-center gap-0.5">
+            <button 
+              onClick={() => {
+                const newAnn: PdfAnnotation = {
+                  id: `txt-${Date.now()}`, type: 'text', text: '', page: 1, x: window.innerWidth / 2 - 50, y: window.innerHeight / 2,
+                };
+                setAnnotations(prev => [...prev, newAnn]);
+                showToast('Text box added. Click to edit.');
+              }}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              title="Add Text"
+            >
+              <TypeOutline className="w-3.5 h-3.5" />
+              <span>Add Text</span>
+            </button>
+
+            <button 
+              onClick={() => document.getElementById('image-insert-input')?.click()}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              title="Insert Image"
+            >
+              <ImagePlus className="w-3.5 h-3.5" />
+              <span>Image</span>
+            </button>
+
+            <button 
+              onClick={() => {
+                const newAnn: PdfAnnotation = {
+                  id: `hl-${Date.now()}`, type: 'highlight', text: `Key Concept`, page: 1, x: 120, y: 160,
+                };
+                setAnnotations(prev => [...prev, newAnn]);
+                showToast('Highlight stamp placed.');
+              }}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              title="Highlight"
+            >
+              <Highlighter className="w-3.5 h-3.5" />
+              <span>Highlight</span>
+            </button>
+
+            <button 
+              onClick={() => {
+                const newAnn: PdfAnnotation = {
+                  id: `redact-${Date.now()}`, type: 'redact', text: '', page: 1, x: window.innerWidth / 2 - 50, y: window.innerHeight / 2,
+                };
+                setAnnotations(prev => [...prev, newAnn]);
+                showToast('Redact block added.');
+              }}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              title="Redact"
+            >
+              <Square className="w-3.5 h-3.5" />
+              <span>Redact</span>
+            </button>
+
+            <button 
+              onClick={() => {
+                setPendingCoords({ page: 1, x: 140, y: 200 });
+                setShowNoteModal(true);
+              }}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              title="Comment"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Comment</span>
+            </button>
+
+            <button 
+              onClick={() => {
+                setPendingCoords({ page: 1, x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                setShowNoteModal(true);
+              }}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              title="Sticky Note"
+            >
+              <StickyNote className="w-3.5 h-3.5" />
+              <span>Note</span>
+            </button>
+          </div>
+
+          <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
+
+          {/* Fill & Sign */}
+          <div className="flex items-center gap-0.5">
+            <button 
+              onClick={() => setShowSignModal(true)}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <FileSignature className="w-3.5 h-3.5 text-orange-600" />
+              <span>Sign</span>
+            </button>
+            <button 
+              onClick={() => setSelectedTool('fill-form')}
+              className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
+                selectedTool === 'fill-form'
+                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold'
+                  : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <LayoutTemplate className="w-3.5 h-3.5" />
+              <span>Fill Form</span>
+            </button>
+          </div>
+
+          <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
+
+          {/* Conversions & Tools */}
+          <div className="flex items-center gap-0.5">
+            <button 
+              onClick={() => { setProFeatureName('PDF to Word'); setShowProModal(true); }}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>PDF to Word</span>
+            </button>
+            <button 
+              onClick={() => { setProFeatureName('PDF to Excel'); setShowProModal(true); }}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <FileArchive className="w-3.5 h-3.5" />
+              <span>PDF to Excel</span>
+            </button>
+            <button 
+              onClick={() => { setProFeatureName('Split & Merge'); setShowProModal(true); }}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <Split className="w-3.5 h-3.5" />
+              <span>Split / Merge</span>
+            </button>
+          </div>
         </div>
-        
-      </div>
-      </>
+        </>
       )}
 
       {/* READING MODE FLOATING CONTROLS */}
@@ -1202,8 +1109,8 @@ function PDFEditorInner() {
             size="sm"
             variant="outline"
             onClick={() => setReadingMode(false)}
-            className="h-9 w-9 p-0 bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 shadow-lg rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-transform hover:scale-105"
-            title="Exit Reading Mode"
+            className="h-9 w-9 p-0 bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white shadow-lg rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all hover:scale-105"
+            title="Exit Reading Mode (Esc)"
           >
             <Maximize2 className="w-4 h-4 text-orange-500" />
           </Button>
@@ -1214,7 +1121,7 @@ function PDFEditorInner() {
       {isExtracting && (
         <div className="absolute inset-0 z-[100] bg-black/60 flex items-center justify-center backdrop-blur-sm">
           <div className="bg-white dark:bg-zinc-900 p-8 rounded-xl shadow-2xl max-w-sm w-full flex flex-col items-center">
-            <RefreshCw className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+            <RefreshCw className="w-10 h-10 text-orange-600 animate-spin mb-4" />
             <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-2">Analyzing Document</h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mb-6">
               {ocrProgress > 0 
@@ -1224,7 +1131,7 @@ function PDFEditorInner() {
             {ocrProgress > 0 && (
               <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-indigo-600 transition-all duration-300"
+                  className="h-full bg-orange-600 transition-all duration-300"
                   style={{ width: `${ocrProgress}%` }}
                 ></div>
               </div>
@@ -1235,66 +1142,68 @@ function PDFEditorInner() {
 
       {/* 4. MAIN WORKSPACE WITH CANVAS */}
       <div 
-        className="flex-1 flex overflow-hidden relative bg-zinc-200/70 dark:bg-[#000000]"
+        className="flex-1 flex overflow-hidden relative bg-[#F8F9FA] dark:bg-[#09090b]"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         {/* Left Sidebar Mini Toggle */}
-        <div className="w-12 bg-[#F0EDE6] dark:bg-[#0c0c0e] border-r border-[#e2dcd0] dark:border-zinc-800 flex flex-col items-center py-4 gap-6 shrink-0 text-zinc-600 dark:text-zinc-400">
-          <button 
-            onClick={() => setShowAiModal(true)}
-            className="p-1.5 rounded transition-colors hover:bg-black/5 dark:hover:bg-zinc-800"
-            title="ZenAI Study Copilot"
-          >
-            <Sparkles className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          </button>
-          <button 
-            onClick={() => { setShowSidebar(true); setSidebarTab('bookmarks'); }}
-            className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'bookmarks' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
-            title="Bookmarks"
-          >
-            <Bookmark className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          </button>
-          <button 
-            onClick={() => { setShowSidebar(true); setSidebarTab('thumbnails'); }}
-            className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'thumbnails' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
-            title="Page Thumbnails"
-          >
-            <FileText className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          </button>
-          <button 
-            onClick={() => { setShowSidebar(true); setSidebarTab('comments'); }}
-            className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'comments' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
-            title="Signatures &amp; Annotations"
-          >
-            <MessageSquare className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          </button>
-          <button 
-            onClick={() => { setShowSidebar(true); setSidebarTab('attachments'); }}
-            className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'attachments' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
-            title="Attachments"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-          </button>
-          <button 
-            onClick={() => { setShowSidebar(true); setSidebarTab('signatures'); }}
-            className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'signatures' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
-            title="Signatures"
-          >
-            <PenTool className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          </button>
-          <button 
-            onClick={() => { setShowSidebar(true); setSidebarTab('layers'); }}
-            className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'layers' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
-            title="Layers"
-          >
-            <Layers className="w-[18px] h-[18px]" strokeWidth={1.5} />
-          </button>
-        </div>
+        {!readingMode && (
+          <div className="w-10 bg-white dark:bg-[#0c0c0e] border-r border-zinc-200 dark:border-zinc-800 flex flex-col items-center py-3 gap-3 shrink-0 text-zinc-400 dark:text-zinc-500">
+            <button 
+              onClick={() => setShowAiModal(true)}
+              className="p-1.5 rounded transition-colors hover:bg-black/5 dark:hover:bg-zinc-800"
+              title="ZenAI Study Copilot"
+            >
+              <Sparkles className="w-[18px] h-[18px]" strokeWidth={1.5} />
+            </button>
+            <button 
+              onClick={() => { setShowSidebar(true); setSidebarTab('bookmarks'); }}
+              className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'bookmarks' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
+              title="Bookmarks"
+            >
+              <Bookmark className="w-[18px] h-[18px]" strokeWidth={1.5} />
+            </button>
+            <button 
+              onClick={() => { setShowSidebar(true); setSidebarTab('thumbnails'); }}
+              className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'thumbnails' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
+              title="Page Thumbnails"
+            >
+              <FileText className="w-[18px] h-[18px]" strokeWidth={1.5} />
+            </button>
+            <button 
+              onClick={() => { setShowSidebar(true); setSidebarTab('comments'); }}
+              className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'comments' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
+              title="Signatures & Annotations"
+            >
+              <MessageSquare className="w-[18px] h-[18px]" strokeWidth={1.5} />
+            </button>
+            <button 
+              onClick={() => { setShowSidebar(true); setSidebarTab('attachments'); }}
+              className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'attachments' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
+              title="Attachments"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <button 
+              onClick={() => { setShowSidebar(true); setSidebarTab('signatures'); }}
+              className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'signatures' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
+              title="Signatures"
+            >
+              <PenTool className="w-[18px] h-[18px]" strokeWidth={1.5} />
+            </button>
+            <button 
+              onClick={() => { setShowSidebar(true); setSidebarTab('layers'); }}
+              className={`p-1.5 rounded transition-colors ${showSidebar && sidebarTab === 'layers' ? 'bg-black/10 text-zinc-900' : 'hover:bg-black/5 dark:hover:bg-zinc-800'}`}
+              title="Layers"
+            >
+              <Layers className="w-[18px] h-[18px]" strokeWidth={1.5} />
+            </button>
+          </div>
+        )}
 
         {/* Collapsible Sidebar Details Panel */}
-        {showSidebar && (
+        {showSidebar && !readingMode && (
           <div className="w-56 bg-zinc-50 dark:bg-[#121214] border-r border-zinc-200 dark:border-zinc-800 flex flex-col shrink-0">
             <div className="p-2.5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs font-semibold text-zinc-700 dark:text-zinc-300">
               <span className="capitalize">{sidebarTab}</span>
@@ -1504,65 +1413,22 @@ function PDFEditorInner() {
 
             </div>
           ) : (
-            /* DROPZONE - WHEN FILE NOT YET STORED */
-            <div className={`w-full max-w-2xl bg-white dark:bg-[#121214] border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center my-auto transition-all ${
-              isDragActive 
-                ? 'border-orange-500 bg-orange-50/20 dark:bg-orange-950/20 scale-[1.01]' 
-                : 'border-zinc-300 dark:border-zinc-800'
-            }`}>
-              
-              <div className="w-16 h-16 rounded-2xl bg-orange-100 dark:bg-orange-950/50 flex items-center justify-center mx-auto mb-5 shadow-xs">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="32" 
-                  height="32" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="#ea580c" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                >
-                  <path d="M11 2v2" />
-                  <path d="M5 2v2" />
-                  <path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1" />
-                  <path d="M8 15a6 6 0 0 0 12 0v-3" />
-                  <circle cx="20" cy="10" r="2" />
-                </svg>
-              </div>
-
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
-                {docTitle}
-              </h2>
-
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto mb-6 leading-relaxed">
-                This document is ready to render in ZenOffice. Click below to load this PDF from your device, or drag and drop the file directly here.
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-orange-600 hover:bg-orange-700 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all"
-                >
-                  <Upload className="w-4 h-4 mr-2" /> Select PDF from Computer
-                </Button>
-
-                <Button 
-                  variant="outline"
-                  onClick={() => router.push('/dashboard')}
-                  className="border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  Back to All Files
-                </Button>
-              </div>
-
-              <div className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex items-center justify-center gap-6 text-xs text-zinc-400">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Fully Private &amp; Offline
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-orange-500" /> Stored in Local IndexedDB
-                </span>
+            /* BLANK DOCUMENT PAGE CANVAS - GOOGLE DOCS STYLE */
+            <div className="w-full flex flex-col items-center py-6 sm:py-10 pb-28">
+              {/* The A4 Document Sheet */}
+              <div 
+                onClick={() => blankEditorRef.current?.focus()}
+                className="w-full max-w-[816px] min-h-[1056px] h-fit bg-white dark:bg-[#121214] shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)] border border-zinc-200/90 dark:border-zinc-800 p-12 sm:p-20 select-text flex flex-col cursor-text transition-all rounded-[2px]"
+              >
+                {/* Editable Document Body */}
+                <div 
+                  ref={blankEditorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  spellCheck={true}
+                  onInput={(e) => setBlankDocText((e.target as HTMLDivElement).innerText)}
+                  className="outline-none flex-1 leading-relaxed text-zinc-900 dark:text-zinc-100 text-base font-sans min-h-[850px] empty:before:content-['Type_@_to_insert_or_start_typing...'] empty:before:text-zinc-400 empty:before:cursor-text"
+                />
               </div>
             </div>
           )}

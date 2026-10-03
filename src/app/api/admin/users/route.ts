@@ -30,7 +30,7 @@ export async function GET(req: Request) {
             .orderBy('name')
             .get();
 
-        const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const users = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
 
         // No-cache headers so the browser also doesn't cache this
         return NextResponse.json(users, {

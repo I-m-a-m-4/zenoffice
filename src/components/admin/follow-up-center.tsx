@@ -364,7 +364,7 @@ export default function FollowUpCenter({
           } catch (e) {
             failCount++;
           }
-          setBulkProgress(prev => ({ done: prev.done + 1, total: prev.total }));
+          setBulkProgress(prev => (prev ? { done: prev.done + 1, total: prev.total } : null));
         }
 
         const stopped = abortBulkRef.current;

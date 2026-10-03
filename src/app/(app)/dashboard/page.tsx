@@ -328,7 +328,7 @@ export default function DashboardPage() {
               onClick={() => router.push('/editor/excel')}
               size="sm"
               variant="outline"
-              className="border-slate-300 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-800 dark:text-zinc-200 text-xs font-medium h-8 rounded-lg gap-1.5"
+              className="border-slate-300 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-800 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white text-xs font-medium h-8 rounded-lg gap-1.5 transition-colors"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
               <span>Spreadsheet</span>
@@ -339,7 +339,7 @@ export default function DashboardPage() {
               onClick={() => router.push('/editor/pdf')}
               size="sm"
               variant="outline"
-              className="border-slate-300 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-800 dark:text-zinc-200 text-xs font-medium h-8 rounded-lg gap-1.5"
+              className="border-slate-300 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-800 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white text-xs font-medium h-8 rounded-lg gap-1.5 transition-colors"
             >
               <FileIcon className="w-3.5 h-3.5 text-rose-600" />
               <span>PDF Suite</span>
@@ -350,7 +350,7 @@ export default function DashboardPage() {
               onClick={() => fileInputRef.current?.click()}
               size="sm"
               variant="outline"
-              className="border-orange-300 dark:border-orange-800/60 bg-orange-50/50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-950/40 text-xs font-semibold h-8 rounded-lg gap-1.5"
+              className="border-orange-300 dark:border-orange-800/60 bg-orange-50/50 dark:bg-orange-950/20 text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-950/40 hover:text-orange-900 dark:hover:text-orange-300 text-xs font-semibold h-8 rounded-lg gap-1.5 transition-colors"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Open Local File</span>
@@ -361,7 +361,7 @@ export default function DashboardPage() {
               onClick={() => setShowOcrModal(true)}
               size="sm"
               variant="outline"
-              className="border-indigo-300 dark:border-indigo-800/60 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 text-xs font-semibold h-8 rounded-lg gap-1.5"
+              className="border-indigo-300 dark:border-indigo-800/60 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 hover:text-indigo-900 dark:hover:text-indigo-300 text-xs font-semibold h-8 rounded-lg gap-1.5 transition-colors"
             >
               <ScanText className="w-3.5 h-3.5" />
               <span>Image to Text (OCR)</span>
@@ -372,7 +372,7 @@ export default function DashboardPage() {
               onClick={() => router.push('/tools')}
               size="sm"
               variant="outline"
-              className="border-blue-300 dark:border-blue-800/60 bg-blue-50/50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/40 text-xs font-semibold h-8 rounded-lg gap-1.5"
+              className="border-blue-300 dark:border-blue-800/60 bg-blue-50/50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/40 hover:text-blue-900 dark:hover:text-blue-300 text-xs font-semibold h-8 rounded-lg gap-1.5 transition-colors"
             >
               <Grid className="w-3.5 h-3.5" />
               <span>All Tools</span>
@@ -408,7 +408,7 @@ export default function DashboardPage() {
                   loadDocs();
                   showToast('Recycle Bin emptied');
                 }}
-                className="h-7 text-xs text-rose-600 border-rose-300 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                className="h-7 text-xs text-rose-600 border-rose-300 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-700 dark:hover:text-rose-400 transition-colors"
               >
                 Empty Trash
               </Button>

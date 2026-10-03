@@ -75,7 +75,7 @@ export async function POST(request: Request) {
           if (parts.length >= 2) {
             const bizPrefix = parts[1];
             const bizSnap = await adminFirestore.collection('businessInstances').get();
-            const match = bizSnap.docs.find(d => d.id.substring(0, 6) === bizPrefix || d.id.startsWith(bizPrefix));
+            const match = bizSnap.docs.find((d: any) => d.id.substring(0, 6) === bizPrefix || d.id.startsWith(bizPrefix));
             if (match) targetBusinessId = match.id;
           }
         }
@@ -181,7 +181,7 @@ export async function POST(request: Request) {
           .collection('businessInstances')
           .get();
 
-        const matchingDoc = businessQuery.docs.find(doc => doc.id.substring(0, 8) === extractedPrefix);
+        const matchingDoc = businessQuery.docs.find((doc: any) => doc.id.substring(0, 8) === extractedPrefix);
         if (matchingDoc) {
           businessDoc = matchingDoc;
           businessId = matchingDoc.id;

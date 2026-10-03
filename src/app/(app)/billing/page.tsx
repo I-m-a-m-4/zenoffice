@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import {
   CheckCircle2, Crown, Sparkles, Download, ArrowRight, Check,
   GraduationCap, Zap, Rocket, Globe, Shield, FileText, Brain,
@@ -43,33 +42,42 @@ export default function BillingPage() {
     }
   }, []);
 
-  const config = {
-    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK-33162c3bb2bb347a6606f3e44645f1c9-X',
-    tx_ref: `zenoffice_${selectedPlan}_${Date.now()}`,
-    amount: PRICES[selectedPlan][currency],
-    currency: currency,
-    payment_options: currency === 'NGN' ? 'card,banktransfer,ussd' : 'card',
-    customer: {
-      email: user?.email || 'user@zenoffice.app',
-      phone_number: '',
-      name: user?.displayName || user?.email?.split('@')[0] || 'ZenOffice User',
-    },
-    customizations: {
-      title: 'ZenOffice',
-      description: `ZenOffice ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} Plan`,
-      logo: 'https://zeneva.space/logo.png',
-    },
+  const loadFlutterwaveScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(false);
+      if (typeof (window as any).FlutterwaveCheckout === 'function') {
+        return resolve(true);
+      }
+
+      const existingScript = document.getElementById('flutterwave-checkout-script') as HTMLScriptElement;
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(true));
+        existingScript.addEventListener('error', () => resolve(false));
+        if (typeof (window as any).FlutterwaveCheckout === 'function') return resolve(true);
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.id = 'flutterwave-checkout-script';
+      script.src = 'https://checkout.flutterwave.com/v3.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => {
+        console.error('Failed to load Flutterwave checkout script');
+        resolve(false);
+      };
+      document.body.appendChild(script);
+    });
   };
 
-  const handleFlutterPayment = useFlutterwave(config);
-
-  const handleCheckout = (planId: PlanId) => {
+  const handleCheckout = async (planId: PlanId) => {
     setSelectedPlan(planId);
     setIsProcessing(true);
 
     const publicKey = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK-33162c3bb2bb347a6606f3e44645f1c9-X';
     const amount = PRICES[planId][currency];
     const userEmail = user?.email || 'user@zenoffice.app';
+    const userName = user?.displayName || userEmail.split('@')[0] || 'ZenOffice User';
 
     const onPaymentSuccess = async (txId: string) => {
       try {
@@ -94,64 +102,48 @@ export default function BillingPage() {
       showToast(`🎉 Payment successful! Welcome to ${planId.toUpperCase()}. Ref: ${txId}`);
     };
 
-    // Resilient fallback using direct window.FlutterwaveCheckout if hook script fails
-    const launchDirectly = () => {
-      if (typeof (window as any).FlutterwaveCheckout === 'function') {
-        (window as any).FlutterwaveCheckout({
-          public_key: publicKey,
-          tx_ref: `zenoffice_${planId}_${Date.now()}`,
-          amount,
-          currency: currency,
-          payment_options: currency === 'NGN' ? 'card,banktransfer,ussd' : 'card',
-          customer: {
-            email: userEmail,
-            name: user?.displayName || userEmail.split('@')[0],
-          },
-          customizations: {
-            title: 'ZenOffice',
-            description: `ZenOffice ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
-            logo: 'https://zeneva.space/logo.png',
-          },
-          callback: (data: any) => {
-            setIsProcessing(false);
-            const txId = data.transaction_id || data.tx_ref || data.flw_ref;
-            if (data.status === 'successful' || data.status === 'completed') {
-              onPaymentSuccess(txId);
-            } else {
-              showToast('Payment was not completed.');
-            }
-          },
-          onclose: () => setIsProcessing(false),
-        });
-        return true;
-      }
-      return false;
-    };
+    const scriptLoaded = await loadFlutterwaveScript();
+    if (!scriptLoaded || typeof (window as any).FlutterwaveCheckout !== 'function') {
+      setIsProcessing(false);
+      showToast('Could not load payment gateway. Please check your internet connection.');
+      return;
+    }
 
-    setTimeout(() => {
-      try {
-        handleFlutterPayment({
-          callback: async (response: any) => {
-            closePaymentModal();
-            setIsProcessing(false);
-            const txId = response.transaction_id || response.tx_ref || response.flw_ref;
-            if (response.status === 'successful' || response.status === 'completed') {
-              onPaymentSuccess(txId);
-            } else {
-              showToast('Payment was not completed.');
-            }
-          },
-          onClose: () => {
-            setIsProcessing(false);
-          },
-        });
-      } catch (err) {
-        if (!launchDirectly()) {
+    try {
+      (window as any).FlutterwaveCheckout({
+        public_key: publicKey,
+        tx_ref: `zenoffice_${planId}_${Date.now()}`,
+        amount,
+        currency,
+        payment_options: currency === 'NGN' ? 'card,banktransfer,ussd' : 'card',
+        customer: {
+          email: userEmail,
+          name: userName,
+          phone_number: '08000000000',
+        },
+        customizations: {
+          title: 'ZenOffice',
+          description: `ZenOffice ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
+          logo: 'https://zeneva.space/logo.png',
+        },
+        callback: (data: any) => {
           setIsProcessing(false);
-          showToast('Payment modal loading timed out. Please check your connection and try again.');
-        }
-      }
-    }, 50);
+          const txId = data.transaction_id || data.tx_ref || data.flw_ref;
+          if (data.status === 'successful' || data.status === 'completed') {
+            onPaymentSuccess(String(txId));
+          } else {
+            showToast('Payment was not completed.');
+          }
+        },
+        onclose: () => {
+          setIsProcessing(false);
+        },
+      });
+    } catch (err) {
+      console.error('FlutterwaveCheckout invocation error:', err);
+      setIsProcessing(false);
+      showToast('Payment initiation failed. Please try again.');
+    }
   };
 
   const handleDownloadInvoice = () => {

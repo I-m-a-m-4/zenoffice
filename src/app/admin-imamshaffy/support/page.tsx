@@ -726,12 +726,12 @@ function ChatDetail({ thread, adminUser, onBack }: { thread: SupportThread, admi
                             if (!element) return;
                             const opt = {
                                 margin: 10,
-                                filename: `Zeneva_Chat_${thread.userName || 'User'}.pdf`,
-                                image: { type: 'jpeg', quality: 0.98 },
+                                filename: `ZenOffice_Chat_${thread.userName || 'User'}.pdf`,
+                                image: { type: 'jpeg' as const, quality: 0.98 },
                                 html2canvas: { scale: 2, useCORS: true, logging: false },
                                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                             };
-                            await html2pdf().set(opt).from(element).save();
+                            await (html2pdf() as any).set(opt).from(element as HTMLElement).save();
                             toast({ title: 'Success', description: 'Chat exported as PDF.' });
                         } catch (err) {
                             console.error('PDF export failed:', err);
@@ -873,12 +873,12 @@ function ChatDetail({ thread, adminUser, onBack }: { thread: SupportThread, admi
                                             );
 
                                             if (msg.isSeen) {
-                                                return <CheckCheck className="h-3.5 w-3.5 text-blue-500" title="Seen" />;
+                                                return <span title="Seen"><CheckCheck className="h-3.5 w-3.5 text-blue-500" /></span>;
                                             }
                                             if (isDelivered) {
-                                                return <CheckCheck className="h-3.5 w-3.5 text-slate-400" title="Delivered" />;
+                                                return <span title="Delivered"><CheckCheck className="h-3.5 w-3.5 text-slate-400" /></span>;
                                             }
-                                            return <Check className="h-3.5 w-3.5 text-slate-400" title="Sent" />;
+                                            return <span title="Sent"><Check className="h-3.5 w-3.5 text-slate-400" /></span>;
                                         })()}
                                     </div>
                                  </div>
@@ -1224,14 +1224,15 @@ function AdminSupportContent() {
                     id: `${userId}_admin_initiated`,
                     userId: userId,
                     userName: 'User ' + userId,
-                    subject: 'A Note From Zeneva CEO',
+                    userEmail: '',
+                    subject: 'A Note From ZenOffice',
                     status: 'open',
                     lastMessageSnippet: '',
                     lastMessageAt: new Date(),
                     createdAt: new Date(),
                     unreadCount: 0,
                     isReadByAdmin: true
-                } as SupportThread);
+                } as unknown as SupportThread);
             }
             // Remove userId from URL so it doesn't stay stuck
             window.history.replaceState(null, '', '/admin-imamshaffy/support');

@@ -52,6 +52,8 @@ function textOf(message: ZenMessage | undefined | null): string {
     .join(' ');
 }
 
+const trackFeature = (_name: string) => {};
+
 function normaliseMessage(m: any): ZenMessage {
   if (!m || typeof m !== 'object') return m;
   if (Array.isArray(m.parts)) return m as ZenMessage;

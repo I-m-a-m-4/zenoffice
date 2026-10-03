@@ -25,7 +25,7 @@ export async function GET(req: Request) {
       .limit(50)
       .get();
 
-    const logs = logsSnapshot.docs.map(doc => ({
+    const logs = logsSnapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data()
     }));

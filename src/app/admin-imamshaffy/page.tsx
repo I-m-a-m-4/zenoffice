@@ -4696,7 +4696,7 @@ function AdminDashboardContent({
                                                         <span className="font-semibold text-sm">{item.name}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <Badge variant="secondary" className="font-mono">{item.value}</Badge>
+                                                        <Badge variant="secondary" className="font-mono">{String(item.value)}</Badge>
                                                         <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
                                                     </div>
                                                 </div>

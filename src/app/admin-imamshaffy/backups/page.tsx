@@ -228,7 +228,7 @@ export default function BackupsAdminPage() {
                   schedules.map((schedule) => (
                     <div key={schedule.name} className="p-4 rounded-xl border border-border/80 bg-background/40 hover:bg-background/80 transition-colors space-y-2">
                       <div className="flex items-center justify-between">
-                        <Badge variant="success" className="text-[10px] font-bold">ACTIVE</Badge>
+                        <Badge className="text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border-emerald-500/20" variant="outline">ACTIVE</Badge>
                         <span className="text-[10px] text-muted-foreground">Retention: {parseInt(schedule.retention) / 86400} days</span>
                       </div>
                       <p className="text-xs font-mono truncate text-muted-foreground select-all">{getDbName(schedule.name)}</p>
@@ -265,7 +265,7 @@ export default function BackupsAdminPage() {
                     <div key={backup.name} className="p-3 rounded-lg border border-border bg-background/50 text-xs space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-bold truncate max-w-[120px]">{getDbName(backup.name)}</span>
-                        <Badge variant={backup.state === 'READY' ? 'success' : 'outline'}>{backup.state}</Badge>
+                        <Badge variant={backup.state === 'READY' ? 'default' : 'outline'}>{backup.state}</Badge>
                       </div>
                       <div className="text-[10px] text-muted-foreground">
                         <p>Date: {new Date(backup.createTime).toLocaleString()}</p>
@@ -293,7 +293,7 @@ export default function BackupsAdminPage() {
                       <p className="font-bold text-foreground">{getDbName(db.name)}</p>
                       <p className="text-[10px] text-muted-foreground">Type: {db.type}</p>
                     </div>
-                    <Badge variant={db.state === 'READY' ? 'success' : 'outline'}>{db.state}</Badge>
+                    <Badge variant={db.state === 'READY' ? 'default' : 'outline'}>{db.state}</Badge>
                   </div>
                 ))}
               </CardContent>

@@ -13,6 +13,7 @@ export interface UserProfile {
     onboardingStep?: number;
     id: string;
     businessId: string;
+    currentBusinessId?: string;
     name: string;
     email: string;
     phone?: string;
@@ -202,18 +203,25 @@ export interface ContentStrategyOutput {
 }
 
 export interface BusinessAnalysisOutput {
-    smartStockRecommendations?: SmartStockRecommendation[];
-    demandHeatmap?: DemandHeatmap;
-    revenueOpportunities?: RevenueOpportunity[];
-    smartMerchandising?: SmartMerchandising[];
-    irresistibleOffers?: IrresistibleOffer[];
-    slowMovingInventory?: SlowMovingInventory[];
-    businessHealth?: BusinessHealth;
-    customerSegments?: CustomerSegment[];
-    pricingRecommendations?: PricingRecommendation[];
-    contentPlanner?: ContentPlanner;
     createdAt?: any;
 }
+
+export type AISuggestions = Record<string, any>;
+export interface Product {
+    id: string;
+    name: string;
+    [key: string]: any;
+}
+export interface Receipt {
+    id: string;
+    [key: string]: any;
+}
+export interface Customer {
+    id: string;
+    name: string;
+    [key: string]: any;
+}
+
 
 
 export interface Branch {
@@ -231,6 +239,8 @@ export interface BusinessInstance {
     name: string;
     address?: string;
     ownerId: string;
+    ownerName?: string;
+    ownerEmail?: string;
     createdAt: any; // Firestore Timestamp
     trialExpiresAt?: any; // Firestore Timestamp
     plan?: 'starter' | 'pro' | 'business';
@@ -542,8 +552,11 @@ export interface SupportThread {
     subject: string;
     status: 'open' | 'closed';
     lastMessageAt: any; // Timestamp
+    lastMessage?: any;
     lastMessageSnippet: string;
     isReadByAdmin: boolean;
+    isReadByUser?: boolean;
+    unreadCount?: number;
     createdAt: any;
 }
 

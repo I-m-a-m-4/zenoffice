@@ -17,7 +17,7 @@ import { useFirestore } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { UserProfile } from '@/types';
-import { Loader2, Shield, Layout, Package, Users, Tag, History, ShoppingBag, Lock, ShoppingCart } from 'lucide-react';
+import { Loader2, Shield, FileText, Trash2, Download, HardDrive, Building, Users, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface PermissionItem {
@@ -29,53 +29,47 @@ interface PermissionItem {
 
 const PERMISSIONS: PermissionItem[] = [
     {
-        id: 'record_sales',
-        label: 'Record Sales (POS)',
-        description: 'Ability to process transactions and record sales in the Point of Sale.',
-        icon: <ShoppingCart className="h-4 w-4" />
+        id: 'edit_documents',
+        label: 'Create & Edit Documents',
+        description: 'Ability to create, edit, and collaborate on Word, Excel, and PDF files.',
+        icon: <FileText className="h-4 w-4" />
     },
     {
-        id: 'view_reports',
-        label: 'View Reports',
-        description: 'Access to business analytics, revenue reports, and sales charts.',
-        icon: <Layout className="h-4 w-4" />
+        id: 'delete_documents',
+        label: 'Delete Documents',
+        description: 'Permission to delete documents or purge items from the workspace trash.',
+        icon: <Trash2 className="h-4 w-4" />
     },
     {
-        id: 'manage_inventory',
-        label: 'Manage Inventory',
-        description: 'Add, edit, or delete products and manage stock levels.',
-        icon: <Package className="h-4 w-4" />
+        id: 'export_documents',
+        label: 'Export & Convert (OCR)',
+        description: 'Export files, run AI document conversion, and OCR processing.',
+        icon: <Download className="h-4 w-4" />
     },
     {
-        id: 'view_customers',
-        label: 'Manage Customers',
-        description: 'View customer history, loyalty points, and profiles.',
+        id: 'manage_drive',
+        label: 'Manage ZenDrive Storage',
+        description: 'Upload, organize, and manage shared cloud workspace files.',
+        icon: <HardDrive className="h-4 w-4" />
+    },
+    {
+        id: 'manage_workspace',
+        label: 'Manage Workspace Settings',
+        description: 'Configure workspace branding, localization, and system preferences.',
+        icon: <Building className="h-4 w-4" />
+    },
+    {
+        id: 'manage_users',
+        label: 'Manage Team Members',
+        description: 'Invite new collaborators, update roles, and manage permissions.',
         icon: <Users className="h-4 w-4" />
-    },
-    {
-        id: 'apply_discounts',
-        label: 'Apply Discounts',
-        description: 'Ability to apply manual discounts to orders in the POS.',
-        icon: <Tag className="h-4 w-4" />
-    },
-    {
-        id: 'override_prices',
-        label: 'Override Prices',
-        description: 'Manually change product prices during a transaction.',
-        icon: <Lock className="h-4 w-4" />
     },
     {
         id: 'view_audit_logs',
         label: 'View Audit Logs',
-        description: 'See detailed history of all staff actions and system changes.',
+        description: 'Inspect full audit trails of document modifications and security events.',
         icon: <History className="h-4 w-4" />
     },
-    {
-        id: 'manage_online_orders',
-        label: 'Manage Online Orders',
-        description: 'View and update status of orders from the web storefront.',
-        icon: <ShoppingBag className="h-4 w-4" />
-    }
 ];
 
 interface UserPermissionsDialogProps {
@@ -92,16 +86,15 @@ export default function UserPermissionsDialog({ isOpen, onOpenChange, user, onSu
     const [permissions, setPermissions] = React.useState<Record<string, boolean>>({});
 
     const getInitialValue = (permissionId: string, role: string) => {
-        // Define default capabilities based on role (matching the system's baseline roles)
+        // Define default capabilities based on role
         const defaults: Record<string, string[]> = {
-            record_sales: ['admin', 'manager', 'vendor_operator'],
-            view_reports: ['admin', 'owner'],
-            manage_inventory: ['admin', 'manager'],
-            view_customers: ['admin', 'manager', 'vendor_operator'],
-            view_audit_logs: ['admin'],
-            manage_online_orders: ['admin', 'manager'],
-            apply_discounts: ['admin', 'manager'],
-            override_prices: ['admin', 'manager'],
+            edit_documents: ['admin', 'manager', 'vendor_operator', 'staff'],
+            delete_documents: ['admin', 'manager'],
+            export_documents: ['admin', 'manager', 'vendor_operator', 'staff'],
+            manage_drive: ['admin', 'manager', 'vendor_operator'],
+            manage_workspace: ['admin', 'owner'],
+            manage_users: ['admin', 'owner'],
+            view_audit_logs: ['admin', 'owner'],
         };
         
         return (defaults[permissionId] || []).includes(role);

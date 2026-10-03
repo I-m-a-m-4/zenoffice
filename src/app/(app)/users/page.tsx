@@ -22,7 +22,7 @@ import { PlusCircle, User, Users, MoreHorizontal, AlertCircle, Trash2, Mail, Use
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where, deleteDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import type { UserProfile, Invitation } from '@/types';
+import type { UserProfile, Invitation, UserRole } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { FeatureGateUpgradeCard } from '@/components/shared/feature-gate';
@@ -285,7 +285,7 @@ function UserManagementDashboard({ businessId, currentUserId, inviterName }: { b
         if (!users) return [];
         let filtered = users;
         if (activeBranchId && activeBranchId !== 'all') {
-            filtered = users.filter(u => {
+            filtered = users.filter((u: any) => {
                 if (activeBranchId === businessId) {
                     return !u.branchId || u.branchId === businessId || u.branchId === 'all';
                 }
@@ -476,7 +476,7 @@ function UserManagementDashboard({ businessId, currentUserId, inviterName }: { b
                             </div>
                         </div>
                         {isLimitReached && businessInstance?.plan !== 'starter' && (
-                            <Alert variant="warning" className="mt-4">
+                            <Alert className="mt-4 border-amber-500/50 text-amber-600">
                                 <AlertCircle className="h-4 w-4" />
                                 <AlertTitle>Plan Limit Reached</AlertTitle>
                                 <AlertDescription>

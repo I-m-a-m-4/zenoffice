@@ -319,7 +319,7 @@ function UserDetailContent() {
                                     <Field label="User ID">
                                         <code className="font-mono text-[10px]">{user.id}</code>
                                     </Field>
-                                    <Field label="Branch">{user.branchId}</Field>
+                                    <Field label="Workspace">{(user as any).branchId || user.businessId || 'Default'}</Field>
                                     <Field label="Onboarding survey">
                                         {user.surveyCompleted ? 'Completed' : 'Not completed'}
                                     </Field>

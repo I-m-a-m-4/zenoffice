@@ -77,21 +77,21 @@ export default function BranchesSettingsPage() {
       return Math.abs(Date.now() - date.getTime()) < 15 * 60 * 1000;
     }).length;
 
-    const branchProducts = (products || []).filter(p => {
+    const branchProducts = (products || []).filter((p: any) => {
       if (p.branchId === branchId) return true;
       if (isPrimary && (!p.branchId || p.branchId === 'all')) return true;
       return false;
     });
 
-    const lowStockCount = branchProducts.filter(p => p.stock <= (p.lowStockThreshold || 5)).length;
+    const lowStockCount = branchProducts.filter((p: any) => (p.stock || 0) <= (p.lowStockThreshold || 5)).length;
 
-    const branchReceipts = (receipts || []).filter(r => {
+    const branchReceipts = (receipts || []).filter((r: any) => {
       if (r.branchId === branchId) return true;
       if (isPrimary && (!r.branchId || r.branchId === 'all')) return true;
       return false;
     });
 
-    const salesVolume = branchReceipts.reduce((sum, r) => sum + (r.total || 0), 0);
+    const salesVolume = branchReceipts.reduce((sum: number, r: any) => sum + (r.total || 0), 0);
 
     return {
       usersCount: branchUsers.length,
@@ -291,7 +291,7 @@ export default function BranchesSettingsPage() {
               </CardContent>
             </Card>
           ) : (
-            displayedBranches.map((branch) => {
+            displayedBranches.map((branch: any) => {
               const stats = getBranchStatsOverride(branch.id, branch.isPrimary);
               const isCurrentlySelected = displayedActiveBranchId === branch.id;
               return (

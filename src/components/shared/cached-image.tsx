@@ -19,11 +19,12 @@ interface CachedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
  * proxying, optimization, and avoiding CORS/hotlinking issues.
  */
 export function CachedImage({ src, className, alt, fallback, ...props }: CachedImageProps) {
-  const sanitizedSrc = typeof src === 'string' && !src.startsWith('data:') && !src.startsWith('blob:') && src.includes(',')
-    ? src.split(',')[0].trim()
-    : src;
+  const rawSrc = typeof src === 'string' ? src : undefined;
+  const sanitizedSrc = rawSrc && !rawSrc.startsWith('data:') && !rawSrc.startsWith('blob:') && rawSrc.includes(',')
+    ? rawSrc.split(',')[0].trim()
+    : rawSrc;
 
-  const [displaySrc, setDisplaySrc] = useState<string | undefined>(sanitizedSrc || undefined);
+  const [displaySrc, setDisplaySrc] = useState<string | undefined>(sanitizedSrc);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [useFallbackUrl, setUseFallbackUrl] = useState(false);

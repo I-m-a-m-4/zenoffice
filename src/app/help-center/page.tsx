@@ -599,7 +599,7 @@ export default function HelpCenterPage() {
                   <div className="mb-4 flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       {React.isValidElement(c.icon)
-                        ? React.cloneElement(c.icon as React.ReactElement, {
+                        ? React.cloneElement(c.icon as React.ReactElement<any>, {
                             className: 'h-4 w-4',
                           })
                         : c.icon}

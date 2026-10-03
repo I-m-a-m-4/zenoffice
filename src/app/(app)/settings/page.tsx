@@ -43,7 +43,7 @@ const CURRENCY_COUNTRY_CODES: Record<string, string> = {
     HNL: 'hn', HRK: 'hr', HTG: 'ht', HUF: 'hu', IDR: 'id', ILS: 'il', IQD: 'iq', IRR: 'ir', ISK: 'is',
     JMD: 'jm', JOD: 'jo', KGS: 'kg', KHR: 'kh', KMF: 'km', KPW: 'kp', KRW: 'kr', KWD: 'kw', KYD: 'ky',
     KZT: 'kz', LAK: 'la', LBP: 'lb', LKR: 'lk', LRD: 'lr', LSL: 'ls', LYD: 'ly', MAD: 'ma', MDL: 'md',
-    MGA: 'mg', MKD: 'mk', MMK: 'mm', MNT: 'mn', MOP: 'mo', MRU: 'mr', MUR: 'mu', MVR: 'mv', MWK: 'mw',
+    MGA: 'mg', MKD: 'mk', MMK: 'mm', MNT: 'mn', MOP: 'mo', MRU: 'mr', MVR: 'mv', MWK: 'mw',
     MXN: 'mx', MYR: 'my', MZN: 'mz', NAD: 'na', NOK: 'no', NPR: 'np', NZD: 'nz', OMR: 'om', PAB: 'pa',
     PEN: 'pe', PGK: 'pg', PHP: 'ph', PLN: 'pl', PYG: 'py', QAR: 'qa', RON: 'ro', RSD: 'rs', RUB: 'ru',
     RWF: 'rw', SGD: 'sg', SHP: 'sh', SLL: 'sl', SOS: 'so', SRD: 'sr', SSP: 'ss', STN: 'st', SYP: 'sy',
@@ -197,9 +197,6 @@ function SettingsPageContent() {
     const [paymentBankAccountId, setPaymentBankAccountId] = React.useState('');
     const [paymentAccountName, setPaymentAccountName] = React.useState('');
     const [paymentInstructions, setPaymentInstructions] = React.useState('');
-    const [isActivatingTerminal, setIsActivatingTerminal] = React.useState(false);
-    const [isDeactivatingTerminal, setIsDeactivatingTerminal] = React.useState(false);
-
     const [ipCountry, setIpCountry] = React.useState<string | null>(null);
 
     React.useEffect(() => {
@@ -211,38 +208,15 @@ function SettingsPageContent() {
         checkIp();
     }, []);
 
-    // Loyalty state
-    const [loyaltyEnabled, setLoyaltyEnabled] = React.useState(false);
-    const [pointsPerUnit, setPointsPerUnit] = React.useState('1');
-
-    // Business rating opt-in. A Switch is binary and the stored flag has three
-    // states, so `undefined` (never asked) hydrates to off here — the switch being
-    // visible *is* the asking, and saving it therefore records a real decision
-    // either way. See the field note in `src/types.ts`.
-    const [ratingEnabled, setRatingEnabled] = React.useState(false);
-
     const [industry, setIndustry] = React.useState('');
     const [country, setCountry] = React.useState('Nigeria');
     const [state, setState] = React.useState('');
     const [fiscalYearStart, setFiscalYearStart] = React.useState('January');
 
-    const [shippingOptions, setShippingOptions] = React.useState<{ name: string, price: number, type: 'delivery' | 'pickup', location?: string | null }[]>([]);
-    const [newShippingOption, setNewShippingOption] = React.useState({ name: '', price: '', type: 'delivery' as 'delivery' | 'pickup', location: '' });
-
-    const [productCategories, setProductCategories] = React.useState<string[]>([]);
-    const [newCategory, setNewCategory] = React.useState('');
-
     // Operating Hours state
     const [operatingHoursEnabled, setOperatingHoursEnabled] = React.useState(false);
     const [openTime, setOpenTime] = React.useState('08:00');
     const [closeTime, setCloseTime] = React.useState('18:00');
-    const [preventSalesOutsideHours, setPreventSalesOutsideHours] = React.useState(false);
-
-    // POS Settings
-    const [allowPosPriceOverride, setAllowPosPriceOverride] = React.useState(false);
-    const [allowCashierExpenseLogging, setAllowCashierExpenseLogging] = React.useState(false);
-    const [allowManagerCostPriceView, setAllowManagerCostPriceView] = React.useState(false);
-    const [requireAdminApprovalForVoids, setRequireAdminApprovalForVoids] = React.useState(false);
 
     // Effect to populate form fields when business data loads
     React.useEffect(() => {
@@ -265,27 +239,15 @@ function SettingsPageContent() {
             setPaymentAccountName(business.settings?.paymentAccountName || '');
             setPaymentInstructions(business.settings?.paymentInstructions || '');
 
-            setLoyaltyEnabled(business.settings.loyaltyProgramEnabled || false);
-            setPointsPerUnit(String(business.settings.pointsPerUnit || 1));
-            setRatingEnabled(business.settings?.ratingEnabled === true);
-
             setIndustry(business.settings?.industry || '');
             setCountry(business.settings?.country || 'Nigeria');
             setState(business.settings?.state || '');
             setFiscalYearStart(business.settings?.fiscalYearStart || 'January');
-            setShippingOptions(business.settings?.publicStore?.shippingOptions || []);
-            setProductCategories(business.settings?.productCategories || []);
 
             // Operating Hours
             setOperatingHoursEnabled(business.settings?.operatingHours?.enabled || false);
             setOpenTime(business.settings?.operatingHours?.openTime || '08:00');
             setCloseTime(business.settings?.operatingHours?.closeTime || '18:00');
-            setPreventSalesOutsideHours(business.settings?.operatingHours?.preventSalesOutsideHours || false);
-
-            setAllowPosPriceOverride(business.settings?.allowPosPriceOverride || false);
-            setAllowCashierExpenseLogging(business.settings?.allowCashierExpenseLogging || false);
-            setAllowManagerCostPriceView(business.settings?.allowManagerCostPriceView || false);
-            setRequireAdminApprovalForVoids(business.settings?.requireAdminApprovalForVoids || false);
         }
     }, [business]);
 
@@ -512,67 +474,6 @@ function SettingsPageContent() {
         }
     };
 
-    const handleActivateTerminal = async () => {
-        if (!paymentBankAccountId || !paymentBankCode) {
-            toast({ variant: "destructive", title: t('settings.toastActivationError'), description: t('settings.toastActivationErrorBody') });
-            return;
-        }
-        const effectivePhone = businessPhone || business?.settings?.phone || '';
-        if (!effectivePhone) {
-            toast({ variant: "destructive", title: t('settings.toastPhoneRequired'), description: t('settings.toastPhoneRequiredBody') });
-            return;
-        }
-        setIsActivatingTerminal(true);
-        try {
-            const response = await fetch('/api/paystack/activate-terminal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    businessId: business.id,
-                    businessName: businessName,
-                    email: currentUserProfile?.email || '',
-                    phone: effectivePhone,
-                    bankCode: paymentBankCode,
-                    accountNumber: paymentBankAccountId
-                })
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.message || 'Paystack terminal activation failed.');
-            }
-
-            const terminalUpdates = {
-                "settings.terminalBankName": result.bankName,
-                "settings.terminalAccountNumber": result.accountNumber,
-                "settings.terminalAccountName": result.accountName,
-                "settings.paystackSubaccountCode": result.subaccountCode
-            };
-
-            await handleSettingsSubmit('financials', {
-                "settings.currency": currency,
-                "settings.timezone": timezone,
-                "settings.defaultTaxRate": parseFloat(defaultTaxRate) || 0,
-                "settings.paymentBankCode": paymentBankCode,
-                "settings.paymentBankName": NIGERIAN_BANKS.find(b => b.value === paymentBankCode)?.label || paymentBankCode || '',
-                "settings.paymentBankAccountId": paymentBankAccountId,
-                "settings.paymentAccountName": paymentAccountName,
-                "settings.paymentInstructions": paymentInstructions,
-                ...terminalUpdates
-            });
-
-            toast({
-                variant: 'success',
-                title: t('settings.toastTerminalActivated'),
-                description: t('settings.toastTerminalActivatedBody', { bank: result.bankName, account: result.accountNumber })
-            });
-        } catch (error: any) {
-            toast({ variant: "destructive", title: t('settings.toastActivationFailed'), description: error.message });
-        } finally {
-            setIsActivatingTerminal(false);
-        }
-    };
 
     const handleVerifyBvn = async () => {
         if (!bvn || bvn.length !== 11) {
@@ -614,36 +515,6 @@ function SettingsPageContent() {
             toast({ variant: "destructive", title: t('settings.toastVerificationFailed'), description: error.message });
         } finally {
             setIsVerifyingBvn(false);
-        }
-    };
-
-    const handleDeactivateTerminal = async () => {
-        setIsDeactivatingTerminal(true);
-        try {
-            await handleSettingsSubmit('financials', {
-                "settings.currency": currency,
-                "settings.timezone": timezone,
-                "settings.defaultTaxRate": parseFloat(defaultTaxRate) || 0,
-                "settings.paymentBankCode": paymentBankCode,
-                "settings.paymentBankName": NIGERIAN_BANKS.find(b => b.value === paymentBankCode)?.label || paymentBankCode || '',
-                "settings.paymentBankAccountId": paymentBankAccountId,
-                "settings.paymentAccountName": paymentAccountName,
-                "settings.paymentInstructions": paymentInstructions,
-                "settings.terminalBankName": null,
-                "settings.terminalAccountNumber": null,
-                "settings.terminalAccountName": null,
-                "settings.paystackSubaccountCode": null
-            });
-
-            toast({
-                variant: 'success',
-                title: t('settings.toastTerminalDeactivated'),
-                description: t('settings.toastTerminalDeactivatedBody')
-            });
-        } catch (error: any) {
-            toast({ variant: "destructive", title: t('settings.toastDeactivationFailed'), description: error.message });
-        } finally {
-            setIsDeactivatingTerminal(false);
         }
     };
 
@@ -702,23 +573,6 @@ function SettingsPageContent() {
 
         let finalData = { ...dataToSave };
 
-        // Auto-add pending shipping option if present
-        if (formName === 'shipping' && newShippingOption.name) {
-            const name = newShippingOption.name.trim();
-            const price = parseFloat(newShippingOption.price);
-            const type = newShippingOption.type;
-            const location = newShippingOption.location.trim();
-
-            if (name && !isNaN(price) && price >= 0) {
-                if (type === 'delivery' || (type === 'pickup' && location)) {
-                    const newOption = { name, price, type, location: type === 'pickup' ? location : null };
-                    const updatedOptions = [...shippingOptions, newOption];
-                    finalData['settings.publicStore.shippingOptions'] = updatedOptions;
-                    setShippingOptions(updatedOptions); // Update local state immediately
-                    setNewShippingOption({ name: '', price: '', type: 'delivery', location: '' }); // Clear input
-                }
-            }
-        }
 
         try {
             const performOptimisticUpdate = () => {
@@ -826,39 +680,6 @@ function SettingsPageContent() {
         }
     };
 
-    const handleAddShippingOption = () => {
-        const name = newShippingOption.name.trim();
-        const price = parseFloat(newShippingOption.price);
-        const type = newShippingOption.type;
-        const location = newShippingOption.location.trim();
-
-        if (name && !isNaN(price) && price >= 0) {
-            if (type === 'pickup' && !location) {
-                toast({ variant: 'destructive', title: t('settings.toastLocationRequired'), description: t('settings.toastLocationRequiredBody') });
-                return;
-            }
-            setShippingOptions([...shippingOptions, { name, price, type, location: type === 'pickup' ? location : null }]);
-            setNewShippingOption({ name: '', price: '', type: 'delivery', location: '' });
-        } else {
-            toast({ variant: 'destructive', title: t('settings.toastInvalidOption'), description: t('settings.toastInvalidOptionBody') });
-        }
-    };
-
-    const handleDeleteShippingOption = (index: number) => {
-        setShippingOptions(shippingOptions.filter((_, i) => i !== index));
-    };
-
-    const handleAddCategory = () => {
-        const cat = newCategory.trim();
-        if (cat && !productCategories.includes(cat)) {
-            setProductCategories([...productCategories, cat]);
-            setNewCategory('');
-        }
-    }
-
-    const handleDeleteCategory = (catToDelete: string) => {
-        setProductCategories(productCategories.filter(c => c !== catToDelete));
-    }
 
     const processedSessions = React.useMemo(() => {
         const groups = new Map<string, any>();
@@ -895,7 +716,6 @@ function SettingsPageContent() {
             <Tabs defaultValue="general" className="space-y-6">
                 <TabsList className="w-full flex-wrap justify-start h-auto bg-transparent p-0 gap-2 mb-4 border-b pb-4">
                     <TabsTrigger value="general" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 rounded-md px-4 py-2">{t('settings.tabGeneral')}</TabsTrigger>
-                    <TabsTrigger value="storefront" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 rounded-md px-4 py-2">{t('settings.tabStorefront')}</TabsTrigger>
                     <TabsTrigger value="financials" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 rounded-md px-4 py-2">{t('settings.tabFinancialsBilling')}</TabsTrigger>
                     <TabsTrigger value="system" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted/50 rounded-md px-4 py-2">{t('settings.tabSystemSecurity')}</TabsTrigger>
                 </TabsList>
@@ -978,54 +798,19 @@ function SettingsPageContent() {
                         </Card>
                     )}
 
-                    {isOwnerOrAdmin && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Gauge className="h-5 w-5 text-primary" />Business Rating</CardTitle>
-                                <CardDescription>
-                                    A score out of 100 built from your own sales, with the biggest money opportunity it can find. Off unless you ask for it.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center justify-between rounded-lg border p-4">
-                                    <div className="space-y-0.5 pe-4">
-                                        <Label htmlFor="rating-switch" className="text-base">Show my business rating</Label>
-                                        <p className="text-sm text-muted-foreground">
-                                            Turning this off hides the score everywhere &mdash; the top bar, the dashboard, Reports, the badges on Achievements, and Zen AI. Nothing is deleted, and your streak keeps counting, so switching it back on picks up where you left off.
-                                        </p>
-                                    </div>
-                                    <Switch id="rating-switch" checked={ratingEnabled} onCheckedChange={setRatingEnabled} />
-                                </div>
-                            </CardContent>
-                            <CardFooter>
-                                {/* Dotted field path, as everywhere on this page: it merges into the
-                                existing `settings` map instead of replacing it. */}
-                                <Button type="button" onClick={() => handleSettingsSubmit('rating', { 'settings.ratingEnabled': ratingEnabled })} disabled={isSaving["rating"]}>
-                                    {isSaving["rating"] && <Loader2 className="me-2 h-4 w-4 animate-spin" />}Save Rating Preference
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    )}
-
                     <Card className="border-border/15 dark:border-border/25 shadow-none hover:shadow-sm transition-shadow">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2"><Star className="h-5 w-5 text-primary fill-primary" />{t('settings.reviewTitle')}</CardTitle>
                             <CardDescription>{t('settings.reviewDescription')}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {/* Deliberately a button, not an anchor. The href used to carry
-                            the `ms-windows-store:` / `market:` deep link, but both
-                            onClick branches called preventDefault() and then
-                            window.open() — which is a no-op inside the Tauri webview,
-                            so this did nothing at all on desktop and Android.
-                            openStoreReview goes through plugin:shell|open. */}
                             <button
                                 type="button"
                                 onClick={() => { void openStoreReview((isTauri && !isMobile) ? 'microsoft' : 'play'); }}
                                 className="inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-primary text-primary bg-background hover:bg-primary hover:text-white h-10 py-2 px-4 w-full"
                             >
                                 <Star className="me-2 h-4 w-4" />
-                                {(isTauri && !isMobile) ? "Rate Zeneva on Microsoft Store" : "Rate Zeneva on Playstore"}
+                                {(isTauri && !isMobile) ? "Rate ZenOffice on Microsoft Store" : "Rate ZenOffice on Playstore"}
                             </button>
                         </CardContent>
                     </Card>
@@ -1040,88 +825,6 @@ function SettingsPageContent() {
                             <LanguageSwitcher onPersist={handleLanguagePersist} />
                         </CardContent>
                     </Card>
-
-                </TabsContent>
-
-                <TabsContent value="storefront" className="space-y-6 mt-0">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Award className="h-5 w-5 text-primary" />{t('settings.loyaltyTitle')}</CardTitle>
-                            <CardDescription>{t('settings.loyaltyDescription')}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between rounded-lg border p-4">
-                                    <div className="space-y-0.5">
-                                        <Label htmlFor="loyalty-switch" className="text-base">{t('settings.loyaltyEnable')}</Label>
-                                        <p className="text-sm text-muted-foreground">{t('settings.loyaltyEnableDescription')}</p>
-                                    </div>
-                                    <Switch id="loyalty-switch" checked={loyaltyEnabled} onCheckedChange={setLoyaltyEnabled} />
-                                </div>
-                                {loyaltyEnabled && (
-                                    <div className="grid sm:grid-cols-2 gap-4 pt-4 border-t">
-                                        <div>
-                                            <Label htmlFor="points-per-unit" className="flex items-center gap-1.5">
-                                                {t('settings.pointsPerUnit')}
-                                                <TooltipProvider>
-                                                    <Tooltip delayDuration={300}>
-                                                        <TooltipTrigger asChild>
-                                                            <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
-                                                        </TooltipTrigger>
-                                                        <TooltipContent className="max-w-[250px]">
-                                                            <p>The number of points a customer earns per single unit of currency spent.</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            </Label>
-                                            <Input
-                                                id="points-per-unit"
-                                                type="number"
-                                                value={pointsPerUnit}
-                                                onChange={e => setPointsPerUnit(e.target.value)}
-                                                placeholder={t('settings.pointsPerUnitPlaceholder')}
-                                            />
-                                            <p className="text-xs text-muted-foreground mt-1">{t('settings.pointsPerUnitHint')}</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                            <Button type="button" onClick={() => handleSettingsSubmit('loyalty', { 'settings.loyaltyProgramEnabled': loyaltyEnabled, 'settings.pointsPerUnit': parseFloat(pointsPerUnit) || 0 })} disabled={isSaving["loyalty"]}>
-                                {isSaving["loyalty"] && <Loader2 className="me-2 h-4 w-4 animate-spin" />}{t('settings.saveLoyalty')}
-                            </Button>
-                        </CardFooter>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Package className="h-5 w-5 text-primary" />{t('settings.categoriesTitle')}</CardTitle>
-                            <CardDescription>{t('settings.categoriesDescription')}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {productCategories.map((cat, index) => (
-                                    <div key={index} className="flex items-center justify-between gap-2 p-3 border rounded-md bg-muted/50">
-                                        <p className="font-medium">{cat}</p>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteCategory(cat)}>
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    </div>
-                                ))}
-                                <div className="flex items-end gap-2 pt-4 border-t">
-                                    <div className="flex-1"><Label>{t('settings.newCategory')}</Label><Input placeholder={t('settings.newCategoryPlaceholder')} value={newCategory} onChange={e => setNewCategory(e.target.value)} /></div>
-                                    <Button type="button" onClick={handleAddCategory}><Plus className="h-4 w-4 me-2" />{t('settings.addCategory')}</Button>
-                                </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                            <Button type="button" onClick={() => handleSettingsSubmit('categories', { 'settings.productCategories': productCategories })} disabled={isSaving["categories"]}>
-                                {isSaving["categories"] && <Loader2 className="me-2 h-4 w-4 animate-spin" />}{t('settings.saveCategories')}
-                            </Button>
-                        </CardFooter>
-                    </Card>
-
 
                 </TabsContent>
 
@@ -1200,15 +903,7 @@ function SettingsPageContent() {
                             {(ipCountry === 'Nigeria' || currency === 'NGN') && (
                                 <>
                                     <Separator />
-                                    <FeatureGate
-                                        requiredPlan="business"
-                                        currentPlan={business?.plan}
-                                        hasLifetimeAccess={hasLifetimeAccess}
-                                        featureName={t('settings.terminalGateName')}
-                                        featureDescription={t('settings.terminalGateDescription')}
-                                        variant="rich"
-                                    >
-                                        <div>
+                                    <div>
                                             <h4 className="font-semibold text-lg flex items-center gap-2 mb-2"><Banknote className="h-5 w-5 text-muted-foreground" />{t('settings.bankTransferTitle')}</h4>
                                             <p className="text-sm text-muted-foreground mb-4">
                                                 {t('settings.bankTransferBody')}
@@ -1284,104 +979,8 @@ function SettingsPageContent() {
                                                     />
                                                     <p className="text-xs text-muted-foreground mt-1">{t('settings.paymentInstructionsHint')}</p>
                                                 </div>
-                                                {currency === 'NGN' && ipCountry === 'Nigeria' && (
-                                                    business?.settings?.terminalAccountNumber ? (
-                                                        <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-500/5 space-y-2 mt-4 animate-fadeIn">
-                                                            <div className="flex items-center justify-between">
-                                                                <h5 className="font-semibold text-emerald-800 text-sm flex items-center gap-1.5">
-                                                                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                                                                    {t('settings.terminalActiveTitle')}
-                                                                </h5>
-                                                                <Badge className="bg-emerald-500 hover:bg-emerald-600 border-none text-white text-[10px]">{t('settings.terminalActiveBadge')}</Badge>
-                                                            </div>
-                                                            <p className="text-xs text-muted-foreground">{t('settings.terminalActiveBody')}</p>
-                                                            <div className="grid grid-cols-2 gap-4 text-xs pt-2 font-mono border-b border-emerald-100/30 pb-2">
-                                                                <div>
-                                                                    <span className="text-slate-400 block">{t('settings.bankName')}</span>
-                                                                    <span className="font-bold text-slate-800">{business.settings.terminalBankName || 'Wema Bank'}</span>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-slate-400 block">{t('settings.accountNumber')}</span>
-                                                                    <span className="font-bold text-slate-800">{business.settings.terminalAccountNumber}</span>
-                                                                </div>
-                                                                <div className="col-span-2">
-                                                                    <span className="text-slate-400 block">{t('settings.accountName')}</span>
-                                                                    <span className="font-bold text-slate-800">{business.settings.terminalAccountName || `Zeneva - ${business.name}`}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="pt-2 flex items-center justify-between border-t border-emerald-100/10">
-                                                                <div className="text-[11px] text-emerald-600 leading-relaxed">
-                                                                    {t('settings.terminalLiveMode')}
-                                                                </div>
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="destructive"
-                                                                    size="sm"
-                                                                    onClick={handleDeactivateTerminal}
-                                                                    disabled={isDeactivatingTerminal}
-                                                                    className="text-xs h-7 px-3 flex items-center gap-1.5"
-                                                                >
-                                                                    {isDeactivatingTerminal ? (
-                                                                        <>
-                                                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                                                            {t('settings.terminalDeactivating')}
-                                                                        </>
-                                                                    ) : (
-                                                                        t('settings.terminalDeactivate')
-                                                                    )}
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        business?.settings?.paymentBankAccountId && (
-                                                            <div className="p-4 rounded-xl border border-orange-100 bg-orange-500/5 space-y-3 mt-4">
-                                                                <div>
-                                                                    <h5 className="font-semibold text-orange-800 text-sm flex items-center gap-1.5">
-                                                                        <Banknote className="h-4 w-4 text-orange-600" />
-                                                                        {t('settings.terminalActivateTitle')}
-                                                                    </h5>
-                                                                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                                                        {t('settings.terminalActivateBody')}
-                                                                    </p>
-                                                                </div>
-                                                                {!(businessPhone || business?.settings?.phone) && (
-                                                                    <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
-                                                                        <span className="text-base mt-0.5">⚠️</span>
-                                                                        <div className="text-xs leading-relaxed">
-                                                                            {t('settings.terminalPhoneWarning')}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                                <div className="flex flex-col gap-2 bg-muted/30 p-3 rounded-lg border border-dashed text-xs text-muted-foreground my-3">
-                                                                    <div className="flex items-center gap-1.5 font-medium text-foreground">
-                                                                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                                                                        {t('settings.feesTitle')}
-                                                                    </div>
-                                                                    <p>{t('settings.feesZeneva')}</p>
-                                                                    <p>{t('settings.feesPaystack')}</p>
-                                                                </div>
-                                                                <Button
-                                                                    type="button"
-                                                                    onClick={handleActivateTerminal}
-                                                                    disabled={isActivatingTerminal}
-                                                                    className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium text-xs py-1.5 h-8 flex items-center justify-center gap-2"
-                                                                >
-                                                                    {isActivatingTerminal ? (
-                                                                        <>
-                                                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                                            {t('settings.terminalActivating')}
-                                                                        </>
-                                                                    ) : (
-                                                                        t('settings.terminalActivateTitle')
-                                                                    )}
-                                                                </Button>
-                                                            </div>
-                                                        )
-                                                    )
-                                                )}
                                             </div>
                                         </div>
-                                    </FeatureGate>
                                 </>
                             )}
                         </CardContent>
@@ -1392,58 +991,6 @@ function SettingsPageContent() {
                         </CardFooter>
                     </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Truck className="h-5 w-5 text-primary" />{t('settings.shippingTitle')}</CardTitle>
-                            <CardDescription>{t('settings.shippingDescription')}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {shippingOptions.map((option, index) => (
-                                    <div key={index} className="flex items-center justify-between gap-2 p-3 border rounded-md bg-muted/50">
-                                        <div>
-                                            <p className="font-medium">{option.name}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {option.type === 'pickup' ? t('settings.shippingPickupAt', { location: option.location }) : t('settings.shippingDelivery')} - ₦{option.price.toLocaleString()}
-                                            </p>
-                                        </div>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteShippingOption(index)}>
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    </div>
-                                ))}
-                                <div className="pt-4 border-t space-y-4">
-                                    <Label>{t('settings.shippingAddNew')}</Label>
-                                    <RadioGroup value={newShippingOption.type} onValueChange={(value: 'delivery' | 'pickup') => setNewShippingOption({ ...newShippingOption, type: value })} className="flex space-x-4">
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="delivery" id="delivery" />
-                                            <Label htmlFor="delivery">{t('settings.shippingDelivery')}</Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="pickup" id="pickup" />
-                                            <Label htmlFor="pickup">{t('settings.shippingInStorePickup')}</Label>
-                                        </div>
-                                    </RadioGroup>
-                                    <div className="flex items-end gap-2">
-                                        <div className="flex-1"><Label>{t('settings.shippingOptionName')}</Label><Input placeholder={t('settings.shippingOptionNamePlaceholder')} value={newShippingOption.name} onChange={e => setNewShippingOption({ ...newShippingOption, name: e.target.value })} /></div>
-                                        <div className="w-32"><Label>{t('common.price')}</Label><Input type="number" placeholder={t('settings.shippingPricePlaceholder')} value={newShippingOption.price} onChange={e => setNewShippingOption({ ...newShippingOption, price: e.target.value })} /></div>
-                                    </div>
-                                    {newShippingOption.type === 'pickup' && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="pickup-location">{t('settings.shippingPickupLocation')}</Label>
-                                            <Input id="pickup-location" placeholder={t('settings.shippingPickupLocationPlaceholder')} value={newShippingOption.location} onChange={e => setNewShippingOption({ ...newShippingOption, location: e.target.value })} />
-                                        </div>
-                                    )}
-                                    <Button type="button" onClick={handleAddShippingOption} className="w-full sm:w-auto"><Plus className="h-4 w-4 me-2" />{t('settings.shippingAddOption')}</Button>
-                                </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                            <Button type="button" onClick={() => handleSettingsSubmit('shipping', { 'settings.publicStore.shippingOptions': shippingOptions })} disabled={isSaving["shipping"]}>
-                                {isSaving["shipping"] && <Loader2 className="me-2 h-4 w-4 animate-spin" />}{t('settings.saveShipping')}
-                            </Button>
-                        </CardFooter>
-                    </Card>
 
                 </TabsContent>
 
@@ -1655,16 +1202,6 @@ function SettingsPageContent() {
                                             />
                                         </div>
                                     </div>
-
-                                    <div className="flex items-center justify-between rounded-lg border p-4 bg-orange-50/50 border-orange-100">
-                                        <div className="space-y-0.5 pe-8">
-                                            <Label className="text-base text-orange-900">{t('settings.hoursStrict')}</Label>
-                                            <p className="text-sm text-orange-700/70">
-                                                {t('settings.hoursStrictDescription')}
-                                            </p>
-                                        </div>
-                                        <Switch checked={preventSalesOutsideHours} onCheckedChange={setPreventSalesOutsideHours} />
-                                    </div>
                                 </div>
                             )}
                         </CardContent>
@@ -1675,8 +1212,7 @@ function SettingsPageContent() {
                                     'settings.operatingHours': {
                                         enabled: operatingHoursEnabled,
                                         openTime,
-                                        closeTime,
-                                        preventSalesOutsideHours
+                                        closeTime
                                     }
                                 })}
                                 disabled={isSaving["operating-hours"]}
@@ -1686,59 +1222,7 @@ function SettingsPageContent() {
                         </CardFooter>
                     </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Paintbrush className="h-5 w-5 text-primary" />Personalization</CardTitle>
-                            <CardDescription>Personalize point of sale rules and checkout behavior.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="flex items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base text-stone-900">Allow Price Override at Checkout</Label>
-                                    <p className="text-sm text-muted-foreground">When enabled, cashiers can click on a product price in the cart to negotiate and manually change the price for that specific sale.</p>
-                                </div>
-                                <Switch checked={allowPosPriceOverride} onCheckedChange={setAllowPosPriceOverride} />
-                            </div>
-                            
-                            <div className="flex items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base text-stone-900">Allow Managers to View Cost Prices</Label>
-                                    <p className="text-sm text-muted-foreground">When enabled, Managers can see inventory cost prices and calculate profit. If disabled, they only see selling prices.</p>
-                                </div>
-                                <Switch checked={allowManagerCostPriceView} onCheckedChange={setAllowManagerCostPriceView} />
-                            </div>
 
-                            <div className="flex items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base text-stone-900">Require Admin Approval for Voids & Returns</Label>
-                                    <p className="text-sm text-muted-foreground">When enabled, Cashiers and Managers cannot void sales or process returns without an Admin PIN.</p>
-                                </div>
-                                <Switch checked={requireAdminApprovalForVoids} onCheckedChange={setRequireAdminApprovalForVoids} />
-                            </div>
-
-                            <div className="flex items-center justify-between rounded-lg border p-4">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base text-stone-900">Allow Cashiers to Log Expenses</Label>
-                                    <p className="text-sm text-muted-foreground">When enabled, Cashiers can log small daily operational expenses. When disabled, only Managers and Admins can.</p>
-                                </div>
-                                <Switch checked={allowCashierExpenseLogging} onCheckedChange={setAllowCashierExpenseLogging} />
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                            <Button
-                                type="button"
-                                onClick={() => handleSettingsSubmit('pos', {
-                                    'settings.allowPosPriceOverride': allowPosPriceOverride,
-                                    'settings.allowCashierExpenseLogging': allowCashierExpenseLogging,
-                                    'settings.allowManagerCostPriceView': allowManagerCostPriceView,
-                                    'settings.requireAdminApprovalForVoids': requireAdminApprovalForVoids
-                                })}
-                                disabled={isSaving["pos"]}
-                            >
-                                {isSaving["pos"] && <Loader2 className="me-2 h-4 w-4 animate-spin" />}{t('common.save')}
-                            </Button>
-                        </CardFooter>
-                    </Card>
 
                     <Card>
                         <CardHeader>

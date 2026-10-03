@@ -2,34 +2,42 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 export type Timeframe = 'today' | '7d' | '30d' | '90d' | 'all';
 
-const OPTIONS: { label: string; value: Timeframe }[] = [
-  { label: 'Today', value: 'today' },
-  { label: '7d', value: '7d' },
-  { label: '30d', value: '30d' },
-  { label: '90d', value: '90d' },
-  { label: 'All', value: 'all' },
-];
-
-interface TimeframePickerProps {
+export interface TimeframePickerProps {
   value: Timeframe;
-  onValueChange: (value: Timeframe) => void;
+  onChange?: (value: Timeframe) => void;
+  onValueChange?: (value: Timeframe) => void;
   className?: string;
 }
 
-export function TimeframePicker({ value, onValueChange, className }: TimeframePickerProps) {
+const TIMEFRAME_OPTIONS: { label: string; value: Timeframe }[] = [
+  { label: 'Today', value: 'today' },
+  { label: '7D', value: '7d' },
+  { label: '30D', value: '30d' },
+  { label: '90D', value: '90d' },
+  { label: 'All', value: 'all' },
+];
+
+export function TimeframePicker({ value, onChange, onValueChange, className = '' }: TimeframePickerProps) {
+  const handleClick = (val: Timeframe) => {
+    onChange?.(val);
+    onValueChange?.(val);
+  };
+
   return (
-    <div className={cn('flex items-center gap-1 rounded-lg border bg-muted p-1', className)}>
-      {OPTIONS.map((opt) => (
+    <div className={`inline-flex items-center gap-1 bg-muted/60 p-1 rounded-lg border text-xs ${className}`}>
+      {TIMEFRAME_OPTIONS.map((opt) => (
         <Button
           key={opt.value}
-          variant={value === opt.value ? 'secondary' : 'ghost'}
+          type="button"
+          variant={value === opt.value ? 'default' : 'ghost'}
           size="sm"
-          className={cn('h-7 px-2.5 text-xs', value === opt.value && 'shadow-sm')}
-          onClick={() => onValueChange(opt.value)}
+          className={`h-7 px-2.5 text-xs font-medium rounded-md ${
+            value === opt.value ? 'shadow-sm' : 'text-muted-foreground hover:text-foreground'
+          }`}
+          onClick={() => handleClick(opt.value)}
         >
           {opt.label}
         </Button>
@@ -37,3 +45,5 @@ export function TimeframePicker({ value, onValueChange, className }: TimeframePi
     </div>
   );
 }
+
+export default TimeframePicker;

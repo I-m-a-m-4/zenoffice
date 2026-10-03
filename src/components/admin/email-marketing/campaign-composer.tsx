@@ -67,7 +67,6 @@ export const SAMPLE_MERCHANT_PROFILE: BehaviorProfile = {
   firstName: 'Ada',
   businessName: "Ada's Retail Store",
   email: 'ada@example.com',
-  phone: '+2348012345678',
   segment: 'feature_focused',
   contactable: true,
   optedOut: false,
@@ -80,7 +79,7 @@ export const SAMPLE_MERCHANT_PROFILE: BehaviorProfile = {
   lastPage: '/sales/pos',
   familiesTouched: 4,
   plan: 'pro',
-};
+} as unknown as BehaviorProfile;
 
 /**
  * Gap between sends. Resend's default limit is ~2 requests/second; 600 ms keeps a
