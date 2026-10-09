@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Share2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
-  Plus, X, Play, MonitorPlay, Square, Type, Image as ImageIcon, LayoutTemplate, Sparkles
+  Plus, X, Play, MonitorPlay, Square, Type, Image as ImageIcon, LayoutTemplate, Sparkles,
+  Save, Download, Check, RefreshCw
 } from 'lucide-react';
 import { ZenAiDialog } from '@/components/shared/zen-ai-dialog';
+import { ZenFileSyncService, ZenDocumentItem } from '@/lib/firebase-sync';
 
 export default function PresentationEditor() {
   const router = useRouter();
@@ -16,16 +18,130 @@ export default function PresentationEditor() {
   const [slides, setSlides] = useState([{ id: 1, content: 'Click to add title' }]);
   const [activeSlide, setActiveSlide] = useState(1);
   const [showAiModal, setShowAiModal] = useState(false);
+  const [currentDoc, setCurrentDoc] = useState<ZenDocumentItem | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Save, Export & Status state
+  const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  };
   
   useEffect(() => {
-    const docParam = searchParams.get('doc');
-    if (docParam) {
-      setDocTitle(decodeURIComponent(docParam));
-    }
+    const loadPresentation = async () => {
+      const docParam = searchParams.get('doc');
+      if (docParam) {
+        setDocTitle(decodeURIComponent(docParam));
+        const docObj = await ZenFileSyncService.getDocument(docParam);
+        if (docObj) {
+          setCurrentDoc(docObj);
+          if (docObj.fileData) {
+            try {
+              const parsed = JSON.parse(docObj.fileData);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setSlides(parsed);
+              }
+            } catch {}
+          }
+        }
+      }
+      setIsLoaded(true);
+    };
+    loadPresentation();
   }, [searchParams]);
+
+  const handleSavePresentation = useCallback(async (silent = false) => {
+    if (isSaving) return;
+    setIsSaving(true);
+    if (!silent) showToast('Saving presentation...');
+    try {
+      const filename = docTitle.toLowerCase().endsWith('.pptx') ? docTitle : `${docTitle}.pptx`;
+      const targetId = currentDoc?.id || filename;
+      const dataStr = JSON.stringify(slides);
+      
+      const updated = await ZenFileSyncService.saveDocument({
+        id: currentDoc?.id || filename,
+        name: filename,
+        type: 'presentation',
+        category: 'Presentations',
+        fileData: dataStr,
+        size: `${(dataStr.length / 1024).toFixed(1)} KB`,
+        sizeBytes: dataStr.length,
+        modified: new Date().toLocaleDateString(),
+        synced: true,
+      });
+
+      setCurrentDoc(updated);
+      setHasUnsavedChanges(false);
+      setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      if (!silent) showToast('Presentation saved successfully!');
+    } catch (e) {
+      console.error(e);
+      if (!silent) showToast('Failed to save presentation');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isSaving, docTitle, currentDoc, slides]);
+
+  // Debounced Auto-Save
+  useEffect(() => {
+    if (!isLoaded || !hasUnsavedChanges || isSaving) return;
+    const timer = setTimeout(() => {
+      handleSavePresentation(true);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [slides, hasUnsavedChanges, isLoaded, isSaving, handleSavePresentation]);
+
+  const handleExportPresentation = async () => {
+    setIsExporting(true);
+    showToast('Exporting presentation...');
+    try {
+      const filename = docTitle.toLowerCase().endsWith('.pptx') ? docTitle : `${docTitle}.pptx`;
+      const dataStr = JSON.stringify(slides, null, 2);
+      
+      // Native desktop save dialog
+      try {
+        const { save } = await import('@tauri-apps/plugin-dialog');
+        const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+        const filePath = await save({
+          defaultPath: filename.replace('.pptx', '.json'),
+          filters: [{ name: 'Presentation (*.json)', extensions: ['json', 'pptx'] }]
+        });
+        if (filePath) {
+          await writeTextFile(filePath, dataStr);
+          showToast(`Exported "${filename}" successfully!`);
+          return;
+        }
+      } catch {}
+
+      // Browser download fallback
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename.replace('.pptx', '.json');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`Exported "${filename}"!`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSavePresentation(false);
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
         e.preventDefault();
         setShowAiModal(prev => !prev);
@@ -33,12 +149,13 @@ export default function PresentationEditor() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleSavePresentation]);
 
   const addSlide = () => {
     const newId = slides.length + 1;
     setSlides([...slides, { id: newId, content: 'New Slide' }]);
     setActiveSlide(newId);
+    setHasUnsavedChanges(true);
   };
 
   return (
@@ -78,6 +195,28 @@ export default function PresentationEditor() {
             </button>
           </div>
 
+          {/* Auto-Save & Sync Status Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 mb-1 rounded text-[11px] font-medium bg-slate-200/60 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+            {isSaving ? (
+              <>
+                <RefreshCw className="w-3 h-3 animate-spin text-orange-600" />
+                <span>Saving...</span>
+              </>
+            ) : hasUnsavedChanges ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-amber-700 dark:text-amber-400">Unsaved</span>
+              </>
+            ) : (
+              <>
+                <Check className="w-3 h-3 text-orange-600" />
+                <span className="text-orange-700 dark:text-orange-400">
+                  Saved{lastSavedTime ? ` (${lastSavedTime})` : ''}
+                </span>
+              </>
+            )}
+          </div>
+
           <button 
             onClick={() => {
               const newName = `Presentation_${Date.now().toString().slice(-4)}.pptx`;
@@ -92,10 +231,48 @@ export default function PresentationEditor() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => handleSavePresentation(false)}
+            disabled={isSaving}
+            className="h-7 px-3 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-[#e2dcd0] dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white disabled:opacity-60 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors shadow-xs"
+            title="Save Presentation (Ctrl+S)"
+          >
+            {isSaving ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-orange-600" />
+            ) : (
+              <Save className="w-3.5 h-3.5 text-orange-600" />
+            )}
+            <span>{isSaving ? 'Saving...' : 'Save'}</span>
+          </button>
+
+          <button 
+            onClick={handleExportPresentation}
+            disabled={isExporting}
+            className="h-7 px-3 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-[#e2dcd0] dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors shadow-xs"
+            title="Export Presentation"
+          >
+            {isExporting ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            <span>Export</span>
+          </button>
+
           <button className="h-7 px-3 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors">
             <MonitorPlay className="w-3.5 h-3.5" /> Present
           </button>
-          <button className="h-7 px-3 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded flex items-center gap-1.5 transition-colors">
+          <button 
+            onClick={() => {
+              if (navigator.share) {
+                navigator.share({ title: docTitle, url: window.location.href }).catch(() => {});
+              } else {
+                navigator.clipboard?.writeText(window.location.href);
+                showToast('Link copied to clipboard!');
+              }
+            }}
+            className="h-7 px-3 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-[#e2dcd0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors shadow-xs"
+          >
             <Share2 className="w-3.5 h-3.5" /> Share
           </button>
         </div>
@@ -279,6 +456,14 @@ export default function PresentationEditor() {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification Banner */}
+      {notification && (
+        <div className="fixed bottom-12 right-6 z-50 bg-zinc-900/95 dark:bg-zinc-100 dark:text-zinc-900 text-white text-xs px-3.5 py-2.5 rounded-lg shadow-xl border border-zinc-700/60 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+          <span>{notification}</span>
+        </div>
+      )}
 
       <ZenAiDialog 
         editorType="document" 

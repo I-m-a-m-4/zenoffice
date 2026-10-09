@@ -13,12 +13,24 @@ import {
   FileArchive, ScanText, Scissors, Languages,
   MousePointer2, Hand, TextSelect, MoveVertical, Square, Image, FileInput, 
   LayoutTemplate, ImagePlus, Combine, Split, PenBox, TypeOutline,
-  Undo2, Redo2, Cloud
+  Undo2, Redo2, Cloud, Save, Loader2, Check, FileSpreadsheet
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { ZenFileSyncService, ZenDocumentItem } from '@/lib/firebase-sync';
 import { ZenAiDialog } from '@/components/shared/zen-ai-dialog';
+import { notifyFileDownloaded } from '@/components/shared/download-watcher';
 import { getAuth } from 'firebase/auth';
+import * as XLSX from 'xlsx';
 
 interface PdfAnnotation {
   id: string;
@@ -28,6 +40,17 @@ interface PdfAnnotation {
   page: number;
   x: number;
   y: number;
+  width?: number;
+  height?: number;
+}
+
+interface HistoryAction {
+  type: 'edit-text' | 'add-ann' | 'remove-ann' | 'add-sig' | 'remove-sig';
+  elementId?: string;
+  prevText?: string;
+  newText?: string;
+  annotation?: PdfAnnotation;
+  signature?: any;
 }
 
 function PDFEditorInner() {
@@ -58,8 +81,16 @@ function PDFEditorInner() {
   // Viewer state
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
-  const [numPages, setNumPages] = useState(0);
-  const [selectedTool, setSelectedTool] = useState<'select' | 'pan' | 'text' | 'highlight' | 'sign' | 'fill-form'>('select');
+  const [selectedTool, setSelectedTool] = useState<'select' | 'pan' | 'text' | 'add-text' | 'highlight' | 'redact' | 'sign' | 'fill-form'>('select');
+  const selectedToolRef = useRef(selectedTool);
+  useEffect(() => {
+    selectedToolRef.current = selectedTool;
+  }, [selectedTool]);
+
+  const zoomRef = useRef(zoom);
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
   const [showProModal, setShowProModal] = useState(false);
   const [proFeatureName, setProFeatureName] = useState('');
   const [viewMode, setViewMode] = useState<'canvas' | 'embed'>('canvas');
@@ -67,6 +98,20 @@ function PDFEditorInner() {
   const [sidebarTab, setSidebarTab] = useState<'thumbnails' | 'bookmarks' | 'comments' | 'attachments' | 'signatures' | 'layers'>('thumbnails');
   const [notification, setNotification] = useState<string | null>(null);
   const [readingMode, setReadingMode] = useState(false);
+
+  // Undo / Redo history
+  const [undoStack, setUndoStack] = useState<HistoryAction[]>([]);
+  const [redoStack, setRedoStack] = useState<HistoryAction[]>([]);
+
+  // Split & Merge state
+  const [showSplitMergeModal, setShowSplitMergeModal] = useState(false);
+  const [splitMergeTab, setSplitMergeTab] = useState<'split' | 'merge'>('split');
+  const [splitPageRange, setSplitPageRange] = useState('1');
+  const mergeFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Hand tool panning ref
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
 
   // Annotations, Notes & Zen AI state
   const [annotations, setAnnotations] = useState<PdfAnnotation[]>([]);
@@ -90,7 +135,12 @@ function PDFEditorInner() {
   // Dragging state
   const [draggedAnnId, setDraggedAnnId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [appliedSignatures, setAppliedSignatures] = useState<Array<{ id: string; type: 'text' | 'image'; text?: string; imageUrl?: string; x: number; y: number; color?: string }>>([]);
+  const [appliedSignatures, setAppliedSignatures] = useState<Array<{ id: string; type: 'text' | 'image'; text?: string; imageUrl?: string; x: number; y: number; color?: string; width?: number; height?: number }>>([]);
+
+  // Save, Export & Dirty state
+  const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Payment / upgrade state
   const [isUpgrading, setIsUpgrading] = useState(false);
@@ -230,12 +280,16 @@ function PDFEditorInner() {
     }
   };
 
-  // Keyboard shortcuts (Ctrl+E for AI copilot, Escape to exit reading mode)
+  // Keyboard shortcuts (Ctrl+E for AI copilot, Ctrl+S for Save, Escape to exit reading mode)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
         e.preventDefault();
         setShowAiModal(prev => !prev);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSaveDocument();
       }
       if (e.key === 'Escape') {
         setReadingMode(false);
@@ -384,8 +438,8 @@ function PDFEditorInner() {
           // Non-blocking text extraction
         }
 
-        // Base scale * zoom factor
-        const scale = (zoom / 100) * 1.5;
+        // Sharp base scale for high-DPI canvas
+        const scale = 1.5;
         const viewport = page.getViewport({ scale, rotation });
 
         // Page wrapper container
@@ -401,10 +455,33 @@ function PDFEditorInner() {
 
         // Canvas & Interactive Text Layer Wrapper
         const pageCanvasWrapper = document.createElement('div');
-        pageCanvasWrapper.className = 'relative w-full flex justify-center bg-white';
+        pageCanvasWrapper.className = 'relative flex justify-center bg-white shadow-sm';
         pageCanvasWrapper.style.width = `${viewport.width}px`;
         pageCanvasWrapper.style.height = `${viewport.height}px`;
-        pageCanvasWrapper.style.maxWidth = '100%';
+
+        // Interactive click handler for adding new text anywhere on page
+        pageCanvasWrapper.onclick = (e) => {
+          if (selectedToolRef.current === 'add-text') {
+            e.stopPropagation();
+            const rect = pageCanvasWrapper.getBoundingClientRect();
+            const currentScale = (zoomRef.current || 100) / 100;
+            const clickX = Math.round((e.clientX - rect.left) / currentScale);
+            const clickY = Math.round((e.clientY - rect.top) / currentScale);
+
+            const newAnn: PdfAnnotation = {
+              id: `text-${Date.now()}`,
+              type: 'text',
+              text: 'Type text here...',
+              page: pageNum,
+              x: Math.max(10, clickX),
+              y: Math.max(10, clickY),
+            };
+            setAnnotations(prev => [...prev, newAnn]);
+            setUndoStack(prev => [...prev, { type: 'add-ann', annotation: newAnn }]);
+            setSelectedTool('select');
+            showToast('New text box added! Click to edit and drag.');
+          }
+        };
 
         // Canvas
         const canvas = document.createElement('canvas');
@@ -425,9 +502,21 @@ function PDFEditorInner() {
         try {
           const textContent = await page.getTextContent();
           if (textContent && textContent.items) {
-            textContent.items.forEach((item: any) => {
-              if (!item.str || !item.str.trim()) return;
+            const validItems = textContent.items.filter((it: any) => it.str && it.str.trim());
+            // Safe non-destructive deduplication (only filter exact duplicates within 0.75pt)
+            const itemsToRender: any[] = [];
+            for (let idx = 0; idx < validItems.length; idx++) {
+              const it = validItems[idx];
+              const isDupe = itemsToRender.some(prev => 
+                Math.abs(prev.transform[4] - it.transform[4]) < 0.75 && 
+                Math.abs(prev.transform[5] - it.transform[5]) < 0.75
+              );
+              if (!isDupe) {
+                itemsToRender.push({ ...it, _uniqueId: `span-${pageNum}-${idx}` });
+              }
+            }
 
+            itemsToRender.forEach((item: any) => {
               const vp = viewport.transform;
               const it = item.transform;
               // 2D affine transform matrix multiplication: vp * it
@@ -436,63 +525,173 @@ function PDFEditorInner() {
               const e = vp[0] * it[4] + vp[2] * it[5] + vp[4];
               const f = vp[1] * it[4] + vp[3] * it[5] + vp[5];
 
+              const styleObj = textContent.styles ? textContent.styles[item.fontName] : null;
+              const fontFam = (styleObj?.fontFamily || '').toLowerCase();
+              const fnLower = (item.fontName || '').toLowerCase();
+
+              // Determine serif / times font family
+              const isSerif = fontFam.includes('serif') || 
+                              fnLower.includes('times') || 
+                              fnLower.includes('serif') || 
+                              fnLower.includes('roman') ||
+                              fnLower.includes('f2') || 
+                              fnLower.includes('f3') || 
+                              fnLower.includes('f4');
+              const isMono = fontFam.includes('mono') || fnLower.includes('courier');
+              const isBold = fnLower.includes('bold') || fnLower.includes('f3');
+              const isItalic = fnLower.includes('italic') || fnLower.includes('oblique') || fnLower.includes('f4');
+
               const fontSize = Math.max(9, Math.hypot(a, b));
-              const top = f - fontSize * 0.85;
+              // Baseline alignment in canvas coordinate space
+              const top = f - (fontSize * 0.81);
               const left = e;
-              const itemWidth = Math.max(item.width * (viewport.scale || scale), 10);
+              const itemWidth = Math.max(item.width * (viewport.scale || scale), 16);
               const itemHeight = fontSize * 1.25;
 
               const span = document.createElement('span');
+              span.id = item._uniqueId;
               span.className = 'pdf-text-item absolute transition-all cursor-text select-text';
               span.style.left = `${left}px`;
               span.style.top = `${top}px`;
               span.style.fontSize = `${fontSize}px`;
-              span.style.lineHeight = `${itemHeight}px`;
+              span.style.lineHeight = '1';
               span.style.minWidth = `${itemWidth}px`;
               span.style.height = `${itemHeight}px`;
               span.style.whiteSpace = 'pre';
               span.style.color = 'transparent';
-              span.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+              span.style.zIndex = '20';
+              span.style.pointerEvents = 'auto';
+
+              if (isSerif) {
+                span.style.fontFamily = '"Times New Roman", Times, Georgia, serif';
+              } else if (isMono) {
+                span.style.fontFamily = '"Courier New", Courier, monospace';
+              } else {
+                span.style.fontFamily = 'Arial, Helvetica, sans-serif';
+              }
+              if (isBold) span.style.fontWeight = 'bold';
+              if (isItalic) span.style.fontStyle = 'italic';
+
               span.innerText = item.str;
               span.title = 'Click to edit text';
 
-              // Hover indicator
+              // Store unscaled PDF points for true vector replacement in pdf-lib
+              span.dataset.pdfX = String(it[4]);
+              span.dataset.pdfY = String(it[5]);
+              span.dataset.pdfWidth = String(item.width);
+              span.dataset.pdfHeight = String(Math.hypot(it[0], it[1]));
+              span.dataset.originalText = item.str;
+              span.dataset.pageNum = String(pageNum);
+              span.dataset.fontName = item.fontName || '';
+              span.dataset.fontFamily = isSerif ? 'serif' : isMono ? 'monospace' : 'sans-serif';
+              span.dataset.fontBold = isBold ? 'true' : 'false';
+              span.dataset.fontItalic = isItalic ? 'true' : 'false';
+
+              // Visual hover indicator
               span.onmouseenter = () => {
-                if (span.getAttribute('contenteditable') !== 'true' && !span.dataset.edited) {
-                  span.style.backgroundColor = 'rgba(59, 130, 246, 0.12)';
-                  span.style.outline = '1px dashed rgba(59, 130, 246, 0.6)';
-                  span.style.borderRadius = '2px';
+                if (span.getAttribute('contenteditable') !== 'true' && span.dataset.edited !== 'true') {
+                  span.style.backgroundColor = 'rgba(234, 88, 12, 0.12)';
+                  span.style.outline = '1.5px dashed rgba(234, 88, 12, 0.7)';
+                  span.style.borderRadius = '3px';
                 }
               };
               span.onmouseleave = () => {
-                if (span.getAttribute('contenteditable') !== 'true' && !span.dataset.edited) {
-                  span.style.backgroundColor = 'transparent';
-                  span.style.outline = 'none';
+                if (span.getAttribute('contenteditable') !== 'true' && span.dataset.edited !== 'true') {
+                  if (selectedToolRef.current === 'fill-form') {
+                    span.style.backgroundColor = 'rgba(59, 130, 246, 0.12)';
+                    span.style.outline = '1.5px dashed rgba(59, 130, 246, 0.7)';
+                  } else {
+                    span.style.backgroundColor = 'transparent';
+                    span.style.outline = 'none';
+                  }
                 }
               };
 
-              // Click to inline edit
-              span.onclick = (ev) => {
+              // Click to inline edit or use active tool
+              const handleStartEdit = (ev: MouseEvent) => {
                 ev.stopPropagation();
+
+                const currentTool = selectedToolRef.current;
+                if (currentTool === 'highlight') {
+                  span.style.backgroundColor = 'rgba(254, 240, 138, 0.85)';
+                  span.style.outline = 'none';
+                  span.dataset.highlighted = 'true';
+                  showToast('Text highlighted');
+                  setHasUnsavedChanges(true);
+                  return;
+                }
+                if (currentTool === 'redact') {
+                  span.style.backgroundColor = '#18181b';
+                  span.style.color = '#18181b';
+                  span.dataset.redacted = 'true';
+                  showToast('Text redacted');
+                  setHasUnsavedChanges(true);
+                  return;
+                }
+
+                // Standard Edit Mode
                 span.contentEditable = 'true';
                 span.style.color = '#18181b';
                 span.style.backgroundColor = '#ffffff'; // Cleanly masks underlying canvas text
+                span.style.boxShadow = '0 0 0 3px #ffffff, 0 2px 12px rgba(0,0,0,0.2)';
+                span.style.padding = '2px 4px';
+                span.style.margin = '-2px -4px';
                 span.style.outline = '2px solid #ea580c';
-                span.style.borderRadius = '2px';
-                span.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-                span.style.zIndex = '30';
+                span.style.borderRadius = '3px';
+                span.style.zIndex = '50';
                 span.focus();
+
+                // Select text contents so user can replace or type immediately
+                try {
+                  const range = document.createRange();
+                  range.selectNodeContents(span);
+                  const sel = window.getSelection();
+                  sel?.removeAllRanges();
+                  sel?.addRange(range);
+                } catch {}
+              };
+
+              span.onclick = handleStartEdit;
+              span.ondblclick = handleStartEdit;
+
+              span.oninput = () => {
+                span.dataset.edited = 'true';
+                setHasUnsavedChanges(true);
               };
 
               span.onblur = () => {
                 span.contentEditable = 'false';
-                span.dataset.edited = 'true';
-                span.style.color = '#18181b';
-                span.style.backgroundColor = '#ffffff'; // Maintain white mask so original canvas text stays replaced
-                span.style.outline = '1px solid rgba(234, 88, 12, 0.3)';
-                span.style.boxShadow = 'none';
-                span.style.zIndex = '10';
-                showToast('Document text updated');
+                const cleanNew = span.innerText.replace(/\u00a0/g, ' ').replace(/\r?\n/g, ' ').trim();
+                const cleanOrig = (span.dataset.originalText || '').replace(/\u00a0/g, ' ').replace(/\r?\n/g, ' ').trim();
+                const hasChanged = cleanNew !== cleanOrig;
+                if (hasChanged) {
+                  span.dataset.edited = 'true';
+                  span.style.color = '#18181b';
+                  span.style.backgroundColor = '#ffffff';
+                  span.style.boxShadow = '0 0 0 2px #ffffff';
+                  span.style.padding = '2px 4px';
+                  span.style.margin = '-2px -4px';
+                  span.style.outline = 'none';
+                  span.style.zIndex = '25';
+                  setHasUnsavedChanges(true);
+                  setUndoStack(prev => [...prev, {
+                    type: 'edit-text',
+                    elementId: span.id,
+                    prevText: cleanOrig,
+                    newText: cleanNew,
+                  }]);
+                  setRedoStack([]);
+                  showToast('Document text updated! Click Save to keep changes.');
+                } else {
+                  span.dataset.edited = 'false';
+                  span.style.color = 'transparent';
+                  span.style.backgroundColor = selectedToolRef.current === 'fill-form' ? 'rgba(59, 130, 246, 0.12)' : 'transparent';
+                  span.style.boxShadow = 'none';
+                  span.style.padding = '0';
+                  span.style.margin = '0';
+                  span.style.outline = selectedToolRef.current === 'fill-form' ? '1.5px dashed rgba(59, 130, 246, 0.7)' : 'none';
+                  span.style.zIndex = '20';
+                }
               };
 
               span.onkeydown = (ev) => {
@@ -526,11 +725,34 @@ function PDFEditorInner() {
     } finally {
       setIsRendering(false);
     }
-  }, [pdfBlobUrl, pdfDataBytes, zoom, rotation, viewMode, docTitle]);
+  }, [pdfBlobUrl, pdfDataBytes, rotation, viewMode, docTitle]);
 
   useEffect(() => {
     renderPdfPages();
   }, [renderPdfPages]);
+
+  // Highlight all receipt fields when 'fill-form' tool is selected
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+    const spans = container.querySelectorAll<HTMLElement>('.pdf-text-item');
+    if (selectedTool === 'fill-form') {
+      spans.forEach(s => {
+        if (s.getAttribute('contenteditable') !== 'true' && s.dataset.edited !== 'true') {
+          s.style.backgroundColor = 'rgba(59, 130, 246, 0.12)';
+          s.style.outline = '1.5px dashed rgba(59, 130, 246, 0.7)';
+          s.style.borderRadius = '3px';
+        }
+      });
+    } else {
+      spans.forEach(s => {
+        if (s.getAttribute('contenteditable') !== 'true' && s.dataset.edited !== 'true' && s.dataset.highlighted !== 'true' && s.dataset.redacted !== 'true') {
+          s.style.backgroundColor = 'transparent';
+          s.style.outline = 'none';
+        }
+      });
+    }
+  }, [selectedTool]);
 
   // Handle local file selection
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -602,15 +824,609 @@ function PDFEditorInner() {
     setRotation(prev => (prev + 90) % 360);
   };
 
-  // Download PDF
-  const handleDownload = async () => {
-    try {
-      let dataToSave = pdfDataBytes;
-      if (!dataToSave && currentDoc && currentDoc.fileData) {
-         const parsed = parsePdfData(currentDoc.fileData);
-         if (parsed) dataToSave = parsed.bytes;
+  // Undo / Redo handlers
+  const handleUndo = () => {
+    if (undoStack.length === 0) {
+      showToast('Nothing to undo');
+      return;
+    }
+    const lastAction = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+    setRedoStack(prev => [...prev, lastAction]);
+
+    if (lastAction.type === 'edit-text' && lastAction.elementId) {
+      const el = document.getElementById(lastAction.elementId);
+      if (el) {
+        el.innerText = lastAction.prevText || '';
+        el.dataset.edited = lastAction.prevText !== el.dataset.originalText ? 'true' : 'false';
+        if (lastAction.prevText === el.dataset.originalText) {
+          el.style.color = 'transparent';
+          el.style.backgroundColor = 'transparent';
+          el.style.boxShadow = 'none';
+        }
       }
+      showToast('Undone text edit');
+    } else if (lastAction.type === 'add-ann' && lastAction.annotation) {
+      setAnnotations(prev => prev.filter(a => a.id !== lastAction.annotation?.id));
+      showToast('Undone annotation');
+    } else if (lastAction.type === 'remove-ann' && lastAction.annotation) {
+      setAnnotations(prev => [...prev, lastAction.annotation!]);
+      showToast('Restored annotation');
+    } else if (lastAction.type === 'add-sig' && lastAction.signature) {
+      setAppliedSignatures(prev => prev.filter(s => s.id !== lastAction.signature?.id));
+      showToast('Undone signature');
+    } else if (lastAction.type === 'remove-sig' && lastAction.signature) {
+      setAppliedSignatures(prev => [...prev, lastAction.signature!]);
+      showToast('Restored signature');
+    }
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) {
+      showToast('Nothing to redo');
+      return;
+    }
+    const nextAction = redoStack[redoStack.length - 1];
+    setRedoStack(prev => prev.slice(0, -1));
+    setUndoStack(prev => [...prev, nextAction]);
+
+    if (nextAction.type === 'edit-text' && nextAction.elementId) {
+      const el = document.getElementById(nextAction.elementId);
+      if (el) {
+        el.innerText = nextAction.newText || '';
+        el.dataset.edited = 'true';
+        el.style.color = '#18181b';
+        el.style.backgroundColor = '#ffffff';
+        el.style.boxShadow = '0 0 0 1.5px #ffffff';
+      }
+      showToast('Redone text edit');
+    } else if (nextAction.type === 'add-ann' && nextAction.annotation) {
+      setAnnotations(prev => [...prev, nextAction.annotation!]);
+      showToast('Re-applied annotation');
+    } else if (nextAction.type === 'remove-ann' && nextAction.annotation) {
+      setAnnotations(prev => prev.filter(a => a.id !== nextAction.annotation?.id));
+      showToast('Removed annotation');
+    } else if (nextAction.type === 'add-sig' && nextAction.signature) {
+      setAppliedSignatures(prev => [...prev, nextAction.signature!]);
+      showToast('Re-applied signature');
+    } else if (nextAction.type === 'remove-sig' && nextAction.signature) {
+      setAppliedSignatures(prev => prev.filter(s => s.id !== nextAction.signature?.id));
+      showToast('Removed signature');
+    }
+  };
+
+  // Real PDF to Word Export
+  const handlePdfToWord = () => {
+    try {
+      showToast('Generating Word document (.doc)...');
+      const contentHtml = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head><meta charset='utf-8'><title>${docTitle}</title></head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; padding: 2rem;">
+          <h1 style="color: #ea580c;">${docTitle}</h1>
+          <hr style="border: 0; border-top: 1px solid #e4e4e7; margin: 1rem 0;" />
+          ${extractedPdfText || '<p>Document content extracted from ZenOffice PDF Suite</p>'}
+        </body>
+        </html>
+      `;
+      const blob = new Blob(['\ufeff', contentHtml], { type: 'application/msword;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = docTitle.replace(/\.pdf$/i, '') + '.doc';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Word document exported successfully!');
+    } catch (e) {
+      console.error('Word export error', e);
+      showToast('Failed to export Word document');
+    }
+  };
+
+  // Real PDF to Excel Export
+  const handlePdfToExcel = () => {
+    try {
+      showToast('Generating Excel spreadsheet (.xlsx)...');
+      const textToParse = extractedPdfText.replace(/<[^>]+>/g, '\n');
+      const lines = textToParse.split('\n').map(l => l.trim()).filter(Boolean);
       
+      const rows: string[][] = [];
+      lines.forEach(line => {
+        if (line.includes(':')) {
+          const parts = line.split(':');
+          rows.push([parts[0].trim(), parts.slice(1).join(':').trim()]);
+        } else if (line.includes('\t')) {
+          rows.push(line.split('\t').map(s => s.trim()));
+        } else {
+          rows.push([line]);
+        }
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(rows.length > 0 ? rows : [['Document', docTitle], ['Status', 'Extracted via ZenOffice']]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Extracted Data');
+      XLSX.writeFile(wb, docTitle.replace(/\.pdf$/i, '') + '.xlsx');
+      showToast('Excel spreadsheet exported successfully!');
+    } catch (e) {
+      console.error('Excel export error', e);
+      showToast('Failed to export Excel spreadsheet');
+    }
+  };
+
+  // PDF Splitter
+  const handleSplitPdf = async (pageNumberStr: string) => {
+    if (!pdfDataBytes) {
+      showToast('No PDF loaded to split');
+      return;
+    }
+    try {
+      showToast('Extracting selected pages...');
+      const targetPageNum = parseInt(pageNumberStr.trim(), 10) || 1;
+      const pdfDoc = await PDFDocument.load(pdfDataBytes, { ignoreEncryption: true });
+      const totalPages = pdfDoc.getPageCount();
+      if (targetPageNum < 1 || targetPageNum > totalPages) {
+        showToast(`Page must be between 1 and ${totalPages}`);
+        return;
+      }
+
+      const newPdf = await PDFDocument.create();
+      const [copiedPage] = await newPdf.copyPages(pdfDoc, [targetPageNum - 1]);
+      newPdf.addPage(copiedPage);
+
+      const splitBytes = await newPdf.save();
+      const blob = new Blob([splitBytes as unknown as BlobPart], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${docTitle.replace(/\.pdf$/i, '')}_Page_${targetPageNum}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setShowSplitMergeModal(false);
+      showToast(`Page ${targetPageNum} extracted and downloaded!`);
+    } catch (e) {
+      console.error('Split error', e);
+      showToast('Failed to split PDF');
+    }
+  };
+
+  // PDF Merger
+  const handleMergePdfFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !pdfDataBytes) return;
+
+    try {
+      showToast('Merging PDF documents...');
+      const fileBuffer = await file.arrayBuffer();
+      const baseDoc = await PDFDocument.load(pdfDataBytes, { ignoreEncryption: true });
+      const incomingDoc = await PDFDocument.load(new Uint8Array(fileBuffer), { ignoreEncryption: true });
+
+      const incomingPages = await baseDoc.copyPages(incomingDoc, incomingDoc.getPageIndices());
+      incomingPages.forEach(p => baseDoc.addPage(p));
+
+      const mergedBytes = await baseDoc.save();
+      const mergedBase64 = uint8ArrayToBase64(mergedBytes);
+      const mergedDataUrl = `data:application/pdf;base64,${mergedBase64}`;
+
+      // Update in memory and persist
+      setPdfDataBytes(mergedBytes);
+      const blob = new Blob([mergedBytes as unknown as BlobPart], { type: 'application/pdf' });
+      setPdfBlobUrl(URL.createObjectURL(blob));
+
+      const targetId = currentDoc?.id || docTitle;
+      await ZenFileSyncService.updateDocumentContent(targetId, mergedDataUrl);
+      setShowSplitMergeModal(false);
+      showToast(`Successfully merged ${file.name} (${incomingPages.length} new pages added)!`);
+    } catch (e) {
+      console.error('Merge error', e);
+      showToast('Failed to merge PDF documents');
+    }
+  };
+
+  // Fast, stack-safe Uint8Array to base64 converter
+  const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
+    let binary = '';
+    const len = bytes.byteLength;
+    const chunkSize = 8192;
+    for (let i = 0; i < len; i += chunkSize) {
+      const chunk = bytes.subarray(i, Math.min(i + chunkSize, len));
+      binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+    }
+    return btoa(binary);
+  };
+
+  // Compile edited PDF pages, text overlays, signatures, and annotations into real vector PDF bytes
+  const compileEditedPdfDocument = async (): Promise<{ dataUrl: string; bytes: Uint8Array } | null> => {
+    try {
+      // Defocus any active editable element so blur handlers commit edits
+      if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      await new Promise(r => setTimeout(r, 60));
+
+      const isBlankDoc = !pdfBlobUrl && !pdfDataBytes;
+
+      // 1. Blank Document Mode (compile from contentEditable sheet)
+      if (isBlankDoc) {
+        const editorEl = blankEditorRef.current;
+        if (!editorEl) return null;
+
+        const canvas = await html2canvas(editorEl, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const w = editorEl.offsetWidth || 816;
+        const h = editorEl.offsetHeight || 1056;
+
+        const pdf = new jsPDF({
+          orientation: w > h ? 'landscape' : 'portrait',
+          unit: 'pt',
+          format: [w, h]
+        });
+        pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+
+        const arrayBuffer = pdf.output('arraybuffer');
+        const dataUrl = pdf.output('datauristring');
+        return { dataUrl, bytes: new Uint8Array(arrayBuffer) };
+      }
+
+      // 2. Vector PDF Compilation using pdf-lib (Preserves 100% vector text, zero rasterization, keeps file editable)
+      const container = canvasContainerRef.current;
+      if (pdfDataBytes && container) {
+        try {
+          const pdfDoc = await PDFDocument.load(pdfDataBytes, { ignoreEncryption: true });
+          const pages = pdfDoc.getPages();
+          const docRect = docViewportRef.current?.getBoundingClientRect();
+
+          const timesFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+          const timesBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+          const timesItalicFont = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+          const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+          const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+          const courierFont = await pdfDoc.embedFont(StandardFonts.Courier);
+
+          for (let i = 0; i < pages.length; i++) {
+            const pageNum = i + 1;
+            const pdfPage = pages[i];
+            const pageHeight = pdfPage.getHeight();
+            const pageWidth = pdfPage.getWidth();
+
+            const pageWrapper = container.querySelector<HTMLElement>(`#pdf-page-${pageNum}`);
+            if (!pageWrapper) continue;
+
+            const pageCanvasWrapper = (pageWrapper.querySelector<HTMLElement>('.relative.w-full.flex.justify-center.bg-white') ||
+                                        pageWrapper.querySelector<HTMLElement>('div:has(canvas)') ||
+                                        pageWrapper) as HTMLElement;
+            const canvasWrapperWidth = pageCanvasWrapper?.offsetWidth || pageWidth;
+            const canvasWrapperHeight = pageCanvasWrapper?.offsetHeight || pageHeight;
+            const scaleX = pageWidth / canvasWrapperWidth;
+            const scaleY = pageHeight / canvasWrapperHeight;
+
+            // A. Apply Edited Text Spans (vector whiteout + vector replacement on exact baseline)
+            const editedSpans = Array.from(pageWrapper.querySelectorAll<HTMLElement>('.pdf-text-item[data-edited="true"]'));
+            for (const span of editedSpans) {
+              const origText = span.dataset.originalText || '';
+              const rawNewText = span.innerText;
+              const cleanText = rawNewText.replace(/\u00a0/g, ' ').replace(/\r?\n/g, ' ').trim();
+              const cleanOrig = origText.replace(/\u00a0/g, ' ').replace(/\r?\n/g, ' ').trim();
+              if (cleanText === cleanOrig) continue;
+
+              const pdfX = parseFloat(span.dataset.pdfX || '0');
+              const pdfY = parseFloat(span.dataset.pdfY || '0');
+              const origWidth = parseFloat(span.dataset.pdfWidth || '0');
+              const fontSize = parseFloat(span.dataset.pdfHeight || '10');
+
+              let fontToUse = helveticaFont;
+              const isSerif = span.dataset.fontFamily === 'serif';
+              const isMono = span.dataset.fontFamily === 'monospace';
+              const isBold = span.dataset.fontBold === 'true';
+              const isItalic = span.dataset.fontItalic === 'true';
+
+              if (isSerif) {
+                if (isBold) fontToUse = timesBoldFont;
+                else if (isItalic) fontToUse = timesItalicFont;
+                else fontToUse = timesFont;
+              } else if (isMono) {
+                fontToUse = courierFont;
+              } else {
+                if (isBold) fontToUse = helveticaBoldFont;
+                else fontToUse = helveticaFont;
+              }
+
+              const newWidth = fontToUse.widthOfTextAtSize(cleanText, fontSize);
+              const maskWidth = Math.max(origWidth, newWidth) + 4;
+              const maskHeight = fontSize * 1.25;
+              const maskY = pdfY - (fontSize * 0.22);
+
+              // Vector whiteout rectangle cleanly covers the original text
+              pdfPage.drawRectangle({
+                x: Math.max(0, pdfX - 2),
+                y: maskY,
+                width: maskWidth,
+                height: maskHeight,
+                color: rgb(1, 1, 1),
+              });
+
+              // Vector replacement text written directly at exact baseline
+              pdfPage.drawText(cleanText, {
+                x: pdfX,
+                y: pdfY,
+                size: fontSize,
+                font: fontToUse,
+                color: rgb(0.09, 0.09, 0.11),
+              });
+            }
+
+            // B. Apply Signatures for this page
+            if (pageCanvasWrapper && docRect) {
+              const pageRect = pageCanvasWrapper.getBoundingClientRect();
+              const pageTop = pageRect.top - docRect.top;
+              const pageBottom = pageTop + pageRect.height;
+              const pageLeft = pageRect.left - docRect.left;
+
+              for (const sig of appliedSignatures) {
+                if (sig.y >= pageTop && sig.y < pageBottom) {
+                  const relX = (sig.x - pageLeft) * scaleX;
+                  const sigH = (sig.height || 48) * scaleY;
+                  const relY = pageHeight - ((sig.y - pageTop) * scaleY) - sigH;
+                  const sigW = (sig.width || 140) * scaleX;
+
+                  if (sig.type === 'text') {
+                    pdfPage.drawText(sig.text || '', {
+                      x: relX,
+                      y: relY,
+                      size: Math.max(12, 18 * scaleY),
+                      font: timesItalicFont,
+                      color: rgb(0.92, 0.35, 0.05),
+                    });
+                  } else if (sig.imageUrl) {
+                    try {
+                      const imgRes = await fetch(sig.imageUrl);
+                      const imgBuffer = await imgRes.arrayBuffer();
+                      const embedded = (sig.imageUrl.startsWith('data:image/jpeg') || sig.imageUrl.startsWith('data:image/jpg'))
+                        ? await pdfDoc.embedJpg(imgBuffer)
+                        : await pdfDoc.embedPng(imgBuffer);
+                      pdfPage.drawImage(embedded, {
+                        x: relX,
+                        y: relY,
+                        width: sigW,
+                        height: sigH,
+                      });
+                    } catch (imgErr) {
+                      console.warn('Could not embed signature image:', imgErr);
+                    }
+                  }
+                }
+              }
+
+              // C. Apply Annotations for this page
+              for (const ann of annotations) {
+                if (ann.y >= pageTop && ann.y < pageBottom) {
+                  const relX = (ann.x - pageLeft) * scaleX;
+                  const annH = (ann.height || 22) * scaleY;
+                  const relY = pageHeight - ((ann.y - pageTop) * scaleY) - annH;
+                  const annW = (ann.width || 120) * scaleX;
+
+                  if (ann.type === 'highlight') {
+                    pdfPage.drawRectangle({
+                      x: relX,
+                      y: relY,
+                      width: annW,
+                      height: annH,
+                      color: rgb(0.99, 0.88, 0.28),
+                      opacity: 0.45,
+                    });
+                  } else if (ann.type === 'redact') {
+                    pdfPage.drawRectangle({
+                      x: relX,
+                      y: relY,
+                      width: annW,
+                      height: annH,
+                      color: rgb(0.09, 0.09, 0.11),
+                    });
+                  } else if (ann.text) {
+                    pdfPage.drawRectangle({
+                      x: relX,
+                      y: relY,
+                      width: annW,
+                      height: annH,
+                      color: rgb(1, 1, 1),
+                      borderColor: rgb(0.92, 0.35, 0.05),
+                      borderWidth: 1,
+                    });
+                    pdfPage.drawText(ann.text, {
+                      x: relX + 4,
+                      y: relY + 4,
+                      size: Math.max(9, 11 * scaleY),
+                      font: helveticaFont,
+                      color: rgb(0.09, 0.09, 0.11),
+                    });
+                  }
+                }
+              }
+            }
+          }
+
+          const savedBytes = await pdfDoc.save();
+          const base64Data = uint8ArrayToBase64(savedBytes);
+          const dataUrl = `data:application/pdf;base64,${base64Data}`;
+          return { dataUrl, bytes: savedBytes };
+        } catch (pdfLibErr) {
+          console.warn('pdf-lib vector compile warning, attempting fallback:', pdfLibErr);
+        }
+      }
+
+      // Fallback: Multi-Page Canvas Capture Mode
+      if (!container) return null;
+      const pageWrappers = Array.from(container.querySelectorAll<HTMLElement>('[id^="pdf-page-"]'));
+      if (pageWrappers.length === 0) {
+        if (pdfDataBytes) {
+          let dataUrl = currentDoc?.fileData;
+          if (!dataUrl) {
+            dataUrl = `data:application/pdf;base64,${uint8ArrayToBase64(pdfDataBytes)}`;
+          }
+          return { dataUrl, bytes: pdfDataBytes };
+        }
+        return null;
+      }
+
+      let pdf: jsPDF | null = null;
+      const originalScrollTop = scrollContainerRef.current?.scrollTop || 0;
+
+      for (let i = 0; i < pageWrappers.length; i++) {
+        const pageWrapper = pageWrappers[i];
+        const pageCanvasWrapper = (pageWrapper.querySelector<HTMLElement>('.relative.w-full.flex.justify-center.bg-white') ||
+                                    pageWrapper.querySelector<HTMLElement>('div:has(canvas)') ||
+                                    pageWrapper) as HTMLElement;
+        if (!pageCanvasWrapper) continue;
+
+        pageWrapper.scrollIntoView({ block: 'nearest' });
+        await new Promise(r => setTimeout(r, 20));
+
+        const pageCanvas = await html2canvas(pageCanvasWrapper, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+
+        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+        const ptWidth = pageCanvasWrapper.offsetWidth || 595;
+        const ptHeight = pageCanvasWrapper.offsetHeight || 842;
+
+        if (!pdf) {
+          pdf = new jsPDF({
+            orientation: ptWidth > ptHeight ? 'landscape' : 'portrait',
+            unit: 'pt',
+            format: [ptWidth, ptHeight]
+          });
+          pdf.addImage(pageImgData, 'JPEG', 0, 0, ptWidth, ptHeight);
+        } else {
+          pdf.addPage([ptWidth, ptHeight], ptWidth > ptHeight ? 'landscape' : 'portrait');
+          pdf.addImage(pageImgData, 'JPEG', 0, 0, ptWidth, ptHeight);
+        }
+      }
+
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = originalScrollTop;
+      }
+
+      if (!pdf) return null;
+      const arrayBuffer = pdf.output('arraybuffer');
+      const dataUrl = pdf.output('datauristring');
+      return { dataUrl, bytes: new Uint8Array(arrayBuffer) };
+    } catch (err) {
+      console.error('Failed to compile edited PDF:', err);
+      return null;
+    }
+  };
+
+  // Save Document Changes to Local & Cloud Sync + Update File on PC
+  const handleSaveDocument = async () => {
+    setIsSaving(true);
+    showToast('Saving document changes...');
+    try {
+      const compiled = await compileEditedPdfDocument();
+      if (compiled) {
+        const targetId = currentDoc?.id || docTitle;
+        await ZenFileSyncService.updateDocumentContent(targetId, compiled.dataUrl);
+
+        // Update in-memory state
+        setPdfDataBytes(compiled.bytes);
+        const newBlob = new Blob([compiled.bytes as unknown as BlobPart], { type: 'application/pdf' });
+        setPdfBlobUrl(URL.createObjectURL(newBlob));
+
+        if (currentDoc) {
+          setCurrentDoc(prev => prev ? { ...prev, fileData: compiled.dataUrl, sizeBytes: compiled.bytes.length } : null);
+        }
+        setHasUnsavedChanges(false);
+
+        // Update the physical file on user's PC
+        let savedToPc = false;
+        const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+        const fileName = docTitle.endsWith('.pdf') ? docTitle : `${docTitle}.pdf`;
+
+        if (isTauri) {
+          try {
+            const { writeFile } = await import('@tauri-apps/plugin-fs');
+            const { downloadDir, documentDir, desktopDir, join } = await import('@tauri-apps/api/path');
+            let dir = '';
+            const loc = currentDoc?.location;
+            if (loc === 'Downloads') dir = await downloadDir();
+            else if (loc === 'Documents') dir = await documentDir();
+            else if (loc === 'Desktop') dir = await desktopDir();
+            else dir = await downloadDir();
+
+            if (dir) {
+              const targetPath = await join(dir, fileName);
+              await writeFile(targetPath, compiled.bytes);
+              savedToPc = true;
+              showToast(`Saved to PC: ${fileName}`);
+            }
+          } catch (tauriErr) {
+            console.warn('Tauri direct file write notice:', tauriErr);
+          }
+        }
+
+        if (!savedToPc) {
+          // In web browser (e.g. localhost): trigger direct browser download to update file on user's PC
+          const blob = new Blob([compiled.bytes as unknown as BlobPart], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          showToast(`Document saved & downloaded to PC (${fileName})!`);
+
+          notifyFileDownloaded({
+            name: fileName,
+            size: `${(compiled.bytes.length / 1024).toFixed(1)} KB`,
+            type: 'pdf'
+          });
+        } else {
+          notifyFileDownloaded({
+            name: fileName,
+            size: `${(compiled.bytes.length / 1024).toFixed(1)} KB`,
+            type: 'pdf'
+          });
+        }
+      } else {
+        showToast('No document loaded to save.');
+      }
+    } catch (err) {
+      console.error('Error saving document:', err);
+      showToast('Failed to save document.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Download / Export PDF with All Modifications Preserved
+  const handleDownload = async () => {
+    setIsExporting(true);
+    showToast('Compiling and exporting PDF...');
+    try {
+      const compiled = await compileEditedPdfDocument();
+      const dataToSave = compiled?.bytes || pdfDataBytes;
+
+      // Automatically persist latest changes to storage
+      if (compiled) {
+        const targetId = currentDoc?.id || docTitle;
+        ZenFileSyncService.updateDocumentContent(targetId, compiled.dataUrl).catch(console.error);
+        setPdfDataBytes(compiled.bytes);
+        setHasUnsavedChanges(false);
+      }
+
       if (dataToSave) {
         try {
           const { save } = await import('@tauri-apps/plugin-dialog');
@@ -625,11 +1441,22 @@ function PDFEditorInner() {
             return;
           }
         } catch (tauriErr) {
-          // Fallback to web
+          // Fallback to web download
         }
       }
-      
-      if (currentDoc) {
+
+      if (compiled) {
+        const blob = new Blob([compiled.bytes as unknown as BlobPart], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = docTitle.endsWith('.pdf') ? docTitle : `${docTitle}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast(`Exported ${docTitle} successfully!`);
+      } else if (currentDoc) {
         ZenFileSyncService.downloadDocument(currentDoc);
         showToast(`Exported ${currentDoc.name}`);
       } else if (pdfBlobUrl) {
@@ -643,8 +1470,11 @@ function PDFEditorInner() {
       } else {
         showToast('No PDF loaded to export.');
       }
-    } catch(e) {
+    } catch (e) {
+      console.error('Error exporting PDF:', e);
       showToast('Error exporting PDF.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -716,7 +1546,27 @@ function PDFEditorInner() {
 
   // Print PDF
   const handlePrint = () => {
-    window.print();
+    if (pdfBlobUrl) {
+      const printIframe = document.createElement('iframe');
+      printIframe.style.position = 'fixed';
+      printIframe.style.right = '0';
+      printIframe.style.bottom = '0';
+      printIframe.style.width = '0';
+      printIframe.style.height = '0';
+      printIframe.style.border = '0';
+      printIframe.src = pdfBlobUrl;
+      printIframe.onload = () => {
+        try {
+          printIframe.contentWindow?.focus();
+          printIframe.contentWindow?.print();
+        } catch {
+          window.print();
+        }
+      };
+      document.body.appendChild(printIframe);
+    } else {
+      window.print();
+    }
   };
 
   // Fullscreen toggle
@@ -747,6 +1597,7 @@ function PDFEditorInner() {
         color: signatureColor,
       };
       setAppliedSignatures(prev => [...prev, newSign]);
+      setHasUnsavedChanges(true);
     } else {
       if (!signCanvasRef.current) return;
       const dataUrl = signCanvasRef.current.toDataURL('image/png');
@@ -758,6 +1609,7 @@ function PDFEditorInner() {
         y: defaultY,
       };
       setAppliedSignatures(prev => [...prev, newSign]);
+      setHasUnsavedChanges(true);
     }
     setShowSignModal(false);
     showToast('Signature placed on document.');
@@ -931,21 +1783,58 @@ function PDFEditorInner() {
                 <input 
                   type="text"
                   value={docTitle}
-                  onChange={(e) => setDocTitle(e.target.value)}
+                  onChange={(e) => {
+                    setDocTitle(e.target.value);
+                    setHasUnsavedChanges(true);
+                  }}
                   className="font-medium text-sm text-zinc-900 dark:text-zinc-100 bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 border border-transparent focus:border-zinc-300 dark:focus:border-zinc-700 rounded px-1.5 py-0.5 max-w-[280px] truncate outline-none transition-colors"
                 />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-900">
                   PDF
                 </span>
-                <span className="hidden sm:flex items-center gap-1 text-[11px] text-zinc-400">
-                  <Cloud className="w-3 h-3 text-zinc-400" />
-                  <span>Saved</span>
+                <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-zinc-400">
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-3 h-3 text-orange-500 animate-spin" />
+                      <span className="text-orange-500">Saving...</span>
+                    </>
+                  ) : hasUnsavedChanges ? (
+                    <span className="text-amber-500 font-medium">● Unsaved changes</span>
+                  ) : (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-500" />
+                      <span className="text-zinc-400">Saved</span>
+                      <span className="hidden md:inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                        <PenTool className="w-2.5 h-2.5" /> Editable
+                      </span>
+                    </>
+                  )}
                 </span>
               </div>
 
               {/* Menu items like Google Docs */}
               <div className="flex items-center gap-0.5 text-xs text-zinc-600 dark:text-zinc-400 -ml-1 mt-0.5">
-                <button onClick={() => fileInputRef.current?.click()} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">File</button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">File</button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="dark:bg-[#18181b] dark:border-zinc-800 text-xs">
+                    <DropdownMenuItem onClick={handleSaveDocument}>
+                      <Save className="w-3.5 h-3.5 mr-2 text-orange-500" /> Save Document (Ctrl+S)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownload}>
+                      <Download className="w-3.5 h-3.5 mr-2" /> Export as PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                      <Upload className="w-3.5 h-3.5 mr-2" /> Open New PDF...
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handlePrint}>
+                      <Printer className="w-3.5 h-3.5 mr-2" /> Print Document
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <button onClick={() => setSelectedTool('select')} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Edit</button>
                 <button onClick={() => setReadingMode(true)} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">View</button>
                 <button onClick={() => document.getElementById('image-insert-input')?.click()} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Insert</button>
@@ -975,11 +1864,42 @@ function PDFEditorInner() {
             </Button>
 
             <Button 
+              variant="outline"
+              size="sm" 
+              onClick={handleSaveDocument}
+              disabled={isSaving}
+              className="h-8 text-xs px-3 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 gap-1.5"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-600" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>Save</span>
+                </>
+              )}
+            </Button>
+
+            <Button 
               size="sm" 
               onClick={handleDownload}
-              className="h-8 text-xs px-3 bg-orange-600 hover:bg-orange-700 text-white shadow-xs font-medium"
+              disabled={isExporting}
+              className="h-8 text-xs px-3 bg-orange-600 hover:bg-orange-700 text-white shadow-xs font-medium gap-1.5"
             >
-              <Download className="w-3.5 h-3.5 mr-1.5" /> Export
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export</span>
+                </>
+              )}
             </Button>
 
             <button 
@@ -994,26 +1914,28 @@ function PDFEditorInner() {
 
         {/* 2. COMPACT, TIGHTLY GROUPED TOOLBAR (Google Docs Style) */}
         <div className="bg-white dark:bg-[#121214] border-b border-zinc-200 dark:border-zinc-800 px-3 py-1 flex items-center gap-1 overflow-x-auto no-scrollbar min-h-[42px]">
-          {/* History */}
+          {/* History (Undo / Redo / Print) */}
           <div className="flex items-center gap-0.5">
             <button 
-              onClick={() => showToast('Undo')}
-              className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-              title="Undo"
+              onClick={handleUndo}
+              disabled={undoStack.length === 0}
+              className={`p-1.5 rounded transition-colors ${undoStack.length > 0 ? 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 cursor-pointer' : 'opacity-40 text-zinc-400 cursor-not-allowed'}`}
+              title="Undo (Ctrl+Z)"
             >
               <Undo2 className="w-4 h-4" />
             </button>
             <button 
-              onClick={() => showToast('Redo')}
-              className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-              title="Redo"
+              onClick={handleRedo}
+              disabled={redoStack.length === 0}
+              className={`p-1.5 rounded transition-colors ${redoStack.length > 0 ? 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 cursor-pointer' : 'opacity-40 text-zinc-400 cursor-not-allowed'}`}
+              title="Redo (Ctrl+Y)"
             >
               <Redo2 className="w-4 h-4" />
             </button>
             <button 
               onClick={handlePrint}
               className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-              title="Print"
+              title="Print Document"
             >
               <Printer className="w-4 h-4" />
             </button>
@@ -1021,20 +1943,26 @@ function PDFEditorInner() {
 
           <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
 
-          {/* Zoom */}
+          {/* Instant Responsive Zoom */}
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setZoom(prev => Math.max(50, prev - 15))}
+              onClick={() => handleZoom(-15)}
               className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-              title="Zoom Out"
+              title="Zoom Out (-15%)"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
-            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 w-10 text-center select-none">{zoom}%</span>
             <button
-              onClick={() => setZoom(prev => Math.min(200, prev + 15))}
+              onClick={handleResetZoom}
+              className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 w-11 text-center select-none hover:text-orange-600 cursor-pointer transition-colors"
+              title="Reset Zoom to 100%"
+            >
+              {zoom}%
+            </button>
+            <button
+              onClick={() => handleZoom(15)}
               className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-              title="Zoom In"
+              title="Zoom In (+15%)"
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
@@ -1045,34 +1973,37 @@ function PDFEditorInner() {
           {/* Cursor Modes */}
           <div className="flex items-center gap-0.5">
             <button 
-              onClick={() => setSelectedTool('select')}
+              onClick={() => { setSelectedTool('select'); showToast('Select & Edit Mode active'); }}
               className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
                 selectedTool === 'select' 
-                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold' 
+                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold ring-1 ring-orange-400/50' 
                   : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
+              title="Select & Edit Mode (Click any text to edit inline)"
             >
               <MousePointer2 className="w-3.5 h-3.5" />
-              <span>Select</span>
+              <span>Select & Edit</span>
             </button>
             <button 
-              onClick={() => setSelectedTool('pan')}
+              onClick={() => { setSelectedTool('pan'); showToast('Hand Tool active: drag to scroll'); }}
               className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
                 selectedTool === 'pan' 
-                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold' 
+                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold ring-1 ring-orange-400/50' 
                   : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
+              title="Hand Tool (Click & drag page to pan smoothly)"
             >
               <Hand className="w-3.5 h-3.5" />
               <span>Hand</span>
             </button>
             <button 
-              onClick={() => setSelectedTool('text')}
+              onClick={() => { setSelectedTool('text'); showToast('Text Select active'); }}
               className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
                 selectedTool === 'text' 
-                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold' 
+                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold ring-1 ring-orange-400/50' 
                   : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
+              title="Text Select Mode"
             >
               <TextSelect className="w-3.5 h-3.5" />
               <span>Text Select</span>
@@ -1085,18 +2016,16 @@ function PDFEditorInner() {
           <div className="flex items-center gap-0.5">
             <button 
               onClick={() => {
-                const scrollContainer = scrollContainerRef.current;
-                const docViewport = docViewportRef.current;
-                const currentScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
-                const defaultX = docViewport ? Math.max(40, (docViewport.clientWidth - 200) / 2) : 150;
-                const newAnn: PdfAnnotation = {
-                  id: `txt-${Date.now()}`, type: 'text', text: '', page: 1, x: defaultX, y: currentScrollTop + 160,
-                };
-                setAnnotations(prev => [...prev, newAnn]);
-                showToast('Text box added. Click to edit.');
+                const isAdd = selectedTool !== 'add-text';
+                setSelectedTool(isAdd ? 'add-text' : 'select');
+                showToast(isAdd ? 'Click anywhere on the document to place a new text box' : 'Select mode');
               }}
-              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              title="Add Text"
+              className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
+                selectedTool === 'add-text'
+                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold ring-1 ring-orange-500'
+                  : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+              title="Click anywhere on the PDF page to add text"
             >
               <TypeOutline className="w-3.5 h-3.5" />
               <span>Add Text</span>
@@ -1105,7 +2034,7 @@ function PDFEditorInner() {
             <button 
               onClick={() => document.getElementById('image-insert-input')?.click()}
               className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              title="Insert Image"
+              title="Insert Image / Picture"
             >
               <ImagePlus className="w-3.5 h-3.5" />
               <span>Image</span>
@@ -1113,16 +2042,16 @@ function PDFEditorInner() {
 
             <button 
               onClick={() => {
-                const scrollContainer = scrollContainerRef.current;
-                const currentScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
-                const newAnn: PdfAnnotation = {
-                  id: `hl-${Date.now()}`, type: 'highlight', text: `Key Concept`, page: 1, x: 120, y: currentScrollTop + 160,
-                };
-                setAnnotations(prev => [...prev, newAnn]);
-                showToast('Highlight stamp placed.');
+                const isHl = selectedTool !== 'highlight';
+                setSelectedTool(isHl ? 'highlight' : 'select');
+                showToast(isHl ? 'Click any text on the page to highlight it yellow' : 'Select mode');
               }}
-              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              title="Highlight"
+              className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
+                selectedTool === 'highlight'
+                  ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 font-semibold ring-1 ring-amber-500'
+                  : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+              title="Highlight text marker"
             >
               <Highlighter className="w-3.5 h-3.5" />
               <span>Highlight</span>
@@ -1130,18 +2059,16 @@ function PDFEditorInner() {
 
             <button 
               onClick={() => {
-                const scrollContainer = scrollContainerRef.current;
-                const docViewport = docViewportRef.current;
-                const currentScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
-                const defaultX = docViewport ? Math.max(40, (docViewport.clientWidth - 200) / 2) : 150;
-                const newAnn: PdfAnnotation = {
-                  id: `redact-${Date.now()}`, type: 'redact', text: '', page: 1, x: defaultX, y: currentScrollTop + 160,
-                };
-                setAnnotations(prev => [...prev, newAnn]);
-                showToast('Redact block added.');
+                const isRedact = selectedTool !== 'redact';
+                setSelectedTool(isRedact ? 'redact' : 'select');
+                showToast(isRedact ? 'Click any text to blackout redact' : 'Select mode');
               }}
-              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              title="Redact"
+              className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
+                selectedTool === 'redact'
+                  ? 'bg-zinc-900 text-white font-semibold ring-1 ring-zinc-700'
+                  : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+              }`}
+              title="Redact sensitive data"
             >
               <Square className="w-3.5 h-3.5" />
               <span>Redact</span>
@@ -1153,7 +2080,7 @@ function PDFEditorInner() {
                 setShowNoteModal(true);
               }}
               className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              title="Comment"
+              title="Add Comment"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Comment</span>
@@ -1161,11 +2088,11 @@ function PDFEditorInner() {
 
             <button 
               onClick={() => {
-                setPendingCoords({ page: 1, x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                setPendingCoords({ page: 1, x: 220, y: 180 });
                 setShowNoteModal(true);
               }}
               className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              title="Sticky Note"
+              title="Add Sticky Note"
             >
               <StickyNote className="w-3.5 h-3.5" />
               <span>Note</span>
@@ -1179,17 +2106,23 @@ function PDFEditorInner() {
             <button 
               onClick={() => setShowSignModal(true)}
               className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              title="Sign Document"
             >
               <FileSignature className="w-3.5 h-3.5 text-orange-600" />
               <span>Sign</span>
             </button>
             <button 
-              onClick={() => setSelectedTool('fill-form')}
+              onClick={() => {
+                const isForm = selectedTool !== 'fill-form';
+                setSelectedTool(isForm ? 'fill-form' : 'select');
+                showToast(isForm ? 'Form Filler active: All fields highlighted for 1-click edit' : 'Select mode');
+              }}
               className={`h-7 px-2 rounded flex items-center gap-1 text-xs font-medium transition-colors ${
                 selectedTool === 'fill-form'
-                  ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 font-semibold'
+                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 font-semibold ring-1 ring-blue-500'
                   : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }`}
+              title="Form Filler: Highlights all editable lines on the receipt"
             >
               <LayoutTemplate className="w-3.5 h-3.5" />
               <span>Fill Form</span>
@@ -1198,27 +2131,30 @@ function PDFEditorInner() {
 
           <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
 
-          {/* Conversions & Tools */}
+          {/* Functional Conversions & Tools */}
           <div className="flex items-center gap-0.5">
             <button 
-              onClick={() => { setProFeatureName('PDF to Word'); setShowProModal(true); }}
-              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              onClick={handlePdfToWord}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              title="Convert & Export to Word document (.doc)"
             >
-              <FileText className="w-3.5 h-3.5" />
+              <FileText className="w-3.5 h-3.5 text-blue-600" />
               <span>PDF to Word</span>
             </button>
             <button 
-              onClick={() => { setProFeatureName('PDF to Excel'); setShowProModal(true); }}
-              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              onClick={handlePdfToExcel}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              title="Convert & Export tables to Excel spreadsheet (.xlsx)"
             >
-              <FileArchive className="w-3.5 h-3.5" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
               <span>PDF to Excel</span>
             </button>
             <button 
-              onClick={() => { setProFeatureName('Split & Merge'); setShowProModal(true); }}
-              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              onClick={() => setShowSplitMergeModal(true)}
+              className="h-7 px-2 rounded flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              title="Split or Merge PDF documents"
             >
-              <Split className="w-3.5 h-3.5" />
+              <Split className="w-3.5 h-3.5 text-orange-600" />
               <span>Split / Merge</span>
             </button>
           </div>
@@ -1416,8 +2352,31 @@ function PDFEditorInner() {
           </div>
         )}
 
-        {/* Central Document Canvas */}
-        <div ref={scrollContainerRef} className="flex-1 h-full w-full overflow-y-auto flex flex-col items-center p-2 sm:p-6 relative">
+        {/* Central Document Canvas with Hand Panning */}
+        <div 
+          ref={scrollContainerRef} 
+          onMouseDown={(e) => {
+            if (selectedTool === 'pan') {
+              isPanningRef.current = true;
+              panStartRef.current = {
+                x: e.clientX,
+                y: e.clientY,
+                scrollLeft: scrollContainerRef.current?.scrollLeft || 0,
+                scrollTop: scrollContainerRef.current?.scrollTop || 0,
+              };
+            }
+          }}
+          onMouseMove={(e) => {
+            if (isPanningRef.current && scrollContainerRef.current) {
+              const dx = e.clientX - panStartRef.current.x;
+              const dy = e.clientY - panStartRef.current.y;
+              scrollContainerRef.current.scrollLeft = panStartRef.current.scrollLeft - dx;
+              scrollContainerRef.current.scrollTop = panStartRef.current.scrollTop - dy;
+            }
+          }}
+          onMouseUp={() => { isPanningRef.current = false; }}
+          className={`flex-1 h-full w-full overflow-auto flex flex-col items-center p-2 sm:p-6 relative ${selectedTool === 'pan' ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
+        >
           
           {isLoading ? (
             <div className="flex flex-col items-center justify-center my-auto gap-3 text-zinc-500 dark:text-zinc-400">
@@ -1425,7 +2384,15 @@ function PDFEditorInner() {
               <span className="text-sm font-medium">Loading {docTitle}...</span>
             </div>
           ) : (pdfBlobUrl || pdfDataBytes) ? (
-            <div ref={docViewportRef} className="w-full max-w-4xl flex flex-col items-center relative">
+            <div 
+              ref={docViewportRef} 
+              style={{
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: 'top center',
+                transition: 'transform 0.12s ease-out'
+              }}
+              className="w-fit flex flex-col items-center relative"
+            >
               
               {/* Overlay Signatures (Anchored to Document, scrolls naturally) */}
               {appliedSignatures.map(sig => (
@@ -1519,22 +2486,8 @@ function PDFEditorInner() {
                 <>
                   <div 
                     ref={canvasContainerRef} 
-                    className={`w-full flex flex-col items-center pb-24 ${selectedTool === 'pan' ? 'cursor-grab active:cursor-grabbing' : selectedTool === 'text' ? 'cursor-text' : 'cursor-default'}`}
+                    className={`w-full flex flex-col items-center pb-24 ${selectedTool === 'pan' ? 'cursor-grab active:cursor-grabbing' : selectedTool === 'text' || selectedTool === 'add-text' ? 'cursor-text' : 'cursor-default'}`}
                   />
-                  {/* Floating Zoom & Page Controls (WPS Style overlay) */}
-                  <div className="fixed bottom-24 right-6 z-40 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full shadow-lg flex items-center p-1.5 gap-1">
-                    <button onClick={() => handleZoom(-10)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300">
-                      <ZoomOut className="w-4 h-4" />
-                    </button>
-                    <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 w-12 text-center select-none">{zoom}%</span>
-                    <button onClick={() => handleZoom(10)} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300">
-                      <ZoomIn className="w-4 h-4" />
-                    </button>
-                    <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-600 mx-1" />
-                    <button onClick={() => setZoom(100)} className="px-2 h-7 rounded-full text-[10px] font-medium hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300">
-                      Fit Size
-                    </button>
-                  </div>
                 </>
               ) : (
                 /* View Mode 2: Native PDF Object/Embed */
@@ -1568,7 +2521,10 @@ function PDFEditorInner() {
                   contentEditable
                   suppressContentEditableWarning
                   spellCheck={true}
-                  onInput={(e) => setBlankDocText((e.target as HTMLDivElement).innerText)}
+                  onInput={(e) => {
+                    setBlankDocText((e.target as HTMLDivElement).innerText);
+                    setHasUnsavedChanges(true);
+                  }}
                   className="outline-none flex-1 leading-relaxed text-zinc-900 dark:text-zinc-100 text-base font-sans min-h-[850px] empty:before:content-['Type_@_to_insert_or_start_typing...'] empty:before:text-zinc-400 empty:before:cursor-text"
                 />
               </div>
@@ -1576,6 +2532,39 @@ function PDFEditorInner() {
           )}
 
         </div>
+      </div>
+
+      {/* Floating Zoom & Page Controls (Fixed to screen viewport, rock-solid instant controls) */}
+      <div className="fixed bottom-6 right-6 z-40 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 rounded-full shadow-xl flex items-center p-1.5 gap-1 select-none pointer-events-auto">
+        <button 
+          onClick={() => handleZoom(-15)} 
+          className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"
+          title="Zoom Out (-15%)"
+        >
+          <ZoomOut className="w-4 h-4" />
+        </button>
+        <button 
+          onClick={handleResetZoom}
+          className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 w-11 text-center select-none hover:text-orange-600 cursor-pointer transition-colors"
+          title="Reset Zoom to 100%"
+        >
+          {zoom}%
+        </button>
+        <button 
+          onClick={() => handleZoom(15)} 
+          className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"
+          title="Zoom In (+15%)"
+        >
+          <ZoomIn className="w-4 h-4" />
+        </button>
+        <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-600 mx-1" />
+        <button 
+          onClick={() => setZoom(100)} 
+          className="px-2.5 h-7 rounded-full text-[10px] font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"
+          title="Fit to Actual Size (100%)"
+        >
+          Fit Size
+        </button>
       </div>
 
       {/* Signature Modal */}
@@ -1806,6 +2795,105 @@ function PDFEditorInner() {
                 Maybe Later
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Split & Merge Suite Modal */}
+      {showSplitMergeModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#121214] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                <Split className="w-4 h-4 text-orange-600" /> Split & Merge PDF Suite
+              </h3>
+              <button onClick={() => setShowSplitMergeModal(false)} className="text-zinc-400 hover:text-zinc-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg mb-4">
+              <button 
+                onClick={() => setSplitMergeTab('split')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${splitMergeTab === 'split' ? 'bg-white dark:bg-zinc-800 text-orange-600 dark:text-orange-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
+              >
+                Split Document
+              </button>
+              <button 
+                onClick={() => setSplitMergeTab('merge')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${splitMergeTab === 'merge' ? 'bg-white dark:bg-zinc-800 text-orange-600 dark:text-orange-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}`}
+              >
+                Merge Documents
+              </button>
+            </div>
+
+            {splitMergeTab === 'split' ? (
+              <div className="space-y-4">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Extract a specific page from <strong>{docTitle}</strong> into a new standalone PDF file.
+                </p>
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Select Page Number (1 to {numPages || 1})
+                  </label>
+                  <input 
+                    type="number"
+                    min="1"
+                    max={numPages || 1}
+                    value={splitPageRange}
+                    onChange={(e) => setSplitPageRange(e.target.value)}
+                    className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm outline-none focus:border-orange-500 text-zinc-900 dark:text-white"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSplitMergeModal(false)}
+                    className="border-zinc-300 dark:border-zinc-700"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={() => handleSplitPdf(splitPageRange)}
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    Extract & Download Page
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Select a second PDF document to append to the end of <strong>{docTitle}</strong>.
+                </p>
+                <input 
+                  type="file" 
+                  ref={mergeFileInputRef}
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={handleMergePdfFile}
+                />
+                <Button 
+                  onClick={() => mergeFileInputRef.current?.click()}
+                  className="w-full h-12 border border-dashed border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/20 text-orange-600 hover:bg-orange-100 flex items-center justify-center gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Choose Second PDF to Merge</span>
+                </Button>
+                <div className="flex justify-end pt-2">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSplitMergeModal(false)}
+                    className="border-zinc-300 dark:border-zinc-700"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

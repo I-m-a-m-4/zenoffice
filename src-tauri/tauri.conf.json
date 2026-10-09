@@ -1,11 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ZenOffice",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "identifier": "com.zenoffice.app",
   "build": {
     "frontendDist": "../out",
-    "devUrl": "http://localhost:9007",
+    "devUrl": "http://localhost:4002",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "node scripts/tauri-prebuild.mjs && node scripts/tauri-postbuild.mjs && node scripts/post-build-cleanup.mjs && node scripts/patch-android-manifest.mjs"
   },
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "ZenOffice v0.0.5",
+        "title": "ZenOffice v0.0.7",
         "width": 1024,
         "height": 768,
         "resizable": true,
@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' tauri: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co https://cdn.jsdelivr.net; connect-src 'self' https: wss: blob:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://www.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; frame-src 'self' https://checkout.paystack.com https://js.paystack.co;"
+      "csp": "default-src 'self' tauri: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co https://*.paystack.co https://checkout.flutterwave.com https://*.flutterwave.com https://cdn.jsdelivr.net; connect-src 'self' https: wss: blob: https://api.flutterwave.com https://*.flutterwave.com https://api.paystack.co https://*.paystack.co; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://www.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; frame-src 'self' https://checkout.paystack.com https://js.paystack.co https://*.paystack.co https://checkout.flutterwave.com https://*.flutterwave.com;"
     }
   },
   "bundle": {
@@ -45,7 +45,7 @@
       }
     },
     "android": {
-      "versionCode": 5
+      "versionCode": 7
     }
   },
   "plugins": {

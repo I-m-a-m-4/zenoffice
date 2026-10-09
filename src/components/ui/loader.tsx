@@ -46,7 +46,7 @@ export default function Loader() {
       try {
         const url = new URL(href, window.location.origin);
         if (url.origin !== window.location.origin) return;
-        if (url.pathname !== window.location.pathname) {
+        if (url.pathname !== window.location.pathname || url.search !== window.location.search) {
           NProgress.start();
         }
       } catch {
@@ -60,3 +60,16 @@ export default function Loader() {
 
   return null;
 }
+
+export function startTopLoader() {
+  if (typeof window !== 'undefined') {
+    NProgress.start();
+  }
+}
+
+export function stopTopLoader() {
+  if (typeof window !== 'undefined') {
+    NProgress.done();
+  }
+}
+

@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import Loader from '@/components/ui/loader';
+import NextTopLoader from 'nextjs-toploader';
 import { NavigationEvents } from '@/components/ui/navigation-events';
 
 
@@ -28,6 +29,7 @@ import { PushClickTracker } from '@/components/shared/push-click-tracker';
 import { NativeNotificationListener } from '@/components/shared/native-notification-listener';
 import { PWAProvider } from '@/context/pwa-context';
 import { SplashScreen } from '@/components/shared/splash-screen';
+import { DownloadWatcher } from '@/components/shared/download-watcher';
 
 import { ThemeProvider } from '@/components/theme-provider';
 import { DM_Sans, Plus_Jakarta_Sans } from 'next/font/google';
@@ -338,6 +340,18 @@ export default function RootLayout({
               <NativeNotificationListener />
               <GlobalAnnouncement />
               <PromoToastWindow />
+              <NextTopLoader
+                color="#ea580c"
+                initialPosition={0.08}
+                crawlSpeed={200}
+                height={3}
+                crawl={true}
+                showSpinner={false}
+                easing="ease"
+                speed={200}
+                shadow="0 0 10px #ea580c,0 0 5px #ea580c"
+                zIndex={99999}
+              />
               <Loader />
               <InstallPrompt />
               <TauriUpdater />
@@ -345,6 +359,7 @@ export default function RootLayout({
                   <LocaleSync />
                   <TauriLayoutWrapper>
                      <DesktopLauncher />
+                     <DownloadWatcher />
                      <Suspense>
                        <NavigationEvents />
                      </Suspense>

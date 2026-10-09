@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/dialog';
 import { getAuth, signOut } from 'firebase/auth';
 import { ZenFileSyncService } from '@/lib/firebase-sync';
+import { startTopLoader } from '@/components/ui/loader';
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -153,16 +154,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
       />
 
       {/* 1. TOP WINDOW BAR (True Black Dark theme + Orange brand identity) */}
-      <header className="h-16 bg-[#F0EDE6] dark:bg-[#121214] border-b border-slate-300 dark:border-zinc-800 flex items-center justify-between px-2 shrink-0  transition-colors">
+      <header className="h-16 bg-[#F0EDE6] dark:bg-[#121214] border-b border-dashed border-slate-300/70 dark:border-zinc-800/80 flex items-center justify-between px-2 shrink-0 transition-colors">
         
         {/* Left: Brand & Open Document Tabs */}
         <div className="flex items-center gap-1 h-full overflow-x-auto no-scrollbar items-end pt-2">
           {/* Main App Brand Tab */}
           <Link 
             href="/dashboard"
-            className={`flex items-center gap-2 px-4 h-11 rounded-t-md text-sm font-semibold border-t border-x cursor-pointer transition-all ${
+            className={`flex items-center gap-2 px-4 h-11 rounded-t-md text-sm font-semibold border-t border-x border-dashed cursor-pointer transition-all ${
               isHomeActive 
-                ? 'bg-white dark:bg-[#000000] border-slate-300 dark:border-zinc-800 text-slate-900 dark:text-white shadow-xs' 
+                ? 'bg-white dark:bg-[#000000] border-slate-300/70 dark:border-zinc-800/80 text-slate-900 dark:text-white shadow-xs' 
                 : 'bg-transparent border-transparent text-slate-600 dark:text-zinc-400 hover:bg-slate-300/50 dark:hover:bg-zinc-800/60'
             }`}
           >
@@ -183,10 +184,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
             return (
               <div 
                 key={tab.id}
-                onClick={() => router.push(tab.path)}
-                className={`flex items-center gap-2 px-4 h-11 rounded-t-md text-sm font-medium border-t border-x cursor-pointer transition-all ${
+                onClick={() => {
+                  startTopLoader();
+                  router.push(tab.path);
+                }}
+                className={`flex items-center gap-2 px-4 h-11 rounded-t-md text-sm font-medium border-t border-x border-dashed cursor-pointer transition-all ${
                   isCurrent 
-                    ? 'bg-white dark:bg-[#000000] border-slate-300 dark:border-zinc-800 text-slate-900 dark:text-white font-semibold shadow-xs' 
+                    ? 'bg-white dark:bg-[#000000] border-slate-300/70 dark:border-zinc-800/80 text-slate-900 dark:text-white font-semibold shadow-xs' 
                     : 'bg-transparent border-transparent text-slate-600 dark:text-zinc-400 hover:bg-slate-300/50 dark:hover:bg-zinc-800/60'
                 }`}
               >
@@ -295,8 +299,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   <p className="text-[11px] text-slate-500 dark:text-zinc-400">Documents are saved locally on your device with zero cloud bloat.</p>
                 </div>
                 <div className="p-2 rounded bg-slate-50 dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 space-y-1">
-                  <div className="font-semibold text-slate-800 dark:text-zinc-200">Firebase Cloud Ready</div>
-                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">Turn on Drive Sync anytime to backup documents to Firebase.</p>
+                  <div className="font-semibold text-slate-800 dark:text-zinc-200">ZenOffice Cloud Ready</div>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">Turn on Drive Sync anytime to backup documents to ZenOffice Cloud.</p>
                 </div>
               </div>
             </DropdownMenuContent>
@@ -344,7 +348,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex flex-1 overflow-hidden">
         
         {/* 2A. LEFTMOST SLIM APP SWITCHER RAIL */}
-        <aside className="w-24 bg-[#F0EDE6] dark:bg-[#121214] border-r border-slate-300 dark:border-zinc-800 flex flex-col items-center py-4 gap-4 shrink-0 ">
+        <aside className="w-24 bg-[#F0EDE6] dark:bg-[#121214] border-r border-dashed border-slate-300/70 dark:border-zinc-800/80 flex flex-col items-center py-4 gap-4 shrink-0">
           <Link 
             href="/dashboard"
             className={`w-14 h-14 rounded-lg flex flex-col items-center justify-center text-xs font-semibold transition-all ${
@@ -400,7 +404,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* 2B. SECONDARY FILE EXPLORER SUB-SIDEBAR */}
-        <aside className="w-64 bg-[#F0EDE6] dark:bg-[#0c0c0e] border-r border-slate-300 dark:border-zinc-800 flex flex-col justify-between shrink-0  overflow-y-auto">
+        <aside className="w-64 bg-[#F0EDE6] dark:bg-[#0c0c0e] border-r border-dashed border-slate-300/70 dark:border-zinc-800/80 flex flex-col justify-between shrink-0 overflow-y-auto">
           <div className="p-3 space-y-4">
             
             {/* Primary Action Buttons (Orange + Open) */}
@@ -415,7 +419,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full border border-slate-300 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-700 dark:text-zinc-200 h-9 text-sm font-medium flex items-center justify-center gap-1.5 rounded-lg cursor-pointer transition-colors shadow-sm bg-white dark:bg-[#121214]"
+                className="w-full border border-dashed border-slate-300/80 dark:border-zinc-800/80 hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-700 dark:text-zinc-200 h-9 text-sm font-medium flex items-center justify-center gap-1.5 rounded-lg cursor-pointer transition-colors shadow-2xs bg-white dark:bg-[#121214]"
               >
                 <FolderOpen className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
                 <span>Open File</span>
@@ -441,7 +445,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
 
             {/* Cloud Storage Section */}
-            <div className="pt-2 border-t border-slate-200 dark:border-zinc-850">
+            <div className="pt-2 border-t border-dashed border-slate-300/60 dark:border-zinc-800/60">
               <div className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider px-2.5 mb-1">
                 <span>Cloud</span>
               </div>
@@ -465,7 +469,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Local Storage Section */}
-            <div className="pt-2 border-t border-slate-200 dark:border-zinc-850">
+            <div className="pt-2 border-t border-dashed border-slate-300/60 dark:border-zinc-800/60">
               <div className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider px-2.5 mb-1">
                 <span>Local Folders</span>
               </div>
@@ -499,19 +503,19 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="mt-auto px-3 pb-3">
             <Link href="/billing" className="relative group block w-full">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500 via-rose-500 to-amber-500 rounded-lg blur opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
-              <button className="relative w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-[#121214] border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm">
-                <div className="flex items-center gap-2 text-orange-600">
-                  <Sparkles className="w-4 h-4" />
-                  <span className="text-xs font-bold text-slate-800 dark:text-zinc-100">Upgrade to Pro</span>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 rounded-lg blur-xs opacity-50 group-hover:opacity-85 transition duration-300"></div>
+              <button className="relative w-full flex items-center justify-between px-3.5 py-2.5 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-lg shadow-sm transition-all duration-200 border border-orange-400/30">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-white drop-shadow-xs" />
+                  <span className="text-xs font-bold text-white tracking-wide">Upgrade to Pro</span>
                 </div>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-orange-600 transition-colors" />
+                <ArrowRight className="w-3.5 h-3.5 text-white/90 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </Link>
           </div>
 
           {/* Bottom Storage Quota Meter Widget */}
-          <div className="p-3 border-t border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#121214]">
+          <div className="p-3 border-t border-dashed border-slate-300/70 dark:border-zinc-800/80 bg-white dark:bg-[#121214]">
             <div className="flex items-center justify-between text-[11px] mb-1.5">
               <span className="text-slate-600 dark:text-zinc-400 font-medium">{storageDisplay.formatted} / 1GB</span>
               <button 
@@ -637,8 +641,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
             <div className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-zinc-800">
               <div>
-                <div className="font-semibold text-slate-800 dark:text-zinc-200">Firebase Cloud Sync</div>
-                <div className="text-[11px] text-slate-500">Optional cloud synchronization</div>
+                <div className="font-semibold text-slate-800 dark:text-zinc-200">ZenOffice Cloud Sync</div>
+                <div className="text-[11px] text-slate-500">Optional cloud synchronization with ZenOffice Cloud</div>
               </div>
               <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
                 Connected
@@ -666,6 +670,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </DialogContent>
       </Dialog>
+
+
 
       {/* TOAST NOTIFICATION */}
       {notification && (

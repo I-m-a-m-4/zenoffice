@@ -11,7 +11,7 @@ import {
   FolderOpen, Upload, Trash2, Eye, ShieldCheck, 
   FileCode, Layers, BookOpen, PenTool, 
   CheckCircle2, AlertCircle, Star, Download,
-  Languages, FileOutput, ScanText,
+  Languages, FileOutput, ScanText, FolderArchive,
   RotateCcw, Plus, ArrowUpDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { ZenFileSyncService, ZenDocumentItem } from '@/lib/firebase-sync';
 import { OcrDialog } from '@/components/ocr-dialog';
+import { startTopLoader } from '@/components/ui/loader';
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -159,7 +160,13 @@ export default function DashboardPage() {
 
   // Route to corresponding editor
   const openDocument = (doc: ZenDocumentItem) => {
-    if (doc.type === 'pdf') {
+    startTopLoader();
+    const lower = doc.name.toLowerCase();
+    if (lower.endsWith('.md') || lower.endsWith('.markdown')) {
+      router.push(`/editor/markdown?doc=${encodeURIComponent(doc.name)}`);
+    } else if (lower.endsWith('.zip') || lower.endsWith('.rar') || lower.endsWith('.tar.gz')) {
+      router.push(`/tools/decompress?file=${encodeURIComponent(doc.name)}`);
+    } else if (doc.type === 'pdf') {
       router.push(`/editor/pdf?doc=${encodeURIComponent(doc.name)}`);
     } else if (doc.type === 'excel') {
       router.push(`/editor/excel?doc=${encodeURIComponent(doc.name)}`);
@@ -220,12 +227,12 @@ export default function DashboardPage() {
       showToast('Cloud Sync disabled. Files are local only.');
     } else {
       setSyncing(true);
-      showToast('Connecting to Firebase Firestore...');
+      showToast('Connecting to ZenOffice Cloud...');
       const result = await ZenFileSyncService.syncToFirebase();
       setSyncing(false);
       setCloudSyncActive(true);
       loadDocs();
-      showToast(`Synced ${result.syncedCount} files to Firebase ZenDrive!`);
+      showToast(`Synced ${result.syncedCount} files to ZenOffice Cloud!`);
     }
   };
 
@@ -356,6 +363,28 @@ export default function DashboardPage() {
               <span>Open Local File</span>
             </Button>
 
+            {/* Markdown Studio */}
+            <Button 
+              onClick={() => router.push('/editor/markdown')}
+              size="sm"
+              variant="outline"
+              className="border-slate-300 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-800 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white text-xs font-medium h-8 rounded-lg gap-1.5 transition-colors"
+            >
+              <FileCode className="w-3.5 h-3.5 text-amber-500" />
+              <span>Markdown</span>
+            </Button>
+
+            {/* One-Click Decompress */}
+            <Button 
+              onClick={() => router.push('/tools/decompress')}
+              size="sm"
+              variant="outline"
+              className="border-slate-300 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-800 dark:text-zinc-200 hover:text-slate-900 dark:hover:text-white text-xs font-medium h-8 rounded-lg gap-1.5 transition-colors"
+            >
+              <FolderArchive className="w-3.5 h-3.5 text-blue-500" />
+              <span>Decompress (ZIP)</span>
+            </Button>
+
             {/* OCR Tool */}
             <Button 
               onClick={() => setShowOcrModal(true)}
@@ -428,12 +457,12 @@ export default function DashboardPage() {
             {syncing ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin text-orange-600" />
-                <span>Syncing to Firebase...</span>
+                <span>Syncing to ZenOffice Cloud...</span>
               </>
             ) : cloudSyncActive ? (
               <>
                 <Cloud className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Cloud Sync Active (Firebase)</span>
+                <span>ZenOffice Cloud Sync Active</span>
               </>
             ) : (
               <>
@@ -445,7 +474,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 3. FILTER & VIEW TOOLBAR */}
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-2 text-xs text-slate-500 dark:text-zinc-400">
+        <div className="flex items-center justify-between border-b border-dashed border-slate-200 dark:border-zinc-800 pb-2 text-xs text-slate-500 dark:text-zinc-400">
           <div className="flex items-center gap-4">
             
             {/* Filter: Types */}
@@ -573,12 +602,12 @@ export default function DashboardPage() {
           </div>
         ) : viewMode === 'list' ? (
           /* REAL LIST VIEW (Clean True Black & White) */
-          <div className="divide-y divide-slate-100 dark:divide-zinc-850">
+          <div className="divide-y divide-dashed divide-slate-200 dark:divide-zinc-800">
             {displayedDocs.map((doc) => (
               <div 
                 key={doc.id}
                 onClick={() => openDocument(doc)}
-                className="group flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-900/70 cursor-pointer transition-all"
+                className="group flex items-center justify-between py-2.5 px-3 rounded-none hover:bg-slate-50 dark:hover:bg-zinc-900/70 cursor-pointer transition-all"
               >
                 {/* File Icon, Star & Name */}
                 <div className="flex items-center gap-3 min-w-0 flex-1 pr-4">
@@ -642,7 +671,7 @@ export default function DashboardPage() {
                           <Download className="w-3.5 h-3.5 mr-2" /> Download File
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleToggleCloudSync}>
-                          <Cloud className="w-3.5 h-3.5 mr-2 text-orange-600" /> {cloudSyncActive ? 'Force Sync to Firebase' : 'Backup to Cloud'}
+                          <Cloud className="w-3.5 h-3.5 mr-2 text-orange-600" /> {cloudSyncActive ? 'Force Sync to ZenOffice Cloud' : 'Backup to ZenOffice Cloud'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {viewParam === 'trash' ? (
@@ -678,7 +707,7 @@ export default function DashboardPage() {
               <div
                 key={doc.id}
                 onClick={() => openDocument(doc)}
-                className="p-4 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#121214] hover:border-orange-500 dark:hover:border-orange-500 shadow-2xs hover:shadow-sm cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
+                className="p-4 rounded-none border border-dashed border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#121214] hover:border-orange-500 dark:hover:border-orange-500 shadow-2xs hover:shadow-sm cursor-pointer transition-all flex flex-col justify-between space-y-3 group"
               >
                 <div className="flex items-start justify-between">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold ${
@@ -740,7 +769,7 @@ export default function DashboardPage() {
       <aside className="w-full xl:w-72 shrink-0 flex flex-col gap-4 ">
         
         {/* Zen Office Suite Tools */}
-        <div className="bg-white dark:bg-[#121214] border border-slate-200 dark:border-zinc-800 rounded-lg p-4 space-y-3 shadow-2xs">
+        <div className="bg-white dark:bg-[#121214] border border-dashed border-slate-300/80 dark:border-zinc-800/80 rounded-lg p-4 space-y-3 shadow-2xs">
           <div className="text-xs font-bold text-slate-800 dark:text-zinc-100 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-orange-600" />
             <span>Productivity Utilities</span>
@@ -799,7 +828,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Local Storage Status Box */}
-        <div className="bg-white dark:bg-[#121214] border border-slate-200 dark:border-zinc-800 rounded-lg p-4 space-y-2 text-xs">
+        <div className="bg-white dark:bg-[#121214] border border-dashed border-slate-300/80 dark:border-zinc-800/80 rounded-lg p-4 space-y-2 text-xs">
           <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-zinc-200">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             <span>Privacy &amp; Offline Mode</span>

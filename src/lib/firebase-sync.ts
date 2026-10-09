@@ -126,7 +126,16 @@ export const ZenFileSyncService = {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(docs));
     } catch (e) {
-      console.error('Failed to save documents to localStorage', e);
+      console.warn('LocalStorage quota issue, stripping large fileData before storing metadata...', e);
+      try {
+        const lightweight = docs.map(d => ({
+          ...d,
+          fileData: (d.fileData && d.fileData.length < 500000) ? d.fileData : undefined
+        }));
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(lightweight));
+      } catch (innerErr) {
+        console.error('Failed to save documents metadata to localStorage', innerErr);
+      }
     }
   },
 
@@ -211,6 +220,8 @@ export const ZenFileSyncService = {
     const found = all.find(d => 
       d.id === docNameOrId || 
       d.id === decoded || 
+      d.name === docNameOrId ||
+      d.name === decoded ||
       d.name.toLowerCase() === docNameOrId.toLowerCase() || 
       d.name.toLowerCase() === decoded.toLowerCase()
     );
@@ -220,12 +231,14 @@ export const ZenFileSyncService = {
     if (found) {
       binaryData = await getFileBinaryFromIDB(found.id) || 
                    await getFileBinaryFromIDB(found.name) || 
-                   await getFileBinaryFromIDB(encodeURIComponent(found.name));
+                   await getFileBinaryFromIDB(encodeURIComponent(found.name)) ||
+                   await getFileBinaryFromIDB(found.name.toLowerCase());
     }
     if (!binaryData) {
       binaryData = await getFileBinaryFromIDB(decoded) || 
                    await getFileBinaryFromIDB(docNameOrId) ||
-                   await getFileBinaryFromIDB(encodeURIComponent(decoded));
+                   await getFileBinaryFromIDB(encodeURIComponent(decoded)) ||
+                   await getFileBinaryFromIDB(decoded.toLowerCase());
     }
 
     const finalData = binaryData || found?.fileData;
@@ -249,7 +262,7 @@ export const ZenFileSyncService = {
         id: `recovered-${Date.now()}`,
         name: decoded,
         type: docType,
-        location: 'Downloads',
+        location: 'Documents',
         creator: 'Me',
         modified: new Date().toLocaleDateString(),
         size: '1.2 MB',
@@ -264,8 +277,30 @@ export const ZenFileSyncService = {
     }
 
     // 4. Sample receipt fallback
-    if (decoded.toLowerCase() === 'school fee receipt.pdf') {
-      return DEMO_OAU_RECEIPT;
+    const isSchoolFeeReceipt = decoded.toLowerCase().includes('school fee receipt') || decoded.toLowerCase().includes('school-fee-receipt');
+    if (isSchoolFeeReceipt) {
+      let sampleData = finalData;
+      if (!sampleData) {
+        try {
+          const res = await fetch('/samples/school-fee-receipt.pdf');
+          if (res.ok) {
+            const blob = await res.blob();
+            sampleData = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+            if (sampleData) {
+              await setFileBinaryInIDB('school fee receipt.pdf', sampleData);
+              await setFileBinaryInIDB('school-fee-receipt.pdf', sampleData);
+            }
+          }
+        } catch {}
+      }
+      return {
+        ...DEMO_OAU_RECEIPT,
+        fileData: sampleData || undefined,
+      };
     }
 
     return null;
@@ -274,16 +309,122 @@ export const ZenFileSyncService = {
   // Save or update document binary content
   async updateDocumentContent(docNameOrId: string, dataUrl: string) {
     const decoded = decodeURIComponent(docNameOrId).trim();
-    await setFileBinaryInIDB(decoded, dataUrl);
-    await setFileBinaryInIDB(docNameOrId, dataUrl);
     const all = this.getAllStored();
-    const doc = all.find(d => d.id === docNameOrId || d.name === decoded || d.name === docNameOrId);
+    const doc = all.find(d => 
+      d.id === docNameOrId || 
+      d.id === decoded || 
+      d.name === decoded || 
+      d.name === docNameOrId ||
+      d.name.toLowerCase() === decoded.toLowerCase() ||
+      d.name.toLowerCase() === docNameOrId.toLowerCase()
+    );
+
+    // Store in IndexedDB across all potential lookup keys
+    await setFileBinaryInIDB(docNameOrId, dataUrl);
+    await setFileBinaryInIDB(decoded, dataUrl);
+    await setFileBinaryInIDB(docNameOrId.toLowerCase(), dataUrl);
+    await setFileBinaryInIDB(decoded.toLowerCase(), dataUrl);
+    await setFileBinaryInIDB(encodeURIComponent(decoded), dataUrl);
+
+    const approxBytes = Math.round(dataUrl.length * 0.75);
+    const sizeDisplay = approxBytes > 1024 * 1024 ? `${(approxBytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(approxBytes / 1024))} KB`;
+
     if (doc) {
       await setFileBinaryInIDB(doc.id, dataUrl);
-      if (dataUrl.length < 500000) {
-        doc.fileData = dataUrl;
+      await setFileBinaryInIDB(doc.name, dataUrl);
+      await setFileBinaryInIDB(encodeURIComponent(doc.name), dataUrl);
+      await setFileBinaryInIDB(doc.name.toLowerCase(), dataUrl);
+
+      doc.fileData = dataUrl;
+      doc.sizeBytes = approxBytes;
+      doc.size = sizeDisplay;
+      doc.modified = new Date().toLocaleDateString();
+      this.saveAllDocuments(all);
+    } else {
+      const ext = decoded.split('.').pop()?.toLowerCase() || '';
+      let docType: ZenDocumentItem['type'] = 'excel';
+      if (['xlsx', 'xls', 'csv'].includes(ext)) docType = 'excel';
+      else if (['docx', 'doc'].includes(ext)) docType = 'word';
+      else if (['pptx', 'ppt'].includes(ext)) docType = 'presentation';
+      else if (ext === 'pdf') docType = 'pdf';
+
+      const newDoc: ZenDocumentItem = {
+        id: `zen-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: decoded.includes('.') ? decoded : `${decoded}.${docType === 'excel' ? 'xlsx' : docType === 'word' ? 'docx' : 'pdf'}`,
+        type: docType,
+        location: 'Documents',
+        creator: 'Me',
+        modified: new Date().toLocaleDateString(),
+        size: sizeDisplay,
+        sizeBytes: approxBytes,
+        isLocal: true,
+        isStarred: false,
+        isDeleted: false,
+        syncedToCloud: false,
+        fileData: dataUrl,
+      };
+      await setFileBinaryInIDB(newDoc.id, dataUrl);
+      await setFileBinaryInIDB(newDoc.name, dataUrl);
+      await setFileBinaryInIDB(newDoc.name.toLowerCase(), dataUrl);
+      await setFileBinaryInIDB(encodeURIComponent(newDoc.name), dataUrl);
+      this.saveAllDocuments([newDoc, ...all]);
+    }
+  },
+
+  // Save document item (creating or updating)
+  async saveDocument(docData: Partial<ZenDocumentItem> & { name: string; fileData?: string }): Promise<ZenDocumentItem> {
+    const all = this.getAllStored();
+    const decoded = decodeURIComponent(docData.name).trim();
+    let existing = all.find(d => 
+      (docData.id && d.id === docData.id) ||
+      d.name.toLowerCase() === docData.name.toLowerCase() ||
+      d.name.toLowerCase() === decoded.toLowerCase()
+    );
+
+    const now = new Date();
+    const dateFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+    if (existing) {
+      existing.modified = dateFormatted;
+      if (docData.size) existing.size = docData.size;
+      if (docData.sizeBytes) existing.sizeBytes = docData.sizeBytes;
+      if (docData.fileData) {
+        existing.fileData = docData.fileData;
+        await setFileBinaryInIDB(existing.id, docData.fileData);
+        await setFileBinaryInIDB(existing.name, docData.fileData);
+        await setFileBinaryInIDB(encodeURIComponent(existing.name), docData.fileData);
+        await setFileBinaryInIDB(existing.name.toLowerCase(), docData.fileData);
+        await setFileBinaryInIDB(decoded, docData.fileData);
       }
       this.saveAllDocuments(all);
+      return existing;
+    } else {
+      const approxBytes = docData.fileData ? Math.round(docData.fileData.length * 0.75) : (docData.sizeBytes || 12288);
+      const newDoc: ZenDocumentItem = {
+        ...docData,
+        id: docData.id || `zen-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: docData.name,
+        type: docData.type || 'excel',
+        location: docData.location || 'Documents',
+        creator: docData.creator || 'Me',
+        modified: dateFormatted,
+        size: docData.size || (approxBytes > 1024 * 1024 ? `${(approxBytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(approxBytes / 1024))} KB`),
+        sizeBytes: approxBytes,
+        fileData: docData.fileData,
+        isLocal: true,
+        isStarred: false,
+        isDeleted: false,
+        syncedToCloud: false,
+      };
+      if (docData.fileData) {
+        await setFileBinaryInIDB(newDoc.id, docData.fileData);
+        await setFileBinaryInIDB(newDoc.name, docData.fileData);
+        await setFileBinaryInIDB(encodeURIComponent(newDoc.name), docData.fileData);
+        await setFileBinaryInIDB(newDoc.name.toLowerCase(), docData.fileData);
+        await setFileBinaryInIDB(decoded, docData.fileData);
+      }
+      this.saveAllDocuments([newDoc, ...all]);
+      return newDoc;
     }
   },
 
@@ -377,10 +518,18 @@ export const ZenFileSyncService = {
   },
 
   // Trigger real file download
-  downloadDocument(docItem: ZenDocumentItem) {
+  async downloadDocument(docItem: ZenDocumentItem) {
     if (typeof window === 'undefined') return;
     let url = docItem.fileData;
     let needRevoke = false;
+
+    if (!url) {
+      url = (await getFileBinaryFromIDB(docItem.id)) || 
+            (await getFileBinaryFromIDB(docItem.name)) || 
+            (await getFileBinaryFromIDB(encodeURIComponent(docItem.name))) || 
+            (await getFileBinaryFromIDB(docItem.name.toLowerCase())) ||
+            undefined;
+    }
 
     if (!url) {
       const content = `ZenOffice Document: ${docItem.name}\nCreated with ZenOffice Suite.\nSize: ${docItem.size}\n`;
@@ -438,7 +587,7 @@ export const ZenFileSyncService = {
           ...cleanDoc,
           userId: currentUid,
           syncedAt: Timestamp.now(),
-          cloudStorage: 'ZenDrive Firebase Storage',
+          cloudStorage: 'ZenOffice Cloud Storage',
         }, { merge: true });
 
         item.syncedToCloud = true;

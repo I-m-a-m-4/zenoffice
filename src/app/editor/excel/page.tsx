@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ChevronLeft, FileText, Download, Save, Printer, Share2, 
   Settings, Bold, Italic, Underline, AlignLeft, AlignCenter, 
   AlignRight, Search, Plus, X, Type, LayoutGrid, Image as ImageIcon,
-  MoreHorizontal, ChevronDown, Check, Columns, Rows, Sparkles
+  MoreHorizontal, ChevronDown, Check, Columns, Rows, Sparkles,
+  RefreshCw
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { ZenFileSyncService } from '@/lib/firebase-sync';
+import { ZenFileSyncService, ZenDocumentItem } from '@/lib/firebase-sync';
 import { ZenAiDialog } from '@/components/shared/zen-ai-dialog';
 
 const COLS = 26; // A to Z
@@ -24,12 +25,27 @@ export default function SpreadsheetEditor() {
   const [cellData, setCellData] = useState<Record<string, string>>({});
   const [formulaValue, setFormulaValue] = useState('');
   const [showAiModal, setShowAiModal] = useState(false);
+  const [currentDoc, setCurrentDoc] = useState<ZenDocumentItem | null>(null);
+  const [sheetName, setSheetName] = useState('Sheet1');
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Save, Export & Status state
+  const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
   
   // Resizing State
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   const [resizingCol, setResizingCol] = useState<string | null>(null);
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
+
+  const showToast = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  };
   
   useEffect(() => {
     const loadExcelFile = async () => {
@@ -37,6 +53,9 @@ export default function SpreadsheetEditor() {
       if (docParam) {
         setDocTitle(decodeURIComponent(docParam));
         const docObj = await ZenFileSyncService.getDocument(docParam);
+        if (docObj) {
+          setCurrentDoc(docObj);
+        }
         
         if (docObj?.fileData) {
           try {
@@ -48,6 +67,7 @@ export default function SpreadsheetEditor() {
             
             if (workbook.SheetNames.length > 0) {
               const firstSheetName = workbook.SheetNames[0];
+              setSheetName(firstSheetName);
               const worksheet = workbook.Sheets[firstSheetName];
               const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:Z100');
               
@@ -70,13 +90,164 @@ export default function SpreadsheetEditor() {
           }
         }
       }
+      setIsLoaded(true);
     };
     
     loadExcelFile();
   }, [searchParams]);
 
+  // Generate binary and data URL representation of current spreadsheet
+  const generateWorkbookData = useCallback(() => {
+    let maxR = 20;
+    let maxC = 10;
+    
+    // Find boundary of entered cell data
+    Object.keys(cellData).forEach(cellRef => {
+      if (cellData[cellRef] !== undefined && cellData[cellRef] !== null && String(cellData[cellRef]).trim() !== '') {
+        try {
+          const decoded = XLSX.utils.decode_cell(cellRef);
+          if (decoded.r + 1 > maxR) maxR = decoded.r + 1;
+          if (decoded.c + 1 > maxC) maxC = decoded.c + 1;
+        } catch {}
+      }
+    });
+
+    const range = { 
+      s: { c: 0, r: 0 }, 
+      e: { c: Math.max(COLS - 1, maxC - 1), r: Math.max(20, maxR - 1) } 
+    };
+    const worksheet: XLSX.WorkSheet = { '!ref': XLSX.utils.encode_range(range) };
+
+    Object.entries(cellData).forEach(([cellRef, val]) => {
+      if (val !== undefined && val !== null && val !== '') {
+        const strVal = String(val);
+        const trimmed = strVal.trim();
+        const num = Number(trimmed);
+        if (trimmed.startsWith('=')) {
+          worksheet[cellRef] = { t: 's', f: trimmed.substring(1), v: trimmed };
+        } else if (!isNaN(num) && trimmed !== '') {
+          worksheet[cellRef] = { t: 'n', v: num };
+        } else {
+          worksheet[cellRef] = { t: 's', v: strVal };
+        }
+      }
+    });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, worksheet, sheetName || 'Sheet1');
+
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+    const dataUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${wbout}`;
+    const arrayBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const bytes = new Uint8Array(arrayBuffer);
+
+    return { dataUrl, bytes, workbook: wb };
+  }, [cellData, sheetName]);
+
+  // Save spreadsheet to storage (local and cloud sync)
+  const handleSaveSpreadsheet = useCallback(async (silent = false) => {
+    if (isSaving) return;
+    setIsSaving(true);
+    if (!silent) showToast('Saving spreadsheet...');
+    try {
+      const { dataUrl, bytes } = generateWorkbookData();
+      const filename = docTitle.toLowerCase().endsWith('.xlsx') ? docTitle : `${docTitle}.xlsx`;
+      
+      const updated = await ZenFileSyncService.saveDocument({
+        id: currentDoc?.id || filename,
+        name: filename,
+        type: 'excel',
+        category: 'Spreadsheets',
+        fileData: dataUrl,
+        size: `${(bytes.length / 1024).toFixed(1)} KB`,
+        sizeBytes: bytes.length,
+        modified: new Date().toLocaleDateString(),
+        synced: true,
+      });
+
+      setCurrentDoc(updated);
+      setHasUnsavedChanges(false);
+      setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      if (!silent) {
+        showToast('Spreadsheet saved successfully!');
+      }
+    } catch (err) {
+      console.error('Failed to save spreadsheet:', err);
+      if (!silent) showToast('Failed to save spreadsheet');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isSaving, generateWorkbookData, docTitle, currentDoc]);
+
+  // Debounced auto-save on modifications
+  useEffect(() => {
+    if (!isLoaded || !hasUnsavedChanges || isSaving) return;
+
+    const timer = setTimeout(() => {
+      handleSaveSpreadsheet(true);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [hasUnsavedChanges, isLoaded, isSaving, handleSaveSpreadsheet]);
+
+  // Export spreadsheet as .xlsx file (Tauri native save dialog + browser fallback)
+  const handleExportSpreadsheet = async () => {
+    setIsExporting(true);
+    showToast('Exporting spreadsheet...');
+    try {
+      const { bytes, dataUrl } = generateWorkbookData();
+      const filename = docTitle.toLowerCase().endsWith('.xlsx') ? docTitle : `${docTitle}.xlsx`;
+
+      // Persist changes
+      const targetId = currentDoc?.id || filename;
+      ZenFileSyncService.updateDocumentContent(targetId, dataUrl).catch(console.error);
+      setHasUnsavedChanges(false);
+
+      // 1. Try desktop Tauri native save dialog
+      try {
+        const { save } = await import('@tauri-apps/plugin-dialog');
+        const { writeFile } = await import('@tauri-apps/plugin-fs');
+        const filePath = await save({
+          defaultPath: filename,
+          filters: [{ name: 'Excel Spreadsheet (*.xlsx)', extensions: ['xlsx'] }]
+        });
+        if (filePath) {
+          await writeFile(filePath, bytes);
+          showToast(`Exported "${filename}" successfully!`);
+          return;
+        }
+      } catch (tauriErr) {
+        // Fallback to web browser download
+      }
+
+      // 2. Web browser download fallback
+      const blob = new Blob([bytes as unknown as BlobPart], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`Exported "${filename}"!`);
+    } catch (err) {
+      console.error('Failed to export spreadsheet:', err);
+      showToast('Failed to export spreadsheet');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Keyboard shortcuts (Ctrl+S for save, Ctrl+E for AI copilot)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSaveSpreadsheet(false);
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
         e.preventDefault();
         setShowAiModal(prev => !prev);
@@ -84,7 +255,7 @@ export default function SpreadsheetEditor() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleSaveSpreadsheet]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -117,6 +288,7 @@ export default function SpreadsheetEditor() {
 
   const handleCellChange = (id: string, val: string) => {
     setCellData(prev => ({ ...prev, [id]: val }));
+    setHasUnsavedChanges(true);
     if (activeCell === id) {
       setFormulaValue(val);
     }
@@ -128,8 +300,10 @@ export default function SpreadsheetEditor() {
   };
 
   const handleFormulaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormulaValue(e.target.value);
-    setCellData(prev => ({ ...prev, [activeCell]: e.target.value }));
+    const val = e.target.value;
+    setFormulaValue(val);
+    setCellData(prev => ({ ...prev, [activeCell]: val }));
+    setHasUnsavedChanges(true);
   };
 
   const renderHeaders = () => {
@@ -225,11 +399,71 @@ export default function SpreadsheetEditor() {
               <X className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Auto-Save & Sync Status Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 mb-1 rounded text-[11px] font-medium bg-slate-200/60 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+            {isSaving ? (
+              <>
+                <RefreshCw className="w-3 h-3 animate-spin text-emerald-600" />
+                <span>Saving...</span>
+              </>
+            ) : hasUnsavedChanges ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-amber-700 dark:text-amber-400">Unsaved</span>
+              </>
+            ) : (
+              <>
+                <Check className="w-3 h-3 text-emerald-600" />
+                <span className="text-emerald-700 dark:text-emerald-400">
+                  Saved{lastSavedTime ? ` (${lastSavedTime})` : ''}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          <button className="h-7 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded flex items-center gap-1.5 transition-colors">
+          <button 
+            onClick={() => handleSaveSpreadsheet(false)}
+            disabled={isSaving}
+            className="h-7 px-3 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-[#e2dcd0] dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white disabled:opacity-60 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors shadow-xs"
+            title="Save Spreadsheet (Ctrl+S)"
+          >
+            {isSaving ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+            ) : (
+              <Save className="w-3.5 h-3.5 text-emerald-600" />
+            )}
+            <span>{isSaving ? 'Saving...' : 'Save'}</span>
+          </button>
+
+          <button 
+            onClick={handleExportSpreadsheet}
+            disabled={isExporting}
+            className="h-7 px-3 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-[#e2dcd0] dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors shadow-xs"
+            title="Export to .xlsx file"
+          >
+            {isExporting ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            <span>Export</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              if (navigator.share) {
+                navigator.share({ title: docTitle, url: window.location.href }).catch(() => {});
+              } else {
+                navigator.clipboard?.writeText(window.location.href);
+                showToast('Link copied to clipboard!');
+              }
+            }}
+            className="h-7 px-3 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-[#e2dcd0] dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors shadow-xs"
+          >
             <Share2 className="w-3.5 h-3.5" /> Share
           </button>
         </div>
@@ -331,6 +565,14 @@ export default function SpreadsheetEditor() {
           <Plus className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {/* Toast Notification Banner */}
+      {notification && (
+        <div className="fixed bottom-12 right-6 z-50 bg-zinc-900/95 dark:bg-zinc-100 dark:text-zinc-900 text-white text-xs px-3.5 py-2.5 rounded-lg shadow-xl border border-zinc-700/60 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+          <span>{notification}</span>
+        </div>
+      )}
 
       <ZenAiDialog 
         editorType="excel" 

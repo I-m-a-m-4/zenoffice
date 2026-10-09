@@ -176,11 +176,16 @@ function DocumentEditorInner() {
               const isStalePlaceholder = found.fileData.includes('Binary content cannot be previewed directly') ||
                                          found.fileData.includes('Document loaded (Binary content');
 
+              const isRawHtml = found.fileData.trim().startsWith('<') || 
+                                found.fileData.includes('zen-wps-docx') || 
+                                found.fileData.includes('</p>') || 
+                                found.fileData.includes('</div>');
+
               if (isStalePlaceholder) {
                 // If it had the old placeholder string, flag it so user can reload with 1 click
                 setHasStalePlaceholder(true);
                 editorRef.current.innerHTML = found.fileData;
-              } else if (isDocx && (found.fileData.startsWith('data:') || found.fileData.length > 500)) {
+              } else if (isDocx && !isRawHtml && (found.fileData.startsWith('data:') || found.fileData.startsWith('UEsDB'))) {
                 // Render with docx-preview for pixel-perfect A4 WPS Office layout
                 try {
                   const res = await renderDocxToElement(found.fileData, editorRef.current);
@@ -190,16 +195,31 @@ function DocumentEditorInner() {
                   showToast(`Rendered ${found.name} in WPS Office layout`);
                 } catch (previewErr) {
                   console.warn('docx-preview fallback to mammoth:', previewErr);
-                  const result = await parseDocxToHtml(found.fileData);
-                  if (active && editorRef.current) {
-                    editorRef.current.innerHTML = result.html || '<p><br/></p>';
-                    handleContentInput();
-                    showToast(`Parsed ${found.name}`);
+                  try {
+                    const result = await parseDocxToHtml(found.fileData);
+                    if (active && editorRef.current) {
+                      editorRef.current.innerHTML = result.html || '<p><br/></p>';
+                      handleContentInput();
+                      showToast(`Parsed ${found.name}`);
+                    }
+                  } catch (mammothErr) {
+                    console.error('Failed to parse docx with mammoth:', mammothErr);
+                    if (active && editorRef.current) {
+                      editorRef.current.innerHTML = found.fileData;
+                      handleContentInput();
+                    }
                   }
                 }
               } else {
                 // Raw HTML or string content from saved document
                 editorRef.current.innerHTML = found.fileData;
+                const editableTargets = editorRef.current.querySelectorAll(
+                  'section.zen-wps-docx, .zen-wps-docx-wrapper, .zen-wps-docx article, .zen-wps-docx p, .zen-wps-docx h1, .zen-wps-docx h2, .zen-wps-docx h3, .zen-wps-docx table, .zen-wps-docx td, .zen-wps-docx th, .zen-wps-docx span'
+                );
+                editableTargets.forEach((node) => {
+                  const el = node as HTMLElement;
+                  el.contentEditable = 'true';
+                });
                 handleContentInput();
               }
             }
@@ -279,22 +299,51 @@ function DocumentEditorInner() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSaveDocument = async () => {
-    if (!editorRef.current) return;
+  const handleSaveDocument = async (silent = false) => {
+    if (!editorRef.current || isSaving) return;
     setIsSaving(true);
     try {
       const content = editorRef.current.innerHTML;
-      const targetId = currentDoc?.id || docTitle;
-      await ZenFileSyncService.updateDocumentContent(targetId, content);
+      const filename = docTitle.includes('.') ? docTitle : `${docTitle}.docx`;
+      const targetId = currentDoc?.id || filename;
+      
+      const updated = await ZenFileSyncService.saveDocument({
+        id: targetId,
+        name: filename,
+        type: 'word',
+        category: 'Documents',
+        fileData: content,
+        size: `${Math.max(1, Math.round(content.length / 1024))} KB`,
+        sizeBytes: content.length,
+        modified: new Date().toLocaleDateString(),
+        synced: true,
+      });
+
+      if (updated) setCurrentDoc(updated);
       setHasUnsavedChanges(false);
-      showToast('Document saved successfully');
+      if (!silent) {
+        showToast('Document saved successfully');
+      }
     } catch (err) {
       console.error('Error saving document:', err);
-      showToast('Failed to save document');
+      if (!silent) {
+        showToast('Failed to save document');
+      }
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Debounced Auto-Save
+  useEffect(() => {
+    if (!hasUnsavedChanges || isSaving) return;
+
+    const timer = setTimeout(() => {
+      handleSaveDocument(true);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [hasUnsavedChanges, isSaving]);
 
   // Keyboard shortcuts (Ctrl+S, Ctrl+E, Ctrl+F, Ctrl+B, Ctrl+I, Ctrl+U)
   useEffect(() => {
@@ -628,8 +677,8 @@ function DocumentEditorInner() {
             size="sm"
             className={`h-7 px-2.5 border text-xs font-medium gap-1 transition-all ${
               hasUnsavedChanges 
-                ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100' 
-                : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50'
+                ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 hover:text-amber-900 dark:hover:text-amber-100' 
+                : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
             title="Save Document (Ctrl+S)"
           >
