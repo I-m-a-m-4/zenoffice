@@ -67,6 +67,7 @@ function PDFEditorInner() {
 
   // Document & view state
   const [docTitle, setDocTitle] = useState(docParam ? decodeURIComponent(docParam) : 'Document.pdf');
+  const [numPages, setNumPages] = useState<number>(1);
   const [blankDocText, setBlankDocText] = useState('');
   const [currentDoc, setCurrentDoc] = useState<ZenDocumentItem | null>(null);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
@@ -502,21 +503,67 @@ function PDFEditorInner() {
         try {
           const textContent = await page.getTextContent();
           if (textContent && textContent.items) {
-            const validItems = textContent.items.filter((it: any) => it.str && it.str.trim());
-            // Safe non-destructive deduplication (only filter exact duplicates within 0.75pt)
-            const itemsToRender: any[] = [];
-            for (let idx = 0; idx < validItems.length; idx++) {
-              const it = validItems[idx];
-              const isDupe = itemsToRender.some(prev => 
-                Math.abs(prev.transform[4] - it.transform[4]) < 0.75 && 
-                Math.abs(prev.transform[5] - it.transform[5]) < 0.75
-              );
-              if (!isDupe) {
-                itemsToRender.push({ ...it, _uniqueId: `span-${pageNum}-${idx}` });
+            // Check if document has serif characteristics
+            let docPrefersSerif = false;
+            if (textContent.styles) {
+              for (const fontKey in textContent.styles) {
+                const st = textContent.styles[fontKey];
+                const fam = (st.fontFamily || '').toLowerCase();
+                const k = fontKey.toLowerCase();
+                if (fam.includes('serif') || fam.includes('times') || fam.includes('roman') || 
+                    k.includes('times') || k.includes('roman') || k.includes('serif') || k.includes('cmr')) {
+                  docPrefersSerif = true;
+                  break;
+                }
               }
             }
 
-            itemsToRender.forEach((item: any) => {
+            // Extract valid non-empty items
+            const rawItems = textContent.items.filter((it: any) => it.str !== undefined && it.str.trim().length > 0);
+
+            // Sort items: Y descending (top to bottom on page) then X ascending (left to right)
+            const sortedItems = [...rawItems].sort((a: any, b: any) => {
+              const yDiff = b.transform[5] - a.transform[5];
+              if (Math.abs(yDiff) > 2.5) return yDiff;
+              return a.transform[4] - b.transform[4];
+            });
+
+            // Merge contiguous text fragments on the same baseline into coherent phrases
+            // Relaxed baseline and gap tolerances ensure split trailing characters (like 'E' after 'SIGNIFICANC')
+            // merge cleanly into a single interactive heading instead of fragmenting.
+            const mergedLines: any[] = [];
+            for (let idx = 0; idx < sortedItems.length; idx++) {
+              const cur = sortedItems[idx];
+              const prev = mergedLines[mergedLines.length - 1];
+
+              if (prev) {
+                const prevY = prev.transform[5];
+                const curY = cur.transform[5];
+                const prevH = Math.hypot(prev.transform[0], prev.transform[1]) || 12;
+                const curH = Math.hypot(cur.transform[0], cur.transform[1]) || 12;
+                const sameBaseline = Math.abs(prevY - curY) < 4.5;
+                const sameSize = Math.abs(prevH - curH) < 4.0;
+                
+                const prevRight = prev.transform[4] + (prev.width || 0);
+                const curLeft = cur.transform[4];
+                const gap = curLeft - prevRight;
+
+                // Merge if on same baseline, similar size, and reasonably adjacent
+                if (sameBaseline && sameSize && gap >= -8 && gap < Math.max(35, curH * 2.5)) {
+                  const spaceToAdd = (gap > (curH * 0.2) && !prev.str.endsWith(' ') && !cur.str.startsWith(' ')) ? ' ' : '';
+                  prev.str = prev.str + spaceToAdd + cur.str;
+                  prev.width = (curLeft + (cur.width || 0)) - prev.transform[4];
+                  continue;
+                }
+              }
+
+              mergedLines.push({
+                ...cur,
+                _uniqueId: `span-${pageNum}-${mergedLines.length}`
+              });
+            }
+
+            mergedLines.forEach((item: any) => {
               const vp = viewport.transform;
               const it = item.transform;
               // 2D affine transform matrix multiplication: vp * it
@@ -529,17 +576,69 @@ function PDFEditorInner() {
               const fontFam = (styleObj?.fontFamily || '').toLowerCase();
               const fnLower = (item.fontName || '').toLowerCase();
 
-              // Determine serif / times font family
-              const isSerif = fontFam.includes('serif') || 
-                              fnLower.includes('times') || 
-                              fnLower.includes('serif') || 
-                              fnLower.includes('roman') ||
-                              fnLower.includes('f2') || 
-                              fnLower.includes('f3') || 
-                              fnLower.includes('f4');
-              const isMono = fontFam.includes('mono') || fnLower.includes('courier');
-              const isBold = fnLower.includes('bold') || fnLower.includes('f3');
-              const isItalic = fnLower.includes('italic') || fnLower.includes('oblique') || fnLower.includes('f4');
+              // Check loaded font metadata from commonObjs if available
+              let commonName = '';
+              let commonBold = false;
+              let commonItalic = false;
+              try {
+                if (page.commonObjs?.has?.(item.fontName)) {
+                  const fo = page.commonObjs.get(item.fontName);
+                  if (fo) {
+                    commonName = (fo.name || fo.loadedName || '').toLowerCase();
+                    commonBold = !!(fo.bold || fo.black || (fo.weight && fo.weight >= 600));
+                    commonItalic = !!fo.italic;
+                  }
+                }
+              } catch {}
+
+              const combined = `${fnLower} ${fontFam} ${commonName}`.toLowerCase();
+              const isExplicitMono = combined.includes('mono') || combined.includes('courier') || combined.includes('typewriter');
+              const isExplicitSans = combined.includes('sans') || combined.includes('arial') || combined.includes('helvetica') || 
+                                     combined.includes('calibri') || combined.includes('roboto') || combined.includes('segoe');
+              const isExplicitSerif = combined.includes('serif') || 
+                                      combined.includes('times') || 
+                                      combined.includes('roman') || 
+                                      combined.includes('cambria') || 
+                                      combined.includes('georgia') || 
+                                      combined.includes('garamond') || 
+                                      combined.includes('minion') || 
+                                      combined.includes('palatino') || 
+                                      combined.includes('baskerville') || 
+                                      combined.includes('century') || 
+                                      combined.includes('bookman') || 
+                                      combined.includes('cmr');
+
+              // Only treat as Serif if explicitly named as a serif font family.
+              // Standard documents default to clean modern Sans-serif (Arial/Helvetica).
+              const isSerif = !isExplicitMono && !isExplicitSans && isExplicitSerif;
+              const isMono = isExplicitMono;
+
+              // Robust Bold Detection:
+              // 1. Explicit font flag or bold naming tokens
+              // 2. Heading pattern detection: e.g. "3.0 HYPOTHESIS AND TESTS OF SIGNIFICANCE", all-caps or numbered title
+              const isNumberedSection = /^\d+(\.\d+)*\s+[A-Z]/.test(item.str.trim());
+              const isAllUpperWords = item.str.length > 3 && item.str === item.str.toUpperCase() && /[A-Z]{3,}/.test(item.str);
+
+              const isBold = commonBold || 
+                             combined.includes('bold') || 
+                             combined.includes('bld') || 
+                             combined.includes('black') || 
+                             combined.includes('heavy') || 
+                             combined.includes('medi') || 
+                             combined.includes('-b') || 
+                             combined.includes('_b') || 
+                             combined.includes('f2') || 
+                             combined.includes('f3') || 
+                             combined.includes('f4') ||
+                             isNumberedSection || 
+                             isAllUpperWords;
+
+              const isItalic = commonItalic || 
+                               combined.includes('italic') || 
+                               combined.includes('ital') || 
+                               combined.includes('oblique') || 
+                               combined.includes('-i') || 
+                               combined.includes('_i');
 
               const fontSize = Math.max(9, Math.hypot(a, b));
               // Baseline alignment in canvas coordinate space
@@ -550,7 +649,7 @@ function PDFEditorInner() {
 
               const span = document.createElement('span');
               span.id = item._uniqueId;
-              span.className = 'pdf-text-item absolute transition-all cursor-text select-text';
+              span.className = 'pdf-text-item absolute cursor-text select-text';
               span.style.left = `${left}px`;
               span.style.top = `${top}px`;
               span.style.fontSize = `${fontSize}px`;
@@ -561,15 +660,19 @@ function PDFEditorInner() {
               span.style.color = 'transparent';
               span.style.zIndex = '20';
               span.style.pointerEvents = 'auto';
+              span.style.padding = '0px';
+              span.style.margin = '0px';
+              span.style.letterSpacing = 'normal';
 
               if (isSerif) {
-                span.style.fontFamily = '"Times New Roman", Times, Georgia, serif';
+                span.style.fontFamily = '"Times New Roman", Times, "Nimbus Roman No9 L", Georgia, "Liberation Serif", serif';
               } else if (isMono) {
                 span.style.fontFamily = '"Courier New", Courier, monospace';
               } else {
-                span.style.fontFamily = 'Arial, Helvetica, sans-serif';
+                span.style.fontFamily = 'Arial, Helvetica, "Liberation Sans", -apple-system, BlinkMacSystemFont, sans-serif';
               }
-              if (isBold) span.style.fontWeight = 'bold';
+
+              span.style.fontWeight = isBold ? '700' : '400';
               if (isItalic) span.style.fontStyle = 'italic';
 
               span.innerText = item.str;
@@ -591,15 +694,15 @@ function PDFEditorInner() {
               span.onmouseenter = () => {
                 if (span.getAttribute('contenteditable') !== 'true' && span.dataset.edited !== 'true') {
                   span.style.backgroundColor = 'rgba(234, 88, 12, 0.12)';
-                  span.style.outline = '1.5px dashed rgba(234, 88, 12, 0.7)';
-                  span.style.borderRadius = '3px';
+                  span.style.outline = '1px dashed rgba(234, 88, 12, 0.7)';
+                  span.style.borderRadius = '2px';
                 }
               };
               span.onmouseleave = () => {
                 if (span.getAttribute('contenteditable') !== 'true' && span.dataset.edited !== 'true') {
                   if (selectedToolRef.current === 'fill-form') {
                     span.style.backgroundColor = 'rgba(59, 130, 246, 0.12)';
-                    span.style.outline = '1.5px dashed rgba(59, 130, 246, 0.7)';
+                    span.style.outline = '1px dashed rgba(59, 130, 246, 0.7)';
                   } else {
                     span.style.backgroundColor = 'transparent';
                     span.style.outline = 'none';
@@ -629,15 +732,21 @@ function PDFEditorInner() {
                   return;
                 }
 
-                // Standard Edit Mode
+                // Cleanly wipe the canvas underneath this text so old letters never bleed through
+                if (context) {
+                  context.fillStyle = '#ffffff';
+                  context.fillRect(left - 1, top - 1, itemWidth + 2, itemHeight + 2);
+                }
+
+                // Standard Edit Mode - keep background transparent to prevent white-box clipping of adjacent text
                 span.contentEditable = 'true';
                 span.style.color = '#18181b';
-                span.style.backgroundColor = '#ffffff'; // Cleanly masks underlying canvas text
-                span.style.boxShadow = '0 0 0 3px #ffffff, 0 2px 12px rgba(0,0,0,0.2)';
-                span.style.padding = '2px 4px';
-                span.style.margin = '-2px -4px';
-                span.style.outline = '2px solid #ea580c';
-                span.style.borderRadius = '3px';
+                span.style.backgroundColor = 'transparent';
+                span.style.padding = '0px';
+                span.style.margin = '0px';
+                span.style.boxShadow = 'none';
+                span.style.outline = '1.5px solid #ea580c';
+                span.style.borderRadius = '2px';
                 span.style.zIndex = '50';
                 span.focus();
 
@@ -657,20 +766,27 @@ function PDFEditorInner() {
               span.oninput = () => {
                 span.dataset.edited = 'true';
                 setHasUnsavedChanges(true);
+                // Erase any newly expanded width area on the canvas as well
+                if (context) {
+                  context.fillStyle = '#ffffff';
+                  const curW = Math.max(itemWidth, span.scrollWidth || span.offsetWidth);
+                  context.fillRect(left - 1, top - 1, curW + 2, itemHeight + 2);
+                }
               };
 
               span.onblur = () => {
                 span.contentEditable = 'false';
+                span.style.outline = 'none';
                 const cleanNew = span.innerText.replace(/\u00a0/g, ' ').replace(/\r?\n/g, ' ').trim();
                 const cleanOrig = (span.dataset.originalText || '').replace(/\u00a0/g, ' ').replace(/\r?\n/g, ' ').trim();
                 const hasChanged = cleanNew !== cleanOrig;
                 if (hasChanged) {
                   span.dataset.edited = 'true';
                   span.style.color = '#18181b';
-                  span.style.backgroundColor = '#ffffff';
-                  span.style.boxShadow = '0 0 0 2px #ffffff';
-                  span.style.padding = '2px 4px';
-                  span.style.margin = '-2px -4px';
+                  span.style.backgroundColor = 'transparent';
+                  span.style.padding = '0px';
+                  span.style.margin = '0px';
+                  span.style.boxShadow = 'none';
                   span.style.outline = 'none';
                   span.style.zIndex = '25';
                   setHasUnsavedChanges(true);
@@ -686,10 +802,10 @@ function PDFEditorInner() {
                   span.dataset.edited = 'false';
                   span.style.color = 'transparent';
                   span.style.backgroundColor = selectedToolRef.current === 'fill-form' ? 'rgba(59, 130, 246, 0.12)' : 'transparent';
-                  span.style.boxShadow = 'none';
                   span.style.padding = '0';
                   span.style.margin = '0';
-                  span.style.outline = selectedToolRef.current === 'fill-form' ? '1.5px dashed rgba(59, 130, 246, 0.7)' : 'none';
+                  span.style.boxShadow = 'none';
+                  span.style.outline = selectedToolRef.current === 'fill-form' ? '1px dashed rgba(59, 130, 246, 0.7)' : 'none';
                   span.style.zIndex = '20';
                 }
               };
@@ -1478,9 +1594,9 @@ function PDFEditorInner() {
     }
   };
 
-  // Convert PDF to Editable Document
+  // Convert PDF to Fully Editable Document (Word / Google Docs Flow Mode)
   const handleEditDocument = async () => {
-    // If no PDF file is loaded, immediately navigate to the blank document editor where the user can type
+    // If no PDF file is loaded, immediately navigate to the document editor
     if (!pdfBlobUrl && !pdfDataBytes) {
       const docName = docTitle.replace(/\.pdf$/i, '.docx');
       router.push(`/editor/document?doc=${encodeURIComponent(docName)}`);
@@ -1489,14 +1605,122 @@ function PDFEditorInner() {
 
     setIsExtracting(true);
     setOcrProgress(0);
-    let finalExtractedText = extractedPdfText;
+
+    const escapeHtml = (str: string) => {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
 
     try {
-      // If pdf.js found very little text, assume it's a scanned document
-      if (extractedPdfText.trim().length < 50) {
-        showToast('Running AI OCR on scanned document...');
-        
-        // Dynamically import tesseract.js
+      showToast('Converting PDF into editable document format...');
+      const pdfjs = await loadPdfJsLibrary();
+      if (!pdfjs) throw new Error('PDF library unavailable');
+
+      const loadingTask = pdfDataBytes
+        ? pdfjs.getDocument({ data: pdfDataBytes })
+        : pdfjs.getDocument(pdfBlobUrl!);
+
+      const pdf = await loadingTask.promise;
+      let fullHtml = '';
+      let totalTextChars = 0;
+
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const rawItems = (textContent.items || []).filter((it: any) => it.str && it.str.trim().length > 0);
+
+        // Sort items: Y descending (top to bottom), X ascending (left to right)
+        const sorted = [...rawItems].sort((a: any, b: any) => {
+          const yDiff = b.transform[5] - a.transform[5];
+          if (Math.abs(yDiff) > 3.5) return yDiff;
+          return a.transform[4] - b.transform[4];
+        });
+
+        // Group into lines by baseline
+        const lines: { text: string; fontSize: number; isHeading: boolean }[] = [];
+        let currentLine: any[] = [];
+        let currentY: number | null = null;
+
+        for (const it of sorted) {
+          const y = it.transform[5];
+          if (currentY === null || Math.abs(currentY - y) <= 4.0) {
+            currentLine.push(it);
+            if (currentY === null) currentY = y;
+          } else {
+            if (currentLine.length > 0) {
+              let text = '';
+              let maxFontSize = 0;
+              for (let i = 0; i < currentLine.length; i++) {
+                const cur = currentLine[i];
+                const prev = currentLine[i - 1];
+                const curH = Math.hypot(cur.transform[0], cur.transform[1]) || 12;
+                if (curH > maxFontSize) maxFontSize = curH;
+
+                if (prev) {
+                  const prevRight = prev.transform[4] + (prev.width || 0);
+                  const curLeft = cur.transform[4];
+                  const gap = curLeft - prevRight;
+                  if (gap > 2 && !prev.str.endsWith(' ') && !cur.str.startsWith(' ')) {
+                    text += ' ';
+                  }
+                }
+                text += cur.str;
+              }
+              const trimmed = text.trim();
+              const isNumbered = /^\d+(\.\d+)*\s+[A-Za-z]/.test(trimmed);
+              const isAllUpper = trimmed.length > 3 && trimmed === trimmed.toUpperCase() && /[A-Z]{3,}/.test(trimmed);
+              const isHeading = isNumbered || isAllUpper || maxFontSize >= 14;
+              lines.push({ text: trimmed, fontSize: maxFontSize, isHeading });
+            }
+            currentLine = [it];
+            currentY = y;
+          }
+        }
+        if (currentLine.length > 0) {
+          let text = '';
+          let maxFontSize = 0;
+          for (let i = 0; i < currentLine.length; i++) {
+            const cur = currentLine[i];
+            const prev = currentLine[i - 1];
+            const curH = Math.hypot(cur.transform[0], cur.transform[1]) || 12;
+            if (curH > maxFontSize) maxFontSize = curH;
+
+            if (prev) {
+              const prevRight = prev.transform[4] + (prev.width || 0);
+              const curLeft = cur.transform[4];
+              const gap = curLeft - prevRight;
+              if (gap > 2 && !prev.str.endsWith(' ') && !cur.str.startsWith(' ')) {
+                text += ' ';
+              }
+            }
+            text += cur.str;
+          }
+          const trimmed = text.trim();
+          const isNumbered = /^\d+(\.\d+)*\s+[A-Za-z]/.test(trimmed);
+          const isAllUpper = trimmed.length > 3 && trimmed === trimmed.toUpperCase() && /[A-Z]{3,}/.test(trimmed);
+          const isHeading = isNumbered || isAllUpper || maxFontSize >= 14;
+          lines.push({ text: trimmed, fontSize: maxFontSize, isHeading });
+        }
+
+        let pageHtml = '';
+        if (pdf.numPages > 1) {
+          pageHtml += `<div style="text-align: center; margin: 2rem 0 1.25rem; border-top: 1px dashed #cbd5e1; padding-top: 0.75rem;"><span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; background: #f8fafc; padding: 2px 12px; border-radius: 9999px; border: 1px solid #e2e8f0;">Page ${pageNum}</span></div>`;
+        }
+
+        for (const line of lines) {
+          totalTextChars += line.text.length;
+          if (line.isHeading) {
+            pageHtml += `<h2 style="font-size: 1.35rem; font-weight: 700; color: #0f172a; margin-top: 1.25rem; margin-bottom: 0.5rem; line-height: 1.3;">${escapeHtml(line.text)}</h2>`;
+          } else {
+            pageHtml += `<p style="margin-bottom: 0.75rem; line-height: 1.65; color: #334155; font-size: 1rem;">${escapeHtml(line.text)}</p>`;
+          }
+        }
+
+        fullHtml += pageHtml;
+      }
+
+      // If scanned document with almost no extractable text, use OCR
+      if (totalTextChars < 40) {
+        showToast('Running AI OCR on scanned pages...');
         const { createWorker } = await import('tesseract.js');
         const worker = await createWorker('eng', 1, {
           logger: m => {
@@ -1505,27 +1729,34 @@ function PDFEditorInner() {
             }
           }
         });
-        
+
         const container = canvasContainerRef.current;
         if (container) {
           const canvases = container.querySelectorAll('canvas');
-          let ocrText = '';
+          let ocrHtml = '';
           for (let i = 0; i < canvases.length; i++) {
             const dataUrl = canvases[i].toDataURL('image/png');
             const { data } = await worker.recognize(dataUrl);
-            ocrText += `<h3>--- Page ${i + 1} ---</h3><div style="font-family: monospace; white-space: pre-wrap; font-size: 14px; line-height: 1.6; margin-bottom: 2rem;">${data.text}</div>`;
+            ocrHtml += `<div style="text-align: center; margin: 2rem 0 1rem; border-top: 1px dashed #cbd5e1; padding-top: 0.5rem;"><span style="font-size: 11px; font-weight: 600; color: #94a3b8;">Page ${i + 1}</span></div>`;
+            const paras = data.text.split(/\n\s*\n/);
+            paras.forEach((p: string) => {
+              if (p.trim()) {
+                ocrHtml += `<p style="margin-bottom: 0.75rem; line-height: 1.6;">${escapeHtml(p.trim())}</p>`;
+              }
+            });
           }
-          finalExtractedText = ocrText;
+          fullHtml = ocrHtml;
         }
         await worker.terminate();
       }
 
-      if (finalExtractedText.trim().length > 0) {
-        localStorage.setItem('zen_extracted_text', finalExtractedText);
-        showToast('Document converted to editable format!');
-        router.push('/editor/document?doc=Extracted_Document.docx');
+      if (fullHtml.trim().length > 0) {
+        localStorage.setItem('zen_extracted_text', fullHtml);
+        showToast('PDF successfully converted to editable document!');
+        const targetDocName = docTitle.replace(/\.pdf$/i, '.docx');
+        router.push(`/editor/document?doc=${encodeURIComponent(targetDocName)}`);
       } else {
-        showToast('Could not extract any text from this document.');
+        showToast('Could not extract text from this document.');
       }
     } catch (err) {
       console.error('Extraction error:', err);
@@ -1804,9 +2035,14 @@ function PDFEditorInner() {
                     <>
                       <Check className="w-3 h-3 text-emerald-500" />
                       <span className="text-zinc-400">Saved</span>
-                      <span className="hidden md:inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
-                        <PenTool className="w-2.5 h-2.5" /> Editable
-                      </span>
+                      <button
+                        onClick={handleEditDocument}
+                        disabled={isExtracting}
+                        className="hidden md:inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 cursor-pointer transition-colors"
+                        title="Convert entire PDF into fully editable Google Docs / Word flow document"
+                      >
+                        <PenTool className="w-2.5 h-2.5" /> Convert to Doc
+                      </button>
                     </>
                   )}
                 </span>
@@ -1819,6 +2055,10 @@ function PDFEditorInner() {
                     <button className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">File</button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="dark:bg-[#18181b] dark:border-zinc-800 text-xs">
+                    <DropdownMenuItem onClick={handleEditDocument} className="cursor-pointer text-emerald-600 dark:text-emerald-400 font-medium">
+                      <FileText className="w-3.5 h-3.5 mr-2" /> Convert to Editable Doc (Word Flow)
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSaveDocument}>
                       <Save className="w-3.5 h-3.5 mr-2 text-orange-500" /> Save Document (Ctrl+S)
                     </DropdownMenuItem>
@@ -1845,6 +2085,27 @@ function PDFEditorInner() {
 
           {/* Right side: Clean Google Docs Actions */}
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleEditDocument}
+              disabled={isExtracting}
+              className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-md shadow-xs gap-1.5 transition-all cursor-pointer"
+              title="Convert this PDF into a fully editable Google Docs / Word format"
+            >
+              {isExtracting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Converting ({ocrProgress}%)...</span>
+                </>
+              ) : (
+                <>
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Convert to Editable Doc</span>
+                  <span className="sm:hidden">Convert</span>
+                </>
+              )}
+            </Button>
+
             <Button
               size="sm"
               onClick={() => setShowAiModal(true)}
@@ -1966,6 +2227,13 @@ function PDFEditorInner() {
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
+            <button
+              onClick={() => setZoom(100)}
+              className="px-2 h-6 rounded text-[11px] font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"
+              title="Fit to Actual Size (100%)"
+            >
+              Fit
+            </button>
           </div>
 
           <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
@@ -2007,6 +2275,15 @@ function PDFEditorInner() {
             >
               <TextSelect className="w-3.5 h-3.5" />
               <span>Text Select</span>
+            </button>
+            <button 
+              onClick={handleEditDocument}
+              disabled={isExtracting}
+              className="h-7 px-2.5 rounded flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800/60 transition-colors cursor-pointer"
+              title="Convert entire PDF to fully editable Word / Google Docs flow document"
+            >
+              {isExtracting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" /> : <FileText className="w-3.5 h-3.5 text-emerald-600" />}
+              <span>Convert to Doc</span>
             </button>
           </div>
 
@@ -2534,38 +2811,6 @@ function PDFEditorInner() {
         </div>
       </div>
 
-      {/* Floating Zoom & Page Controls (Fixed to screen viewport, rock-solid instant controls) */}
-      <div className="fixed bottom-6 right-6 z-40 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 rounded-full shadow-xl flex items-center p-1.5 gap-1 select-none pointer-events-auto">
-        <button 
-          onClick={() => handleZoom(-15)} 
-          className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"
-          title="Zoom Out (-15%)"
-        >
-          <ZoomOut className="w-4 h-4" />
-        </button>
-        <button 
-          onClick={handleResetZoom}
-          className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 w-11 text-center select-none hover:text-orange-600 cursor-pointer transition-colors"
-          title="Reset Zoom to 100%"
-        >
-          {zoom}%
-        </button>
-        <button 
-          onClick={() => handleZoom(15)} 
-          className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"
-          title="Zoom In (+15%)"
-        >
-          <ZoomIn className="w-4 h-4" />
-        </button>
-        <div className="w-px h-4 bg-zinc-300 dark:bg-zinc-600 mx-1" />
-        <button 
-          onClick={() => setZoom(100)} 
-          className="px-2.5 h-7 rounded-full text-[10px] font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"
-          title="Fit to Actual Size (100%)"
-        >
-          Fit Size
-        </button>
-      </div>
 
       {/* Signature Modal */}
       {showSignModal && (

@@ -177,13 +177,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Optional sample loader
-  const handleLoadSampleReceipt = () => {
-    const sample = ZenFileSyncService.loadSampleReceipt();
-    loadDocs();
-    showToast('Loaded Obafemi Awolowo University Receipt');
-    openDocument(sample);
-  };
 
   const handleToggleStar = (e: React.MouseEvent, docId: string) => {
     e.stopPropagation();
@@ -592,12 +585,6 @@ export default function DashboardPage() {
                 Create Spreadsheet
               </button>
 
-              <button 
-                onClick={handleLoadSampleReceipt}
-                className="px-3.5 py-2 rounded-lg border border-rose-300 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-xs font-medium transition-colors"
-              >
-                Open Demo OAU Receipt
-              </button>
             </div>
           </div>
         ) : viewMode === 'list' ? (

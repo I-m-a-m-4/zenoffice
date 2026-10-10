@@ -23,22 +23,6 @@ export interface ZenDocumentItem {
 const LOCAL_STORAGE_KEY = 'zenoffice_user_documents';
 const CLOUD_SYNC_ENABLED_KEY = 'zenoffice_cloud_sync_enabled';
 
-// Optional demo receipt if user wants to inspect sample
-export const DEMO_OAU_RECEIPT: ZenDocumentItem = {
-  id: 'oau-receipt-2026',
-  name: 'school fee receipt.pdf',
-  type: 'pdf',
-  location: 'Downloads',
-  creator: 'Me',
-  modified: '10/09/2026',
-  size: '52 KB',
-  sizeBytes: 53248,
-  isLocal: true,
-  isStarred: true,
-  isDeleted: false,
-  syncedToCloud: false,
-};
-
 // IndexedDB helper for robust, quota-free storage of large file binaries (PDFs, spreadsheets, etc.)
 const IDB_NAME = 'zenoffice_files_db';
 const IDB_STORE = 'files_data';
@@ -143,7 +127,9 @@ export const ZenFileSyncService = {
     if (typeof window === 'undefined') return [];
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
+      const items: ZenDocumentItem[] = stored ? JSON.parse(stored) : [];
+      // Filter out any legacy demo receipt if previously stored
+      return items.filter(d => d.id !== 'oau-receipt-2026' && !d.name?.toLowerCase().includes('school fee receipt'));
     } catch {
       return [];
     }
@@ -274,33 +260,6 @@ export const ZenFileSyncService = {
       const current = this.getAllStored();
       this.saveAllDocuments([synth, ...current]);
       return synth;
-    }
-
-    // 4. Sample receipt fallback
-    const isSchoolFeeReceipt = decoded.toLowerCase().includes('school fee receipt') || decoded.toLowerCase().includes('school-fee-receipt');
-    if (isSchoolFeeReceipt) {
-      let sampleData = finalData;
-      if (!sampleData) {
-        try {
-          const res = await fetch('/samples/school-fee-receipt.pdf');
-          if (res.ok) {
-            const blob = await res.blob();
-            sampleData = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-            if (sampleData) {
-              await setFileBinaryInIDB('school fee receipt.pdf', sampleData);
-              await setFileBinaryInIDB('school-fee-receipt.pdf', sampleData);
-            }
-          }
-        } catch {}
-      }
-      return {
-        ...DEMO_OAU_RECEIPT,
-        fileData: sampleData || undefined,
-      };
     }
 
     return null;
@@ -458,17 +417,6 @@ export const ZenFileSyncService = {
     const current = this.getAllStored();
     this.saveAllDocuments([newDoc, ...current]);
     return newDoc;
-  },
-
-  // Load the sample OAU receipt if user requests it
-  loadSampleReceipt(): ZenDocumentItem {
-    const current = this.getAllStored();
-    const existing = current.find(d => d.id === DEMO_OAU_RECEIPT.id);
-    if (!existing) {
-      this.saveAllDocuments([DEMO_OAU_RECEIPT, ...current]);
-      return DEMO_OAU_RECEIPT;
-    }
-    return existing;
   },
 
   // Toggle starred status
