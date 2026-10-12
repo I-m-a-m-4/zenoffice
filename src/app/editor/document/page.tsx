@@ -28,6 +28,7 @@ import {
   dataUrlToArrayBuffer 
 } from '@/lib/docx-service';
 import { ZenAiDialog } from '@/components/shared/zen-ai-dialog';
+import { markFileSavedLocally } from '@/components/shared/download-watcher';
 
 const FONT_FAMILIES = [
   'Times New Roman',
@@ -222,6 +223,36 @@ function DocumentEditorInner() {
                 });
                 handleContentInput();
               }
+            }
+          } else if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+            try {
+              const { readFile } = await import('@tauri-apps/plugin-fs');
+              const { downloadDir } = await import('@tauri-apps/api/path');
+              let targetPath = docParam;
+              if (!targetPath.includes('/') && !targetPath.includes('\\')) {
+                const dlDir = await downloadDir();
+                targetPath = `${dlDir}${dlDir.endsWith('\\') || dlDir.endsWith('/') ? '' : '/'}${docParam}`;
+              }
+              const fileBytes = await readFile(targetPath);
+              if (active && fileBytes && fileBytes.length > 0 && editorRef.current) {
+                const fileNameOnly = targetPath.split(/[/\\]/).pop() || 'Document.docx';
+                setDocTitle(fileNameOnly);
+                
+                try {
+                  const res = await renderDocxToElement(fileBytes.buffer, editorRef.current);
+                  setTotalPages(res.pageCount);
+                  handleContentInput();
+                  showToast(`Opened ${fileNameOnly}`);
+                } catch (previewErr) {
+                  const result = await parseDocxToHtml(fileBytes.buffer);
+                  if (active && editorRef.current) {
+                    editorRef.current.innerHTML = result.html || '<p><br/></p>';
+                    handleContentInput();
+                  }
+                }
+              }
+            } catch (tauriFsErr) {
+              console.warn('Could not read docx from disk in Tauri', tauriFsErr);
             }
           }
         } catch (err) {
@@ -537,6 +568,7 @@ function DocumentEditorInner() {
   // Multi-format file export
   const handleExportWord = () => {
     const htmlContent = editorRef.current?.innerHTML || '';
+    markFileSavedLocally(docTitle);
     exportHtmlToWordDocument(htmlContent, docTitle);
     showToast(`Exported ${docTitle} as Word Document`);
     setShowExportMenu(false);
@@ -671,7 +703,7 @@ function DocumentEditorInner() {
 
           {/* Quick Save Button */}
           <Button
-            onClick={handleSaveDocument}
+            onClick={() => handleSaveDocument(false)}
             disabled={isSaving}
             variant="outline"
             size="sm"

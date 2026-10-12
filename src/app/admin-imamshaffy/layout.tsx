@@ -10,8 +10,6 @@ import { Button } from '@/components/ui/button';
 import { getAuth, signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import Confetti from '@/components/shared/confetti';
-
-import Admin2FAGate from '@/components/admin/admin-2fa-gate';
 import { useTheme } from 'next-themes';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -346,9 +344,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Page content — extra bottom padding on mobile to clear the bottom nav */}
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 overflow-y-auto pb-24 md:pb-8">
-          <Admin2FAGate>
-            {children}
-          </Admin2FAGate>
+          {children}
         </main>
 
         {/* Mobile Bottom Navigation — four primary links plus a "More" sheet.

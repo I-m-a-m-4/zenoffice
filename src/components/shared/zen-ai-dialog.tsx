@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  Sparkles, X, Key, BookOpen, HelpCircle, 
+  Sparkles, X, BookOpen, HelpCircle, 
   FileCheck, Quote, Send, Loader2, Copy, 
-  Check, Settings, GraduationCap, ArrowRight, Table
+  Check, GraduationCap, Table
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -31,28 +31,7 @@ export function ZenAiDialog({
   const [result, setResult] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Zen API Key state (saved in localStorage for convenience)
-  const [zenApiKey, setZenApiKey] = useState('');
-  const [showKeyConfig, setShowKeyConfig] = useState(false);
-  const [keySaved, setKeySaved] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedKey = localStorage.getItem('zenoffice_zen_api_key') || '';
-      setZenApiKey(savedKey);
-    }
-  }, []);
-
   if (!isOpen) return null;
-
-  const handleSaveKey = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('zenoffice_zen_api_key', zenApiKey.trim());
-      setKeySaved(true);
-      setTimeout(() => setKeySaved(false), 2500);
-      setShowKeyConfig(false);
-    }
-  };
 
   const handleRunAction = async (actionType: 'explain' | 'quiz' | 'summarize' | 'cite' | 'polish' | 'formula' | 'chat', customQuery?: string) => {
     setSelectedAction(actionType);
@@ -64,30 +43,22 @@ export function ZenAiDialog({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-zen-key': zenApiKey.trim(),
         },
         body: JSON.stringify({
           action: actionType,
           prompt: customQuery || prompt,
           documentText: documentContext,
-          customApiKey: zenApiKey.trim(),
-          model: 'llama-3.3-70b-versatile',
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        if (data.error === 'MISSING_API_KEY') {
-          setShowKeyConfig(true);
-          setResult('⚠️ Please provide your free Groq API key (starts with gsk_...) in the settings above to unlock unlimited student study tools.');
-        } else {
-          setResult(`Error: ${data.message || 'Failed to generate response'}`);
-        }
+        setResult(`Error: ${data.message || 'Unable to generate response. Please try again.'}`);
       } else {
         setResult(data.result);
       }
     } catch (err: any) {
-      setResult(`Network error: ${err.message}`);
+      setResult(`Network error: ${err.message || 'Failed to connect to Zen AI engine'}`);
     } finally {
       setLoading(false);
     }
@@ -101,8 +72,8 @@ export function ZenAiDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-white dark:bg-[#121214] border border-zinc-300 dark:border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-zinc-900 dark:text-zinc-100">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 select-none">
+      <div className="bg-white dark:bg-[#121214] border border-zinc-300 dark:border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-zinc-900 dark:text-zinc-100 font-sans">
         
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-[#0c0c0e]">
@@ -125,57 +96,14 @@ export function ZenAiDialog({
 
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => setShowKeyConfig(!showKeyConfig)}
-              className="p-1.5 rounded-lg text-zinc-500 hover:text-orange-500 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
-              title="Zen AI Key Settings"
-            >
-              <Key className="w-4 h-4" />
-            </button>
-            <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+              title="Close"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
-
-        {/* API Key Configuration Drawer */}
-        {showKeyConfig && (
-          <div className="p-4 bg-orange-50/50 dark:bg-orange-950/30 border-b border-orange-200 dark:border-orange-900/60 text-xs">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="font-semibold text-orange-900 dark:text-orange-200 flex items-center gap-1.5">
-                <Key className="w-3.5 h-3.5 text-orange-600" /> Zen AI Custom Key
-              </span>
-              <button 
-                onClick={() => setZenApiKey('')}
-                className="text-[11px] text-orange-600 hover:underline"
-              >
-                Clear Key
-              </button>
-            </div>
-            <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mb-2 leading-relaxed">
-              Enter your Zen AI Custom Access Key below to unlock unlimited rate limits.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={zenApiKey}
-                onChange={(e) => setZenApiKey(e.target.value)}
-                placeholder="zen_..."
-                className="flex-1 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 font-mono text-xs outline-none focus:border-orange-500 text-zinc-900 dark:text-white"
-              />
-              <Button 
-                size="sm" 
-                onClick={handleSaveKey}
-                className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-3"
-              >
-                {keySaved ? <Check className="w-3.5 h-3.5 mr-1 text-white" /> : null}
-                {keySaved ? 'Saved!' : 'Save Key'}
-              </Button>
-            </div>
-          </div>
-        )}
 
         {/* Action Pills for Students */}
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-2 shrink-0 bg-white dark:bg-[#121214]">
@@ -284,7 +212,7 @@ export function ZenAiDialog({
                 </div>
               </div>
 
-              <div className="text-xs leading-relaxed text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap font-sans space-y-2">
+              <div className="text-xs leading-relaxed text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap font-sans space-y-2 select-text">
                 {result}
               </div>
             </div>

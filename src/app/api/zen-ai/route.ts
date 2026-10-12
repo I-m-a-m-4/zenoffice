@@ -3,27 +3,26 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { prompt, action, documentText, customApiKey, model = 'llama-3.3-70b-versatile' } = body;
+    const { prompt, action, documentText } = body;
 
-    // 1. Resolve API key (priority: customApiKey from student input -> header -> env)
-    const apiKey = customApiKey?.trim() || req.headers.get('x-zen-key') || process.env.GROQ_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
         { 
-          error: 'MISSING_API_KEY', 
-          message: 'Zen AI Custom Key is required. You can enter your free key directly in the AI Assistant settings or set GROQ_API_KEY in the environment.' 
+          error: 'CONFIGURATION_ERROR', 
+          message: 'Zen AI service is currently unavailable. Please contact administrator.' 
         }, 
-        { status: 401 }
+        { status: 503 }
       );
     }
 
-    // 2. Build student-focused system prompt and user instruction
-    let systemInstruction = 'You are ZenOffice Academic AI, a fast, knowledgeable study and document co-pilot built specifically for students and academic researchers. Explain concepts clearly, accurately, and concisely. Use markdown formatting with bullet points and bold headers where appropriate.';
+    // 1. Build student-focused system prompt and user instruction
+    const systemInstruction = 'You are ZenOffice Academic AI, a fast, knowledgeable study and document co-pilot built specifically for students and academic researchers. Explain concepts clearly, accurately, and concisely. Use markdown formatting with bullet points, clear step-by-step points, and bold headers where appropriate.';
 
     let userInstruction = prompt || '';
 
-    // Specialized student actions
+    // Specialized student and academic actions
     if (action === 'explain') {
       userInstruction = `Explain the following academic document or lecture notes in simple, intuitive terms. Break down complex terminology, formulas, and concepts so a student preparing for an exam can easily understand them:\n\n${documentText ? `--- DOCUMENT CONTENT ---\n${documentText.slice(0, 8000)}\n--- END CONTENT ---\n\n` : ''}${prompt ? `Student Question: ${prompt}` : 'Please provide a comprehensive concept breakdown.'}`;
     } else if (action === 'quiz') {
@@ -42,40 +41,44 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 3. Call Groq OpenAI-compatible chat completion endpoint
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    // 2. Call Google Gemini 3.6 Flash
+    const model = 'gemini-3.6-flash';
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: model,
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: userInstruction }
+        systemInstruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        contents: [
+          {
+            parts: [{ text: userInstruction }]
+          }
         ],
-        temperature: 0.4,
-        max_tokens: 2048,
-      }),
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 2048,
+        }
+      })
     });
 
-    if (!groqResponse.ok) {
-      const errorText = await groqResponse.text();
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text();
       console.error('Zen AI Engine error:', errorText);
       return NextResponse.json(
-        { error: 'ZEN_AI_API_ERROR', message: `Zen AI Engine error (${groqResponse.status}): ${errorText}` },
-        { status: groqResponse.status }
+        { error: 'ZEN_AI_API_ERROR', message: 'The AI engine was unable to complete the request. Please try again.' },
+        { status: geminiResponse.status }
       );
     }
 
-    const data = await groqResponse.json();
-    const resultText = data.choices?.[0]?.message?.content || 'No response generated.';
+    const data = await geminiResponse.json();
+    const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
 
     return NextResponse.json({
       result: resultText,
-      model: data.model || model,
-      usage: data.usage,
+      model,
     });
   } catch (error: any) {
     console.error('Zen AI error:', error);

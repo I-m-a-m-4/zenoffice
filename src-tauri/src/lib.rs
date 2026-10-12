@@ -1,8 +1,6 @@
 mod win_grid;
 mod watcher;
 
-#[cfg(desktop)]
-use tauri::Manager;
 
 #[cfg(desktop)]
 use tauri::{menu::{Menu, MenuItem}, tray::{TrayIconBuilder, TrayIconEvent}};
@@ -33,6 +31,11 @@ fn validate_subscription(access_level: String, trial_expires_at: i64) -> bool {
     trial_expires_at > now
 }
 
+#[tauri::command]
+fn mark_file_saved_by_app(path: String) {
+    watcher::ignore_path(path);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   #[cfg(target_os = "android")]
@@ -50,7 +53,8 @@ pub fn run() {
         calculate_royalty, 
         validate_subscription,
         win_grid::list_desktop_windows,
-        win_grid::read_desktop_grid
+        win_grid::read_desktop_grid,
+        mark_file_saved_by_app
     ])
     .plugin(tauri_plugin_sql::Builder::default().build())
     .plugin(tauri_plugin_fs::init())

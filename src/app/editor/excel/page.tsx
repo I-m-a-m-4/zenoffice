@@ -13,6 +13,7 @@ import {
 import * as XLSX from 'xlsx';
 import { ZenFileSyncService, ZenDocumentItem } from '@/lib/firebase-sync';
 import { ZenAiDialog } from '@/components/shared/zen-ai-dialog';
+import { markFileSavedLocally } from '@/components/shared/download-watcher';
 
 const COLS = 26; // A to Z
 const ROWS = 100;
@@ -87,6 +88,44 @@ export default function SpreadsheetEditor() {
             }
           } catch (e) {
             console.error("Failed to parse Excel file", e);
+          }
+        } else if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+          try {
+            const { readFile } = await import('@tauri-apps/plugin-fs');
+            const { downloadDir } = await import('@tauri-apps/api/path');
+            let targetPath = docParam;
+            if (!targetPath.includes('/') && !targetPath.includes('\\')) {
+              const dlDir = await downloadDir();
+              targetPath = `${dlDir}${dlDir.endsWith('\\') || dlDir.endsWith('/') ? '' : '/'}${docParam}`;
+            }
+            const fileBytes = await readFile(targetPath);
+            if (fileBytes && fileBytes.length > 0) {
+              const workbook = XLSX.read(fileBytes, { type: 'array' });
+              if (workbook.SheetNames.length > 0) {
+                const firstSheetName = workbook.SheetNames[0];
+                setSheetName(firstSheetName);
+                const worksheet = workbook.Sheets[firstSheetName];
+                const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:Z100');
+                
+                const newCellData: Record<string, string> = {};
+                for (let R = range.s.r; R <= range.e.r; R++) {
+                  for (let C = range.s.c; C <= range.e.c; C++) {
+                    const cellRef = XLSX.utils.encode_cell({c: C, r: R});
+                    const cell = worksheet[cellRef];
+                    if (cell && cell.w !== undefined) {
+                      newCellData[cellRef] = cell.w.toString();
+                    } else if (cell && cell.v !== undefined) {
+                      newCellData[cellRef] = cell.v.toString();
+                    }
+                  }
+                }
+                setCellData(newCellData);
+                const fileNameOnly = targetPath.split(/[/\\]/).pop() || 'Spreadsheet.xlsx';
+                setDocTitle(fileNameOnly);
+              }
+            }
+          } catch (tauriFsErr) {
+            console.warn('Could not read Excel file from disk in Tauri', tauriFsErr);
           }
         }
       }
@@ -212,6 +251,9 @@ export default function SpreadsheetEditor() {
           filters: [{ name: 'Excel Spreadsheet (*.xlsx)', extensions: ['xlsx'] }]
         });
         if (filePath) {
+          markFileSavedLocally(filePath);
+          const fn = filePath.split(/[/\\]/).pop();
+          if (fn) markFileSavedLocally(fn);
           await writeFile(filePath, bytes);
           showToast(`Exported "${filename}" successfully!`);
           return;
@@ -224,6 +266,7 @@ export default function SpreadsheetEditor() {
       const blob = new Blob([bytes as unknown as BlobPart], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
+      markFileSavedLocally(filename);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

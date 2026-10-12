@@ -385,7 +385,7 @@ function MarkdownEditorInner() {
             {/* Quick Menu */}
             <div className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400 -ml-1 mt-0.5">
               <button onClick={() => fileInputRef.current?.click()} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Open</button>
-              <button onClick={handleSaveDocument} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Save</button>
+              <button onClick={() => handleSaveDocument(false)} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Save</button>
               <button onClick={handleExportMarkdown} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Export .md</button>
               <button onClick={handleExportHtml} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Export HTML</button>
               <button onClick={() => window.print()} className="px-2 py-0.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100">Print / PDF</button>

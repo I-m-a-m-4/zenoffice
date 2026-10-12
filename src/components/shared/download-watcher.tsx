@@ -48,21 +48,38 @@ export function DownloadWatcher() {
     (async () => {
       try {
         const { listen } = await import('@tauri-apps/api/event');
-        unlistenTauriEvent = await listen<string>('downloaded-file', (event) => {
+        unlistenTauriEvent = await listen<any>('downloaded-file', (event) => {
           if (noMoreNotifications) return;
-          const fullPath = event.payload;
-          const fileName = fullPath.split(/[/\\]/).pop() || fullPath;
+          const payload = event.payload;
+          let fullPath = '';
+          let fileName = '';
+          let fileSize: string | undefined = undefined;
+
+          if (typeof payload === 'string') {
+            fullPath = payload;
+            fileName = fullPath.split(/[/\\]/).pop() || fullPath;
+          } else if (payload && typeof payload === 'object') {
+            fullPath = payload.path || '';
+            fileName = payload.name || fullPath.split(/[/\\]/).pop() || '';
+            fileSize = payload.size;
+          }
+
+          if (!fileName) return;
+          if (dismissedFilesRef.current.has(fileName) || dismissedFilesRef.current.has(fullPath)) return;
+          dismissedFilesRef.current.add(fileName);
+
           const lower = fileName.toLowerCase();
           let type: DownloadNotificationItem['type'] = 'other';
-          if (lower.endsWith('.zip') || lower.endsWith('.rar') || lower.endsWith('.tar.gz')) type = 'zip';
+          if (lower.endsWith('.zip') || lower.endsWith('.rar') || lower.endsWith('.7z') || lower.endsWith('.tar.gz')) type = 'zip';
           else if (lower.endsWith('.pdf')) type = 'pdf';
-          else if (lower.endsWith('.docx')) type = 'docx';
-          else if (lower.endsWith('.xlsx')) type = 'xlsx';
+          else if (lower.endsWith('.docx') || lower.endsWith('.doc')) type = 'docx';
+          else if (lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv')) type = 'xlsx';
           else if (lower.endsWith('.md')) type = 'md';
 
           setDownloadItem({
             name: fileName,
-            path: fullPath,
+            path: fullPath || undefined,
+            size: fileSize,
             type
           });
           setIsVisible(true);
@@ -70,72 +87,9 @@ export function DownloadWatcher() {
       } catch {}
     })();
 
-    // 3. In Tauri desktop mode: poll the Downloads folder for new files
-    let intervalId: any = null;
-    let isTauriEnv = false;
-
-    async function initTauriWatcher() {
-      try {
-        const { downloadDir } = await import('@tauri-apps/api/path');
-        const { readDir, stat } = await import('@tauri-apps/plugin-fs');
-        isTauriEnv = true;
-        const downloadsPath = await downloadDir();
-
-        // Check recent files every 4 seconds
-        intervalId = setInterval(async () => {
-          if (noMoreNotifications) return;
-          try {
-            const entries = await readDir(downloadsPath);
-            const now = Date.now();
-
-            for (const entry of entries) {
-              if (entry.name && !entry.isDirectory) {
-                const lower = entry.name.toLowerCase();
-                const isRelevant = lower.endsWith('.zip') || lower.endsWith('.rar') || lower.endsWith('.tar.gz') || lower.endsWith('.pdf') || lower.endsWith('.docx') || lower.endsWith('.xlsx') || lower.endsWith('.md');
-                
-                if (isRelevant && !dismissedFilesRef.current.has(entry.name)) {
-                  try {
-                    const fileStat = await stat(`${downloadsPath}/${entry.name}`);
-                    // If file was modified/created in the last 15 seconds
-                    const mtime = fileStat.mtime ? new Date(fileStat.mtime).getTime() : 0;
-                    if (now - mtime < 15000 && mtime > 0) {
-                      dismissedFilesRef.current.add(entry.name);
-                      
-                      let type: DownloadNotificationItem['type'] = 'other';
-                      if (lower.endsWith('.zip') || lower.endsWith('.rar') || lower.endsWith('.tar.gz')) type = 'zip';
-                      else if (lower.endsWith('.pdf')) type = 'pdf';
-                      else if (lower.endsWith('.docx')) type = 'docx';
-                      else if (lower.endsWith('.xlsx')) type = 'xlsx';
-                      else if (lower.endsWith('.md')) type = 'md';
-
-                      const sizeMB = fileStat.size ? `${(fileStat.size / (1024 * 1024)).toFixed(1)} MB` : undefined;
-
-                      setDownloadItem({
-                        name: entry.name,
-                        size: sizeMB,
-                        path: `${downloadsPath}/${entry.name}`,
-                        type
-                      });
-                      setIsVisible(true);
-                      break;
-                    }
-                  } catch {}
-                }
-              }
-            }
-          } catch {}
-        }, 6000);
-      } catch {
-        // Not in Tauri or plugin not available
-      }
-    }
-
-    initTauriWatcher();
-
     return () => {
       window.removeEventListener('zenoffice-file-downloaded' as any, handleDownloadEvent);
       if (unlistenTauriEvent) unlistenTauriEvent();
-      if (intervalId) clearInterval(intervalId);
     };
   }, [noMoreNotifications]);
 
@@ -160,16 +114,20 @@ export function DownloadWatcher() {
     if (!downloadItem) return;
     setIsVisible(false);
 
+    // Prefer full file path so editor can open directly from disk
+    const targetDoc = downloadItem.path || downloadItem.name;
+    const encoded = encodeURIComponent(targetDoc);
+
     if (downloadItem.type === 'zip') {
-      router.push(`/tools/decompress?file=${encodeURIComponent(downloadItem.name)}`);
+      router.push(`/tools/decompress?file=${encoded}`);
     } else if (downloadItem.type === 'pdf') {
-      router.push(`/editor/pdf?doc=${encodeURIComponent(downloadItem.name)}`);
+      router.push(`/editor/pdf?doc=${encoded}`);
     } else if (downloadItem.type === 'md') {
-      router.push(`/editor/markdown?doc=${encodeURIComponent(downloadItem.name)}`);
+      router.push(`/editor/markdown?doc=${encoded}`);
     } else if (downloadItem.type === 'docx') {
-      router.push(`/editor/document?doc=${encodeURIComponent(downloadItem.name)}`);
+      router.push(`/editor/document?doc=${encoded}`);
     } else if (downloadItem.type === 'xlsx') {
-      router.push(`/editor/excel?doc=${encodeURIComponent(downloadItem.name)}`);
+      router.push(`/editor/excel?doc=${encoded}`);
     } else {
       router.push('/dashboard');
     }
@@ -294,3 +252,16 @@ export function notifyFileDownloaded(item: DownloadNotificationItem) {
     window.dispatchEvent(new CustomEvent('zenoffice-file-downloaded', { detail: item }));
   }
 }
+
+// Global helper to mark a file as saved by ZenOffice so the background watcher doesn't alert on it
+export async function markFileSavedLocally(filePathOrName: string) {
+  if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('mark_file_saved_by_app', { path: filePathOrName });
+    } catch (e) {
+      // Ignored
+    }
+  }
+}
+

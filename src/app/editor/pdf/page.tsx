@@ -28,7 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ZenFileSyncService, ZenDocumentItem } from '@/lib/firebase-sync';
 import { ZenAiDialog } from '@/components/shared/zen-ai-dialog';
-import { notifyFileDownloaded } from '@/components/shared/download-watcher';
+import { markFileSavedLocally } from '@/components/shared/download-watcher';
 import { getAuth } from 'firebase/auth';
 import * as XLSX from 'xlsx';
 
@@ -290,7 +290,12 @@ function PDFEditorInner() {
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        handleSaveDocument();
+        handleSaveDocumentRef.current?.(false);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        const searchInput = document.getElementById('pdf-toolbar-search') as HTMLInputElement | null;
+        searchInput?.focus();
       }
       if (e.key === 'Escape') {
         setReadingMode(false);
@@ -330,6 +335,31 @@ function PDFEditorInner() {
               setPdfBlobUrl(found.fileData);
             }
           } else {
+            setPdfBlobUrl(null);
+            setPdfDataBytes(null);
+          }
+        } else if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+          // If not in ZenFileSyncService and running on desktop, load directly from disk!
+          try {
+            const { readFile } = await import('@tauri-apps/plugin-fs');
+            const { downloadDir } = await import('@tauri-apps/api/path');
+            let targetPath = docParam;
+            if (!targetPath.includes('/') && !targetPath.includes('\\')) {
+              const dlDir = await downloadDir();
+              targetPath = `${dlDir}${dlDir.endsWith('\\') || dlDir.endsWith('/') ? '' : '/'}${docParam}`;
+            }
+            const fileBytes = await readFile(targetPath);
+            if (!active) return;
+            if (fileBytes && fileBytes.length > 0) {
+              const blob = new Blob([fileBytes], { type: 'application/pdf' });
+              const blobUrl = URL.createObjectURL(blob);
+              setPdfBlobUrl(blobUrl);
+              setPdfDataBytes(fileBytes);
+              const fileNameOnly = targetPath.split(/[/\\]/).pop() || 'Document.pdf';
+              setDocTitle(fileNameOnly);
+            }
+          } catch (fsErr) {
+            console.warn('Could not read PDF directly from disk in Tauri', fsErr);
             setPdfBlobUrl(null);
             setPdfDataBytes(null);
           }
@@ -710,7 +740,7 @@ function PDFEditorInner() {
                 }
               };
 
-              // Click to inline edit or use active tool
+              // Click or mousedown to inline edit or use active tool
               const handleStartEdit = (ev: MouseEvent) => {
                 ev.stopPropagation();
 
@@ -732,13 +762,27 @@ function PDFEditorInner() {
                   return;
                 }
 
+                if (span.getAttribute('contenteditable') === 'true') {
+                  // Already in edit mode: let browser handle typing and selection
+                  return;
+                }
+
+                // Backup original canvas pixels under this text box if not already edited
+                if (context && span.dataset.edited !== 'true') {
+                  try {
+                    (span as any)._savedCanvasData = context.getImageData(left - 1, top - 1, itemWidth + 4, itemHeight + 4);
+                  } catch {
+                    (span as any)._savedCanvasData = null;
+                  }
+                }
+
                 // Cleanly wipe the canvas underneath this text so old letters never bleed through
                 if (context) {
                   context.fillStyle = '#ffffff';
-                  context.fillRect(left - 1, top - 1, itemWidth + 2, itemHeight + 2);
+                  context.fillRect(left - 1, top - 1, itemWidth + 4, itemHeight + 4);
                 }
 
-                // Standard Edit Mode - keep background transparent to prevent white-box clipping of adjacent text
+                // Standard Edit Mode
                 span.contentEditable = 'true';
                 span.style.color = '#18181b';
                 span.style.backgroundColor = 'transparent';
@@ -750,38 +794,93 @@ function PDFEditorInner() {
                 span.style.zIndex = '50';
                 span.focus();
 
-                // Select text contents so user can replace or type immediately
+                // Position caret at clicked coordinates rather than selecting the entire sentence
                 try {
-                  const range = document.createRange();
-                  range.selectNodeContents(span);
-                  const sel = window.getSelection();
-                  sel?.removeAllRanges();
-                  sel?.addRange(range);
+                  let range: Range | null = null;
+                  if (document.caretRangeFromPoint) {
+                    range = document.caretRangeFromPoint(ev.clientX, ev.clientY);
+                  } else if ((document as any).caretPositionFromPoint) {
+                    const pos = (document as any).caretPositionFromPoint(ev.clientX, ev.clientY);
+                    if (pos) {
+                      range = document.createRange();
+                      range.setStart(pos.offsetNode, pos.offset);
+                      range.collapse(true);
+                    }
+                  }
+
+                  if (range && span.contains(range.startContainer)) {
+                    const sel = window.getSelection();
+                    sel?.removeAllRanges();
+                    sel?.addRange(range);
+                  } else {
+                    // Fallback: place caret at the end of the text (NOT selecting all)
+                    const r = document.createRange();
+                    r.selectNodeContents(span);
+                    r.collapse(false);
+                    const sel = window.getSelection();
+                    sel?.removeAllRanges();
+                    sel?.addRange(r);
+                  }
                 } catch {}
               };
 
-              span.onclick = handleStartEdit;
-              span.ondblclick = handleStartEdit;
+              span.onmousedown = (ev: MouseEvent) => {
+                const currentTool = selectedToolRef.current;
+                if (currentTool === 'highlight' || currentTool === 'redact' || currentTool === 'add-text') return;
+                if (span.getAttribute('contenteditable') === 'true') return;
+                handleStartEdit(ev);
+              };
+
+              span.onclick = (ev: MouseEvent) => {
+                const currentTool = selectedToolRef.current;
+                if (currentTool === 'highlight' || currentTool === 'redact') {
+                  handleStartEdit(ev);
+                  return;
+                }
+                if (currentTool === 'add-text') return;
+                if (span.getAttribute('contenteditable') === 'true') return;
+                handleStartEdit(ev);
+              };
+
+              span.ondblclick = (ev: MouseEvent) => {
+                ev.stopPropagation();
+                if (span.getAttribute('contenteditable') !== 'true') {
+                  handleStartEdit(ev);
+                }
+                try {
+                  const sel = window.getSelection();
+                  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+                    const range = document.createRange();
+                    range.selectNodeContents(span);
+                    sel?.removeAllRanges();
+                    sel?.addRange(range);
+                  }
+                } catch {}
+              };
 
               span.oninput = () => {
                 span.dataset.edited = 'true';
+                (span as any)._savedCanvasData = null; // Changes made; keep canvas whiteout
                 setHasUnsavedChanges(true);
-                // Erase any newly expanded width area on the canvas as well
+
                 if (context) {
                   context.fillStyle = '#ffffff';
                   const curW = Math.max(itemWidth, span.scrollWidth || span.offsetWidth);
-                  context.fillRect(left - 1, top - 1, curW + 2, itemHeight + 2);
+                  context.fillRect(left - 1, top - 1, curW + 4, itemHeight + 4);
                 }
               };
 
               span.onblur = () => {
                 span.contentEditable = 'false';
                 span.style.outline = 'none';
+
                 const cleanNew = span.innerText.replace(/\u00a0/g, ' ').replace(/\r?\n/g, ' ').trim();
                 const cleanOrig = (span.dataset.originalText || '').replace(/\u00a0/g, ' ').replace(/\r?\n/g, ' ').trim();
                 const hasChanged = cleanNew !== cleanOrig;
+
                 if (hasChanged) {
                   span.dataset.edited = 'true';
+                  (span as any)._savedCanvasData = null;
                   span.style.color = '#18181b';
                   span.style.backgroundColor = 'transparent';
                   span.style.padding = '0px';
@@ -799,8 +898,24 @@ function PDFEditorInner() {
                   setRedoStack([]);
                   showToast('Document text updated! Click Save to keep changes.');
                 } else {
-                  span.dataset.edited = 'false';
-                  span.style.color = 'transparent';
+                  // No text change made: restore original canvas pixels if available
+                  let restored = false;
+                  if ((span as any)._savedCanvasData && context) {
+                    try {
+                      context.putImageData((span as any)._savedCanvasData, left - 1, top - 1);
+                      restored = true;
+                    } catch {}
+                    (span as any)._savedCanvasData = null;
+                  }
+
+                  if (restored) {
+                    span.dataset.edited = 'false';
+                    span.style.color = 'transparent';
+                  } else {
+                    // Keep text black & visible so it NEVER turns into a blank white box
+                    span.style.color = '#18181b';
+                  }
+
                   span.style.backgroundColor = selectedToolRef.current === 'fill-form' ? 'rgba(59, 130, 246, 0.12)' : 'transparent';
                   span.style.padding = '0';
                   span.style.margin = '0';
@@ -1270,14 +1385,16 @@ function PDFEditorInner() {
                 color: rgb(1, 1, 1),
               });
 
-              // Vector replacement text written directly at exact baseline
-              pdfPage.drawText(cleanText, {
-                x: pdfX,
-                y: pdfY,
-                size: fontSize,
-                font: fontToUse,
-                color: rgb(0.09, 0.09, 0.11),
-              });
+              // Vector replacement text written directly at exact baseline (if not deleted)
+              if (cleanText.length > 0) {
+                pdfPage.drawText(cleanText, {
+                  x: pdfX,
+                  y: pdfY,
+                  size: fontSize,
+                  font: fontToUse,
+                  color: rgb(0.09, 0.09, 0.11),
+                });
+              }
             }
 
             // B. Apply Signatures for this page
@@ -1445,26 +1562,24 @@ function PDFEditorInner() {
   };
 
   // Save Document Changes to Local & Cloud Sync + Update File on PC
-  const handleSaveDocument = async () => {
+  const handleSaveDocument = async (silent = false) => {
     setIsSaving(true);
-    showToast('Saving document changes...');
+    if (!silent) showToast('Saving document changes...');
     try {
       const compiled = await compileEditedPdfDocument();
       if (compiled) {
         const targetId = currentDoc?.id || docTitle;
         await ZenFileSyncService.updateDocumentContent(targetId, compiled.dataUrl);
 
-        // Update in-memory state
+        // Update in-memory state without triggering full canvas reset
         setPdfDataBytes(compiled.bytes);
-        const newBlob = new Blob([compiled.bytes as unknown as BlobPart], { type: 'application/pdf' });
-        setPdfBlobUrl(URL.createObjectURL(newBlob));
 
         if (currentDoc) {
           setCurrentDoc(prev => prev ? { ...prev, fileData: compiled.dataUrl, sizeBytes: compiled.bytes.length } : null);
         }
         setHasUnsavedChanges(false);
 
-        // Update the physical file on user's PC
+        // Update the physical file on user's PC if running in desktop app
         let savedToPc = false;
         const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
         const fileName = docTitle.endsWith('.pdf') ? docTitle : `${docTitle}.pdf`;
@@ -1482,50 +1597,47 @@ function PDFEditorInner() {
 
             if (dir) {
               const targetPath = await join(dir, fileName);
+              markFileSavedLocally(targetPath);
+              markFileSavedLocally(fileName);
               await writeFile(targetPath, compiled.bytes);
               savedToPc = true;
-              showToast(`Saved to PC: ${fileName}`);
+              if (!silent) showToast(`Saved to PC: ${fileName}`);
             }
           } catch (tauriErr) {
             console.warn('Tauri direct file write notice:', tauriErr);
           }
         }
 
-        if (!savedToPc) {
-          // In web browser (e.g. localhost): trigger direct browser download to update file on user's PC
-          const blob = new Blob([compiled.bytes as unknown as BlobPart], { type: 'application/pdf' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-          showToast(`Document saved & downloaded to PC (${fileName})!`);
-
-          notifyFileDownloaded({
-            name: fileName,
-            size: `${(compiled.bytes.length / 1024).toFixed(1)} KB`,
-            type: 'pdf'
-          });
-        } else {
-          notifyFileDownloaded({
-            name: fileName,
-            size: `${(compiled.bytes.length / 1024).toFixed(1)} KB`,
-            type: 'pdf'
-          });
+        if (!silent && !savedToPc) {
+          showToast('All changes saved to ZenOffice!');
         }
       } else {
-        showToast('No document loaded to save.');
+        if (!silent) showToast('No document loaded to save.');
       }
     } catch (err) {
       console.error('Error saving document:', err);
-      showToast('Failed to save document.');
+      if (!silent) showToast('Failed to save document.');
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Keep a ref so listeners and timers always have the latest function
+  const handleSaveDocumentRef = useRef(handleSaveDocument);
+  useEffect(() => {
+    handleSaveDocumentRef.current = handleSaveDocument;
+  });
+
+  // Auto-save: automatically persist changes 1.5s after any edit without interrupting user
+  useEffect(() => {
+    if (!hasUnsavedChanges || isSaving || isLoading || isRendering) return;
+
+    const timer = setTimeout(() => {
+      handleSaveDocumentRef.current?.(true);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [hasUnsavedChanges, isSaving, isLoading, isRendering]);
 
   // Download / Export PDF with All Modifications Preserved
   const handleDownload = async () => {
@@ -1552,6 +1664,9 @@ function PDFEditorInner() {
             filters: [{ name: 'PDF', extensions: ['pdf'] }]
           });
           if (filePath) {
+            markFileSavedLocally(filePath);
+            const fn = filePath.split(/[/\\]/).pop();
+            if (fn) markFileSavedLocally(fn);
             await writeFile(filePath, dataToSave);
             showToast(`Exported ${docTitle} successfully!`);
             return;
@@ -1566,19 +1681,24 @@ function PDFEditorInner() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = docTitle.endsWith('.pdf') ? docTitle : `${docTitle}.pdf`;
+        const exportName = docTitle.endsWith('.pdf') ? docTitle : `${docTitle}.pdf`;
+        markFileSavedLocally(exportName);
+        a.download = exportName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         showToast(`Exported ${docTitle} successfully!`);
       } else if (currentDoc) {
+        markFileSavedLocally(currentDoc.name);
         ZenFileSyncService.downloadDocument(currentDoc);
         showToast(`Exported ${currentDoc.name}`);
       } else if (pdfBlobUrl) {
         const a = document.createElement('a');
         a.href = pdfBlobUrl;
-        a.download = docTitle.endsWith('.pdf') ? docTitle : `${docTitle}.pdf`;
+        const exportName = docTitle.endsWith('.pdf') ? docTitle : `${docTitle}.pdf`;
+        markFileSavedLocally(exportName);
+        a.download = exportName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1897,6 +2017,7 @@ function PDFEditorInner() {
   const handleGlobalMouseUp = () => {
     if (draggedAnnId) {
       setDraggedAnnId(null);
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -1914,6 +2035,7 @@ function PDFEditorInner() {
       y: (pendingCoords?.y || 140) + currentScrollTop,
     };
     setAnnotations(prev => [...prev, newNote]);
+    setHasUnsavedChanges(true);
     setNewNoteContent('');
     setShowNoteModal(false);
     showToast(`Study note attached.`);
@@ -1980,6 +2102,7 @@ function PDFEditorInner() {
                   y: currentScrollTop + 160,
                 };
                 setAnnotations(prev => [...prev, newAnn]);
+                setHasUnsavedChanges(true);
                 showToast('Image inserted. You can now drag it.');
               }
             };
@@ -2027,22 +2150,14 @@ function PDFEditorInner() {
                   {isSaving ? (
                     <>
                       <Loader2 className="w-3 h-3 text-orange-500 animate-spin" />
-                      <span className="text-orange-500">Saving...</span>
+                      <span className="text-orange-500 font-medium">Auto-saving...</span>
                     </>
                   ) : hasUnsavedChanges ? (
-                    <span className="text-amber-500 font-medium">● Unsaved changes</span>
+                    <span className="text-amber-500 font-medium">● Saving soon...</span>
                   ) : (
                     <>
                       <Check className="w-3 h-3 text-emerald-500" />
-                      <span className="text-zinc-400">Saved</span>
-                      <button
-                        onClick={handleEditDocument}
-                        disabled={isExtracting}
-                        className="hidden md:inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 cursor-pointer transition-colors"
-                        title="Convert entire PDF into fully editable Google Docs / Word flow document"
-                      >
-                        <PenTool className="w-2.5 h-2.5" /> Convert to Doc
-                      </button>
+                      <span className="text-zinc-400">All changes saved</span>
                     </>
                   )}
                 </span>
@@ -2059,7 +2174,7 @@ function PDFEditorInner() {
                       <FileText className="w-3.5 h-3.5 mr-2" /> Convert to Editable Doc (Word Flow)
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSaveDocument}>
+                    <DropdownMenuItem onClick={() => handleSaveDocument(false)}>
                       <Save className="w-3.5 h-3.5 mr-2 text-orange-500" /> Save Document (Ctrl+S)
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleDownload}>
@@ -2083,28 +2198,8 @@ function PDFEditorInner() {
             </div>
           </div>
 
-          {/* Right side: Clean Google Docs Actions */}
+          {/* Right side: Clean Actions */}
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={handleEditDocument}
-              disabled={isExtracting}
-              className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-md shadow-xs gap-1.5 transition-all cursor-pointer"
-              title="Convert this PDF into a fully editable Google Docs / Word format"
-            >
-              {isExtracting ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Converting ({ocrProgress}%)...</span>
-                </>
-              ) : (
-                <>
-                  <FileText className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Convert to Editable Doc</span>
-                  <span className="sm:hidden">Convert</span>
-                </>
-              )}
-            </Button>
 
             <Button
               size="sm"
@@ -2127,7 +2222,7 @@ function PDFEditorInner() {
             <Button 
               variant="outline"
               size="sm" 
-              onClick={handleSaveDocument}
+              onClick={() => handleSaveDocument(false)}
               disabled={isSaving}
               className="h-8 text-xs px-3 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 gap-1.5"
             >
@@ -2204,7 +2299,7 @@ function PDFEditorInner() {
 
           <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
 
-          {/* Instant Responsive Zoom */}
+          {/* Instant Responsive Zoom & Rotate */}
           <div className="flex items-center gap-1">
             <button
               onClick={() => handleZoom(-15)}
@@ -2234,6 +2329,38 @@ function PDFEditorInner() {
             >
               Fit
             </button>
+            <button
+              onClick={handleRotate}
+              className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 transition-colors cursor-pointer"
+              title="Rotate Page (90° Clockwise)"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
+
+          {/* Quick Find / Search in Document */}
+          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/80 rounded px-2 h-7 border border-transparent focus-within:border-orange-500/50 transition-colors">
+            <Search className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            <input 
+              id="pdf-toolbar-search"
+              type="text"
+              placeholder="Find in PDF..."
+              value={pdfSearchQuery}
+              onChange={(e) => setPdfSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSearchPdf(); }}
+              className="bg-transparent text-xs w-20 sm:w-28 outline-none text-zinc-800 dark:text-zinc-200 placeholder-zinc-400"
+            />
+            {pdfSearchQuery && (
+              <button 
+                onClick={() => setPdfSearchQuery('')}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                title="Clear Search"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
 
           <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 shrink-0" />
@@ -2275,15 +2402,6 @@ function PDFEditorInner() {
             >
               <TextSelect className="w-3.5 h-3.5" />
               <span>Text Select</span>
-            </button>
-            <button 
-              onClick={handleEditDocument}
-              disabled={isExtracting}
-              className="h-7 px-2.5 rounded flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800/60 transition-colors cursor-pointer"
-              title="Convert entire PDF to fully editable Word / Google Docs flow document"
-            >
-              {isExtracting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" /> : <FileText className="w-3.5 h-3.5 text-emerald-600" />}
-              <span>Convert to Doc</span>
             </button>
           </div>
 
@@ -2692,7 +2810,11 @@ function PDFEditorInner() {
                     <img src={sig.imageUrl} className="h-12 w-auto pointer-events-none filter drop-shadow-sm" alt="Drawn Signature" />
                   )}
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setAppliedSignatures(prev => prev.filter(s => s.id !== sig.id)) }}
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setAppliedSignatures(prev => prev.filter(s => s.id !== sig.id));
+                      setHasUnsavedChanges(true);
+                    }}
                     className="text-zinc-400 hover:text-rose-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 -right-2 bg-white dark:bg-zinc-800 rounded-full border border-zinc-200 dark:border-zinc-700 shadow-sm p-0.5"
                   >
                     <X className="w-3 h-3" />
@@ -2730,7 +2852,10 @@ function PDFEditorInner() {
                       autoFocus
                       type="text" 
                       value={ann.text} 
-                      onChange={(e) => setAnnotations(prev => prev.map(a => a.id === ann.id ? { ...a, text: e.target.value } : a))}
+                      onChange={(e) => {
+                        setAnnotations(prev => prev.map(a => a.id === ann.id ? { ...a, text: e.target.value } : a));
+                        setHasUnsavedChanges(true);
+                      }}
                       className="bg-transparent outline-none border-b border-transparent focus:border-orange-500 text-zinc-900 dark:text-white"
                       placeholder="Type here..."
                     />
@@ -2740,7 +2865,10 @@ function PDFEditorInner() {
                     <textarea 
                       autoFocus
                       value={ann.text} 
-                      onChange={(e) => setAnnotations(prev => prev.map(a => a.id === ann.id ? { ...a, text: e.target.value } : a))}
+                      onChange={(e) => {
+                        setAnnotations(prev => prev.map(a => a.id === ann.id ? { ...a, text: e.target.value } : a));
+                        setHasUnsavedChanges(true);
+                      }}
                       className="bg-zinc-900 text-white outline-none border-none min-w-[100px] min-h-[40px] resize placeholder-zinc-500"
                       placeholder="Redacted"
                     />
@@ -2748,7 +2876,11 @@ function PDFEditorInner() {
                     <span>{ann.type === 'highlight' ? '🖍️' : '📝'} {ann.text}</span>
                   )}
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setAnnotations(prev => prev.filter(a => a.id !== ann.id)) }}
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setAnnotations(prev => prev.filter(a => a.id !== ann.id));
+                      setHasUnsavedChanges(true);
+                    }}
                     className="text-zinc-400 hover:text-rose-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 -right-2 bg-white dark:bg-zinc-800 rounded-full border border-zinc-200 dark:border-zinc-700 shadow-sm p-0.5"
                   >
                     <X className="w-3 h-3" />
