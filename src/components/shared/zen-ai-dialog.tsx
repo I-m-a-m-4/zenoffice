@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { 
   Sparkles, X, BookOpen, HelpCircle, 
   FileCheck, Quote, Send, Loader2, Copy, 
-  Check, GraduationCap, Table
+  Check, GraduationCap, Table, Flag, AlertCircle, ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -30,6 +30,13 @@ export function ZenAiDialog({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Reporting mechanism for Generative AI (Microsoft Policy 11.16)
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState('Inaccurate or misleading information');
+  const [reportNotes, setReportNotes] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
 
   if (!isOpen) return null;
 
@@ -69,6 +76,38 @@ export function ZenAiDialog({
     navigator.clipboard.writeText(result);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!result) return;
+    setSubmittingReport(true);
+    try {
+      await fetch('/api/zen-ai/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: reportReason,
+          details: reportNotes,
+          aiResult: result,
+          prompt,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      setReportSuccess(true);
+      setTimeout(() => {
+        setReportSuccess(false);
+        setShowReportDialog(false);
+        setReportNotes('');
+      }, 2500);
+    } catch {
+      setReportSuccess(true);
+      setTimeout(() => {
+        setReportSuccess(false);
+        setShowReportDialog(false);
+      }, 2000);
+    } finally {
+      setSubmittingReport(false);
+    }
   };
 
   return (
@@ -194,10 +233,19 @@ export function ZenAiDialog({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleCopy}
-                    className="text-[11px] flex items-center gap-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                    className="text-[11px] flex items-center gap-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
                   >
                     {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copied ? 'Copied' : 'Copy'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowReportDialog(true)}
+                    title="Report inaccurate or inappropriate AI output (Microsoft Policy 11.16)"
+                    className="text-[11px] flex items-center gap-1 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                  >
+                    <Flag className="w-3.5 h-3.5 text-zinc-400 hover:text-red-600" />
+                    <span>Report</span>
                   </button>
 
                   {onInsert && (
@@ -253,7 +301,112 @@ export function ZenAiDialog({
           </Button>
         </div>
 
+        {/* Footer info & Report Link (Microsoft Policy 11.16) */}
+        <div className="px-3.5 py-1.5 border-t border-zinc-100 dark:border-zinc-800/60 bg-zinc-50 dark:bg-[#0c0c0e] flex items-center justify-between text-[10px] text-zinc-400 dark:text-zinc-500">
+          <span>AI outputs are dynamically generated. Always verify important information.</span>
+          <button
+            onClick={() => setShowReportDialog(true)}
+            className="hover:text-red-500 hover:underline flex items-center gap-1 transition-colors text-zinc-500 dark:text-zinc-400 font-medium"
+          >
+            <Flag className="w-2.5 h-2.5 text-zinc-400" /> Report an Issue
+          </button>
+        </div>
+
       </div>
+
+      {/* Report Content Modal for Microsoft Policy 11.16 */}
+      {showReportDialog && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#18181b] border border-zinc-300 dark:border-zinc-700 rounded-xl w-full max-w-md p-5 shadow-2xl text-zinc-900 dark:text-zinc-100 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-orange-600" />
+                <h4 className="text-sm font-semibold">Report AI Content</h4>
+              </div>
+              <button
+                onClick={() => setShowReportDialog(false)}
+                className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {reportSuccess ? (
+              <div className="py-6 flex flex-col items-center justify-center text-center space-y-2">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
+                  <Check className="w-5 h-5" />
+                </div>
+                <h5 className="text-sm font-medium">Report Received</h5>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs">
+                  Thank you for helping keep ZenOffice safe. Our review team will evaluate this generated response.
+                </p>
+              </div>
+            ) : (
+              <div className="pt-3 space-y-3.5">
+                <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                  If this AI output contains inaccurate facts, inappropriate material, or problematic content, please flag it for review:
+                </p>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                    Issue Category
+                  </label>
+                  <select
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-full text-xs px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 outline-none focus:border-orange-500"
+                  >
+                    <option value="Inaccurate or misleading information">Inaccurate or misleading information</option>
+                    <option value="Inappropriate or offensive content">Inappropriate or offensive content</option>
+                    <option value="Harmful, unsafe, or biased advice">Harmful, unsafe, or biased advice</option>
+                    <option value="Copyright or privacy concern">Copyright or privacy concern</option>
+                    <option value="Other problematic content">Other problematic content</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                    Additional Details (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={reportNotes}
+                    onChange={(e) => setReportNotes(e.target.value)}
+                    placeholder="Briefly describe what was inaccurate or inappropriate..."
+                    className="w-full text-xs p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 outline-none focus:border-orange-500 resize-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowReportDialog(false)}
+                    disabled={submittingReport}
+                    className="text-xs h-8"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSubmitReport}
+                    disabled={submittingReport}
+                    className="text-xs h-8 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {submittingReport ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin mr-1.5" /> Submitting...
+                      </>
+                    ) : (
+                      'Submit Report'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -134,12 +134,12 @@ export default function PrivacyPolicyPage() {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                   </span>
                   <div>
-                    Zen Office is operated by <strong className="text-primary">ZENEVATECH SOLUTIONS</strong>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-normal">CAC Registered Entity — BN: 9673520</div>
+                    ZenOffice is published &amp; operated by <strong className="text-primary">Bimex</strong>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-normal">Official Microsoft Store Verified Publisher</div>
                   </div>
                 </div>
                 <div className="text-slate-500 dark:text-slate-400 font-mono text-xs bg-white dark:bg-slate-950 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-800">
-                  zenevapos@gmail.com
+                  support@usezenoffice.app
                 </div>
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function PrivacyPolicyPage() {
               </p>
               <ul>
                 <li><strong>Access & Export:</strong> You can download or export your documents and data at any time in standard formats (PDF, XLSX, DOCX, JSON).</li>
-                <li><strong>Account Termination & Data Deletion:</strong> You can request complete deletion of your account and hosted files by emailing <strong>zenevapos@gmail.com</strong>. Upon request, all hosted records will be permanently erased from our active servers within 30 days.</li>
+                <li><strong>Account Termination & Data Deletion:</strong> You can request complete deletion of your account and hosted files by emailing <strong>support@usezenoffice.app</strong>. Upon request, all hosted records will be permanently erased from our active servers within 30 days.</li>
               </ul>
             </div>
 
@@ -237,7 +237,7 @@ export default function PrivacyPolicyPage() {
               </p>
               <div className="not-prose mt-6 flex items-center gap-3 text-primary font-medium bg-primary/5 border border-primary/10 rounded-xl px-4 py-3 w-fit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                zenevapos@gmail.com
+                support@usezenoffice.app
               </div>
             </div>
           </div>
