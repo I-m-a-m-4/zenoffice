@@ -139,12 +139,12 @@ export default function TermsOfServicePage() {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                   </span>
                   <div>
-                    Zen Office is operated by <strong className="text-primary">ZENEVATECH SOLUTIONS</strong>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-normal">CAC Registered Entity — BN: 9673520</div>
+                    ZenOffice is published &amp; operated by <strong className="text-primary">Bimex</strong>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-normal">Official Microsoft Store Verified Publisher</div>
                   </div>
                 </div>
                 <div className="text-slate-500 dark:text-slate-400 font-mono text-xs bg-white dark:bg-slate-950 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-800">
-                  zenevapos@gmail.com
+                  support@usezenoffice.app
                 </div>
               </div>
             </div>
@@ -201,7 +201,7 @@ export default function TermsOfServicePage() {
             <div id="intellectual" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Intellectual Property</h2>
               <p>
-                The Zen Office application software, branding, UI components, code, and trademarks are the exclusive property of ZENEVATECH SOLUTIONS and its licensors.
+                The ZenOffice application software, branding, UI components, code, and trademarks are the exclusive property of Bimex and its licensors.
               </p>
             </div>
 
@@ -222,14 +222,14 @@ export default function TermsOfServicePage() {
             <div id="liability" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Limitation of Liability</h2>
               <p>
-                To the maximum extent permitted by law, Zen Office and ZENEVATECH SOLUTIONS shall not be liable for indirect, incidental, or consequential damages resulting from platform use or file handling.
+                To the maximum extent permitted by law, ZenOffice and Bimex shall not be liable for indirect, incidental, or consequential damages resulting from platform use or file handling.
               </p>
             </div>
 
             <div id="governing" className="scroll-mt-28 mt-16 pt-8 border-t border-slate-100 dark:border-slate-800/50">
               <h2>Governing Law</h2>
               <p>
-                These Terms are governed by the laws of the Federal Republic of Nigeria.
+                These Terms are governed by applicable commercial laws and international software distribution standards.
               </p>
             </div>
 
@@ -247,7 +247,7 @@ export default function TermsOfServicePage() {
               </p>
               <div className="not-prose mt-6 flex items-center gap-3 text-primary font-medium bg-primary/5 border border-primary/10 rounded-xl px-4 py-3 w-fit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                zenevapos@gmail.com
+                support@usezenoffice.app
               </div>
             </div>
           </div>

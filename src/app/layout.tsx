@@ -68,20 +68,15 @@ export const metadata: Metadata = {
   },
   description: 'ZenOffice is a powerful document management platform and office suite for viewing and editing files like Word, Excel, and PDF.',
   keywords: [
-    'inventory management software', 
-    'retail pos system', 
-    'cloud pos nigeria', 
-    'multi-currency billing', 
-    'usd payment gateway for retail', 
-    'pharmacy inventory software', 
-    'boutique management system', 
-    'business analytics dashboard', 
-    'global retail OS',
-    'pos for mini-marts',
-    'offline capable point of sale',
-    'inventory system with no subscription options',
-    'zeneva vs quickbooks pos',
-    'pos for open markets'
+    'pdf editor',
+    'ai document editor',
+    'word document processor',
+    'excel spreadsheet editor',
+    'document management suite',
+    'local first office suite',
+    'pdf annotation tool',
+    'ai study assistant',
+    'zenoffice'
   ],
   applicationName: 'ZenOffice',
   authors: [{ name: 'ZenOffice Team' }],
@@ -115,7 +110,7 @@ export const metadata: Metadata = {
         width: 1200,
         height: 630,
         type: 'image/png',
-        alt: 'Zeneva Retail Operating System',
+        alt: 'ZenOffice - AI Document & PDF Editor',
       },
     ],
     locale: 'en_US',
@@ -137,7 +132,7 @@ const jsonLd = {
       '@type': 'WebSite',
       '@id': `${siteUrl}/#website`,
       'url': siteUrl,
-      'name': 'Zeneva',
+      'name': 'ZenOffice',
       'potentialAction': {
         '@type': 'SearchAction',
         'target': `${siteUrl}/help-center?q={search_term_string}`,
@@ -147,45 +142,24 @@ const jsonLd = {
     {
       '@type': 'Organization',
       '@id': `${siteUrl}/#organization`,
-      name: 'Zeneva',
+      name: 'ZenOffice by Bimex',
       url: siteUrl,
-      logo: `${siteUrl}/zeneva-og-image.png?v=5`,
-      // Machine-readable form of the CAC badge the footer already renders. The
-      // badge is an image plus sr-only text; this is what actually gives the
-      // registration a chance of being treated as an entity signal.
-      legalName: 'Zeneva',
-      identifier: {
-        '@type': 'PropertyValue',
-        name: 'Corporate Affairs Commission (CAC) Business Number',
-        value: 'BN 9673520',
-      },
-      address: {
-        '@type': 'PostalAddress',
-        addressCountry: 'NG',
-      },
-      // The product UI ships in these locales (src/lib/i18n/config.ts). Stated
-      // here rather than as hreflang because the locales are switched
-      // client-side and have no distinct URLs to point an alternate at.
+      logo: `${siteUrl}/zenoffice-icon.svg`,
+      legalName: 'Bimex',
       availableLanguage: [
         'en', 'fr', 'es', 'pt', 'de', 'it', 'ar', 'zh-Hans', 'ja', 'ko', 'hi',
       ],
-      sameAs: [
-        'https://x.com/zeneva_retail',
-        'https://www.instagram.com/zeneva_pos/',
-        'https://www.tiktok.com/@zeneva_retail',
-        'https://www.youtube.com/@ZenevaPos'
-      ]
     },
     {
       '@type': 'SoftwareApplication',
-      name: 'Zeneva',
-      applicationCategory: 'BusinessApplication',
-      operatingSystem: 'Web, Android, iOS, Windows, macOS, Linux',
+      name: 'ZenOffice - AI Document & PDF Editor',
+      applicationCategory: 'ProductivityApplication',
+      operatingSystem: 'Windows, macOS, Web',
       offers: {
         '@type': 'Offer',
         price: '0',
-        priceCurrency: 'NGN',
-        description: 'Starter plan is free forever. Paid plans start at ₦10,000/month.'
+        priceCurrency: 'USD',
+        description: 'Starter plan is free. Pro plans start at $12/month.'
       },
       aggregateRating: {
         '@type': 'AggregateRating',

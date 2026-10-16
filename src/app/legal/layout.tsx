@@ -1,8 +1,8 @@
 
 'use client';
 
-import MarketingFooter from "@/components/layout/marketing-footer";
-import MarketingHeader from "@/components/layout/marketing-header";
+import ZenOfficeHeader from "@/components/layout/zenoffice-header";
+import ZenOfficeFooter from "@/components/layout/zenoffice-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export default function LegalLayout({
@@ -12,11 +12,11 @@ export default function LegalLayout({
 }) {
   return (
     <ThemeProvider forcedTheme="light">
-      <MarketingHeader />
+      <ZenOfficeHeader />
       <main className="bg-white text-foreground min-h-screen">
         {children}
       </main>
-      <MarketingFooter />
+      <ZenOfficeFooter />
     </ThemeProvider>
   );
 }

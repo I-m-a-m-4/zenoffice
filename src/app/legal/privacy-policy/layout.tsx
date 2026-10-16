@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 
 // page.tsx is a client component, so metadata has to live in a layout.
 export const metadata: Metadata = {
-  title: 'Privacy Policy',
-  description: 'How Zeneva collects, stores, and protects your business and customer data, including your rights over that data and how to exercise them.',
+  title: 'Privacy Policy | ZenOffice - AI Document & PDF Editor',
+  description: 'How ZenOffice collects, protects, and handles your documents and data with local-first security and complete privacy.',
   alternates: {
     canonical: '/legal/privacy-policy'
   },
