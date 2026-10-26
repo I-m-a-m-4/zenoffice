@@ -11,11 +11,16 @@ service cloud.firestore {
     function isSuperAdmin() {
       return request.auth != null &&
              (request.auth.uid == 'jzQgCHzaObeUbeYklTLtQQh03G53' ||
-              (request.auth.token != null && 'email' in request.auth.token && request.auth.token.email == 'belloimam431@gmail.com'));
+              (request.auth.token != null && 'email' in request.auth.token && (request.auth.token.email == 'belloimam431@gmail.com' || request.auth.token.email.lower() == 'belloimam431@gmail.com')));
     }
 
     match /{allPaths=**} {
       allow read, write: if isSuperAdmin();
+    }
+
+    match /app_launches/{installId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin();
     }
 
     function isUserAuthenticated() {
