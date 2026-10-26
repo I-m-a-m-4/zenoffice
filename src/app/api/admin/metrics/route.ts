@@ -26,20 +26,21 @@ export async function GET(req: Request) {
     try {
         const db = adminFirestore;
 
-        // Fetch all collections in parallel directly from Firestore (real-time)
+        // Fetch collections directly with resilience
         const [
-            usersSnap,
-            businessesSnap,
-            productsSnap,
-            receiptsSnap,
-            purchasesSnap,
-            downloadClicksSnap,
-            applicationsSnap,
-            grantsSnap,
-            checkoutAttemptsSnap,
-            branchesSnap
-        ] = await Promise.all([
-            db.collection('users').orderBy('name').get(),
+            usersRes,
+            businessesRes,
+            productsRes,
+            receiptsRes,
+            purchasesRes,
+            downloadClicksRes,
+            applicationsRes,
+            grantsRes,
+            checkoutAttemptsRes,
+            branchesRes,
+            appLaunchesRes
+        ] = await Promise.allSettled([
+            db.collection('users').get(),
             db.collection('businessInstances').get(),
             db.collection('products').get(),
             db.collection('receipts').get(),
@@ -47,20 +48,22 @@ export async function GET(req: Request) {
             db.collection('download_clicks').get(),
             db.collection('job_applications').get(),
             db.collection('grants').get(),
-            db.collection('checkout_attempts').orderBy('timestamp', 'desc').get(),
-            db.collectionGroup('branches').get()
+            db.collection('checkout_attempts').orderBy('timestamp', 'desc').limit(250).get(),
+            db.collectionGroup('branches').get(),
+            db.collection('app_launches').orderBy('lastSeenAt', 'desc').limit(1000).get()
         ]);
 
-        const users = usersSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-        const businesses = businessesSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-        const products = productsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-        const applications = applicationsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-        const grants = grantsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-        const receipts = receiptsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-        const purchases = purchasesSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-        const downloadClicks = downloadClicksSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-        const checkoutAttempts = checkoutAttemptsSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
-        const branches = branchesSnap.docs.map((doc: any) => ({ id: doc.id, businessId: doc.ref.parent.parent?.id, ...doc.data() }));
+        const users = usersRes.status === 'fulfilled' ? usersRes.value.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
+        const businesses = businessesRes.status === 'fulfilled' ? businessesRes.value.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
+        const products = productsRes.status === 'fulfilled' ? productsRes.value.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
+        const receipts = receiptsRes.status === 'fulfilled' ? receiptsRes.value.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
+        const purchases = purchasesRes.status === 'fulfilled' ? purchasesRes.value.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
+        const downloadClicks = downloadClicksRes.status === 'fulfilled' ? downloadClicksRes.value.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
+        const applications = applicationsRes.status === 'fulfilled' ? applicationsRes.value.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
+        const grants = grantsRes.status === 'fulfilled' ? grantsRes.value.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
+        const checkoutAttempts = checkoutAttemptsRes.status === 'fulfilled' ? checkoutAttemptsRes.value.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
+        const branches = branchesRes.status === 'fulfilled' ? branchesRes.value.docs.map((doc: any) => ({ id: doc.id, businessId: doc.ref.parent.parent?.id, ...doc.data() })) : [];
+        const appLaunches = appLaunchesRes.status === 'fulfilled' ? appLaunchesRes.value.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) : [];
 
         const payload = {
             users,
@@ -72,7 +75,8 @@ export async function GET(req: Request) {
             purchases,
             downloadClicks,
             checkoutAttempts,
-            branches
+            branches,
+            appLaunches,
         };
 
         return NextResponse.json(payload, { headers: corsHeaders });

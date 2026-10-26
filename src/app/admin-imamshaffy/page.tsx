@@ -930,53 +930,133 @@ function UserListDialog({ open, onOpenChange, title, description, users, busines
     );
 }
 
-function DownloadIntelligenceDialog({ open, onOpenChange, downloadClicks, downloadStats }: {
+function DownloadIntelligenceDialog({ open, onOpenChange, downloadClicks, downloadStats, appLaunches = [] }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     downloadClicks: any[];
     downloadStats: any;
+    appLaunches?: any[];
 }) {
+    const totalInstalls = Math.max(appLaunches.length, downloadStats.windows || 0);
+    const totalLaunches = (appLaunches || []).reduce((acc: number, l: any) => acc + (l.launches || 1), 0);
+    const windowsInstalls = (appLaunches || []).filter((l: any) => 
+        l.platform === 'windows' || (l.userAgent || '').toLowerCase().includes('windows')
+    ).length || downloadStats.windows || 0;
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl sm:max-w-5xl w-[95vw]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Download className="h-5 w-5 text-primary" />
-                        Download Intelligence
+                        Download & Store Acquisition Intelligence
                     </DialogTitle>
                     <DialogDescription>
-                        Detailed breakdown of app download clicks, platforms, and geographic distribution.
+                        Complete breakdown of Microsoft Store desktop installations, native app sessions, and website downloads.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-2">
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardDescription className="text-xs">Unique Downloaders</CardDescription>
-                            <CardTitle className="text-2xl font-bold">{downloadClicks.length}</CardTitle>
+                            <CardDescription className="text-xs">Store & App Installs</CardDescription>
+                            <CardTitle className="text-2xl font-bold text-primary flex items-center gap-2">
+                                <Laptop className="h-5 w-5 text-blue-500" />
+                                {totalInstalls}
+                            </CardTitle>
                         </CardHeader>
                     </Card>
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardDescription className="text-xs">Total Clicks</CardDescription>
-                            <CardTitle className="text-2xl font-bold">{downloadStats.totalClicks}</CardTitle>
+                            <CardDescription className="text-xs">App Launches / Sessions</CardDescription>
+                            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                                <Activity className="h-5 w-5 text-emerald-500" />
+                                {totalLaunches > 0 ? totalLaunches : totalInstalls}
+                            </CardTitle>
                         </CardHeader>
                     </Card>
-                    <Card className="md:col-span-2">
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardDescription className="text-xs">Website Download Clicks</CardDescription>
+                            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                                <Download className="h-5 w-5 text-violet-500" />
+                                {downloadClicks.length}
+                            </CardTitle>
+                        </CardHeader>
+                    </Card>
+                    <Card>
                         <CardHeader className="pb-2">
                             <CardDescription className="text-xs">Platform Breakdown</CardDescription>
-                            <CardTitle className="text-sm font-bold flex gap-4 mt-2">
-                                <span className="flex items-center gap-1"><Laptop className="h-4 w-4" /> Win: {downloadStats.windows}</span>
-                                <span className="flex items-center gap-1"><Laptop className="h-4 w-4" /> Mac: {downloadStats.macos}</span>
-                                <span className="flex items-center gap-1"><Smartphone className="h-4 w-4" /> Android: {downloadStats.android}</span>
+                            <CardTitle className="text-xs font-semibold flex flex-col gap-1 mt-1">
+                                <span className="flex items-center justify-between text-muted-foreground"><span>Windows PC:</span> <span className="font-bold text-foreground">{windowsInstalls}</span></span>
+                                <span className="flex items-center justify-between text-muted-foreground"><span>Mac / Android:</span> <span className="font-bold text-foreground">{downloadStats.macos + downloadStats.android}</span></span>
                             </CardTitle>
                         </CardHeader>
                     </Card>
                 </div>
                 
-                <Tabs defaultValue="log" className="w-full mt-4">
+                <Tabs defaultValue={appLaunches.length > 0 ? "installs" : "log"} className="w-full mt-2">
                     <TabsList className="flex w-full justify-start overflow-x-auto overflow-y-hidden snap-x h-auto py-2 scrollbar-hide">
-                        <TabsTrigger value="log" className="snap-start shrink-0">Click Log ({downloadClicks.length})</TabsTrigger>
+                        <TabsTrigger value="installs" className="gap-2 snap-start shrink-0">
+                            <Laptop className="h-4 w-4" />
+                            Store Installs & Launches ({appLaunches.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="log" className="gap-2 snap-start shrink-0">
+                            <Download className="h-4 w-4" />
+                            Web Download Clicks ({downloadClicks.length})
+                        </TabsTrigger>
                     </TabsList>
+
+                    <TabsContent value="installs" className="space-y-4 mt-2">
+                        <div className="max-h-96 overflow-auto border rounded-md">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Last Active</TableHead>
+                                        <TableHead>Install ID</TableHead>
+                                        <TableHead>Platform / Build</TableHead>
+                                        <TableHead>Version</TableHead>
+                                        <TableHead className="text-right">Launches</TableHead>
+                                        <TableHead>Signed Up?</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {appLaunches.map((l, index) => {
+                                        const dateStr = l.lastSeenAt?.toDate 
+                                            ? format(l.lastSeenAt.toDate(), "PPP p")
+                                            : (l.lastSeenAt?.seconds 
+                                                ? format(new Date(l.lastSeenAt.seconds * 1000), "PPP p")
+                                                : (l.createdAt?.toDate ? format(l.createdAt.toDate(), "PPP p") : 'Recent'));
+                                        return (
+                                            <TableRow key={l.id || l.installId || index}>
+                                                <TableCell className="text-[10px] text-muted-foreground whitespace-nowrap">{dateStr}</TableCell>
+                                                <TableCell className="font-mono text-xs max-w-[140px] truncate" title={l.id || l.installId || 'Unknown'}>{l.id || l.installId || 'Unknown'}</TableCell>
+                                                <TableCell className="text-xs capitalize flex items-center gap-1.5">
+                                                    <Laptop className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                                    <span>{l.platform || 'Windows (Store)'}</span>
+                                                </TableCell>
+                                                <TableCell className="font-mono text-xs">{l.version ? `v${l.version}` : 'v3.2.8'}</TableCell>
+                                                <TableCell className="text-right font-mono text-xs">{l.launches || 1}</TableCell>
+                                                <TableCell className="text-xs">
+                                                    {l.signedUp ? (
+                                                        <Badge variant="default" className="bg-emerald-600 text-[10px] py-0">Registered</Badge>
+                                                    ) : (
+                                                        <Badge variant="secondary" className="text-[10px] py-0">Anonymous</Badge>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                    {appLaunches.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center text-muted-foreground py-6 text-sm">
+                                                No direct app launches recorded yet.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </TabsContent>
                     
                     <TabsContent value="log" className="space-y-4 mt-2">
                         <div className="max-h-96 overflow-auto border rounded-md">
@@ -2694,7 +2774,7 @@ function BusinessIntelDialog({
 // ==============================================================================
 
 function AdminDashboardContent({
-    users, businesses, products, receipts, purchases, applications, downloadClicks, grants, checkoutAttempts, branches, onRefresh, isRefreshing,
+    users, businesses, products, receipts, purchases, applications, downloadClicks, appLaunches = [], grants, checkoutAttempts, branches, onRefresh, isRefreshing,
     storefrontShares = [], receiptShares = [], onlineOrders = [], importAttempts = []
 }: {
     users: any[];
@@ -2704,6 +2784,7 @@ function AdminDashboardContent({
     purchases: any[];
     applications: any[];
     downloadClicks: any[];
+    appLaunches?: any[];
     grants: any[];
     checkoutAttempts: any[];
     branches?: any[];
@@ -2726,6 +2807,7 @@ function AdminDashboardContent({
     const storefrontSharesTotal = useCollectionCount('storefront_shares');
     const receiptSharesTotal = useCollectionCount('receipt_shares');
     const onlineOrdersTotal = useCollectionCount('onlineOrders', true);
+    const appLaunchesTotal = useCollectionCount('app_launches');
 
     const normalizeTimestamp = (ts: any) => {
         if (!ts) return { toDate: () => new Date() };
@@ -3666,7 +3748,13 @@ function AdminDashboardContent({
         const payingBusinessesCount = payingBusinessIds.size;
         const ltv = payingBusinessesCount > 0 ? totalSubscriptionRevenue / payingBusinessesCount : 0;
 
-        // --- DOWNLOAD TELEMETRY INTELLIGENCE ---
+        // --- DOWNLOAD & STORE APP TELEMETRY INTELLIGENCE ---
+        const totalAppInstalls = Math.max(appLaunchesTotal ?? 0, appLaunches?.length || 0);
+        const windowsInstalls = (appLaunches || []).filter((l: any) => 
+            l.platform === 'windows' || (l.userAgent || '').toLowerCase().includes('windows')
+        ).length;
+        const totalAppLaunchesCount = (appLaunches || []).reduce((acc: number, l: any) => acc + (l.launches || 1), 0);
+
         const downloadStats = (downloadClicks || []).reduce((acc, d) => {
             const pList = d.platforms || [];
             pList.forEach((p: string) => {
@@ -3676,7 +3764,15 @@ function AdminDashboardContent({
             });
             acc.totalClicks += (d.clicks || 0);
             return acc;
-        }, { windows: 0, macos: 0, android: 0, totalClicks: 0 });
+        }, { windows: windowsInstalls > 0 ? windowsInstalls : 0, macos: 0, android: 0, totalClicks: 0 });
+
+        // If app_launches has desktop installs, reflect them in downloadStats
+        if (windowsInstalls > downloadStats.windows) {
+            downloadStats.windows = windowsInstalls;
+        }
+
+        // Total unique installations & website downloads
+        const uniqueDownloaders = (totalAppInstalls > 0 ? totalAppInstalls : (downloadClicks?.length || 0));
 
         // Operations & adoption metrics now live in OperationsAdoptionPanel, which
         // scopes them to the reader's chosen timeframe instead of all-time.
@@ -3689,13 +3785,16 @@ function AdminDashboardContent({
             totalCreditPackRevenue, totalCompanyRevenue,
             richestBusiness, topPerformers, allPerformers, averageSalesPerDay, averageReceiptsPerDay, dailyGmvData, dailyReceiptsData,
             earliestBusiness, daysActive,
-            uniqueDownloaders: downloadClicks?.length || 0,
+            totalAppInstalls,
+            windowsInstalls: windowsInstalls > 0 ? windowsInstalls : totalAppInstalls,
+            totalAppLaunchesCount: totalAppLaunchesCount > 0 ? totalAppLaunchesCount : totalAppInstalls,
+            uniqueDownloaders,
             downloadStats,
             payingBusinesses,
             validPurchases,
             revenueGeneratingBusinessesCount
         };
-    }, [users, businesses, products, convertedReceipts, purchases, downloadClicks, velocityFilter]);
+    }, [users, businesses, products, convertedReceipts, purchases, downloadClicks, appLaunches, appLaunchesTotal, velocityFilter]);
 
 
     const handleOpenDetailModal = (type: 'active' | 'activated' | 'atRisk' | 'paying' | 'totalBusinesses' | 'inventoryActive' | 'generatingSales' | 'totalUsers') => {
@@ -4136,7 +4235,7 @@ function AdminDashboardContent({
     };
 
     return (
-        <div ref={cardRef} className="p-4 md:p-6 lg:p-8 space-y-6 high-fidelity-shell">
+        <div ref={cardRef} className="w-full space-y-6 high-fidelity-shell min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
                 <div>
                     <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -4162,7 +4261,7 @@ function AdminDashboardContent({
                     <TabsTrigger value="overview" className="snap-start shrink-0">Overview</TabsTrigger>
                     <TabsTrigger value="acquisition" className="gap-2 snap-start shrink-0">
                         <DoorOpen className="h-4 w-4" />
-                        Acquisition
+                        Acquisition ({analyticsData.totalAppInstalls})
                     </TabsTrigger>
                     <TabsTrigger value="users" className="snap-start shrink-0">User Management</TabsTrigger>
                     <TabsTrigger value="broadcasts" className="snap-start shrink-0">Comms Center</TabsTrigger>
@@ -4201,7 +4300,7 @@ function AdminDashboardContent({
                                 Platform Overview Command
                             </CardTitle>
                         </CardHeader>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
                         <button onClick={() => handleOpenDetailModal('totalUsers')} className="text-left w-full h-full transition-transform active:scale-95">
                             <StatCard 
                                 title="Total Users" 
@@ -4216,6 +4315,28 @@ function AdminDashboardContent({
                                 value={analyticsData.totalBusinesses} 
                                 icon={Building} 
                                 description="Total business registrations"
+                            />
+                        </button>
+                        <button 
+                            onClick={() => setIsDownloadIntelOpen(true)} 
+                            className="text-left w-full h-full transition-transform active:scale-95"
+                        >
+                            <StatCard 
+                                title="Microsoft Store & App" 
+                                value={analyticsData.totalAppInstalls} 
+                                icon={Laptop} 
+                                description={`${analyticsData.windowsInstalls} Windows PC · ${analyticsData.totalAppLaunchesCount} Launches`}
+                            />
+                        </button>
+                        <button 
+                            onClick={() => setIsDownloadIntelOpen(true)} 
+                            className="text-left w-full h-full transition-transform active:scale-95"
+                        >
+                            <StatCard 
+                                title="Total Downloaders" 
+                                value={analyticsData.uniqueDownloaders} 
+                                icon={Download} 
+                                description={`${analyticsData.downloadStats.windows} Win / ${analyticsData.downloadStats.macos} Mac / ${analyticsData.downloadStats.android} Mobile`}
                             />
                         </button>
                         <button onClick={() => handleOpenDetailModal('inventoryActive')} className="text-left w-full h-full transition-transform active:scale-95">
@@ -4234,6 +4355,14 @@ function AdminDashboardContent({
                                 description="Businesses with transactions"
                             />
                         </button>
+                        <button onClick={() => handleOpenDetailModal('paying')} className="text-left w-full h-full transition-transform active:scale-95">
+                            <StatCard 
+                                title="Paying Accounts" 
+                                value={analyticsData.payingBusinesses.length} 
+                                icon={Crown} 
+                                description="Paid subscriber businesses"
+                            />
+                        </button>
                         <button onClick={() => setIsAgeMilestoneOpen(true)} className="text-left w-full h-full transition-transform active:scale-95">
                             <StatCard 
                                 title="Zeneva Age" 
@@ -4241,18 +4370,7 @@ function AdminDashboardContent({
                                     ? `${(analyticsData.daysActive / 365).toFixed(1)} Years` 
                                     : `${analyticsData.daysActive} Days`} 
                                 icon={Clock} 
-                                description={`Launched ${format(analyticsData.earliestBusiness, 'MMM yyyy')} (${Math.floor(analyticsData.daysActive / 30)} months, ${Math.floor((analyticsData.daysActive % 30) / 7)} weeks)`}
-                            />
-                        </button>
-                        <button 
-                            onClick={() => setIsDownloadIntelOpen(true)} 
-                            className="text-left w-full h-full transition-transform active:scale-95"
-                        >
-                            <StatCard 
-                                title="Unique Downloaders" 
-                                value={analyticsData.uniqueDownloaders} 
-                                icon={Download} 
-                                description={`${analyticsData.downloadStats.windows} Win / ${analyticsData.downloadStats.macos} Mac / ${analyticsData.downloadStats.android} Android`}
+                                description={`Launched ${format(analyticsData.earliestBusiness, 'MMM yyyy')} (${Math.floor(analyticsData.daysActive / 30)}m)`}
                             />
                         </button>
                     </div>
@@ -5895,6 +6013,7 @@ function AdminDashboardContent({
                 onOpenChange={setIsDownloadIntelOpen}
                 downloadClicks={downloadClicks || []}
                 downloadStats={analyticsData.downloadStats}
+                appLaunches={appLaunches || []}
             />
 
             <ImportIntelligenceDialog
@@ -6101,53 +6220,48 @@ const ADMIN_LOG_LIMIT = 250;
 export default function AdminDashboardPage() {
     const firestore = useFirestore();
 
-    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('name')), [firestore]);
+    // Query users directly without restrictive name ordering that excludes incomplete signups
+    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
     const businessesQuery = useMemoFirebase(() => query(collection(firestore, 'businessInstances')), [firestore]);
     const productsQuery = useMemoFirebase(() => query(collection(firestore, 'products')), [firestore]);
     const applicationsQuery = useMemoFirebase(() => query(collection(firestore, 'job_applications'), orderBy('createdAt', 'desc'), limit(ADMIN_LOG_LIMIT)), [firestore]);
     const grantsQuery = useMemoFirebase(() => query(collection(firestore, 'grants'), orderBy('createdAt', 'desc'), limit(ADMIN_LOG_LIMIT)), [firestore]);
-    const receiptsQuery = useMemoFirebase(() => query(collection(firestore, 'receipts'), orderBy('createdAt', 'desc')), [firestore]);
+    const receiptsQuery = useMemoFirebase(() => query(collection(firestore, 'receipts'), orderBy('createdAt', 'desc'), limit(500)), [firestore]);
     const purchasesQuery = useMemoFirebase(() => query(collection(firestore, 'purchases')), [firestore]);
-    // Deliberately unbounded: one doc per visitor (not per click), and it backs
-    // an all-time platform breakdown, so a limit would silently change the
-    // windows/macos/android split. It is also not growing — its only writer is
-    // api/download/[platform], which is still a disabled .bak route.
     const downloadClicksQuery = useMemoFirebase(() => query(collection(firestore, 'download_clicks')), [firestore]);
+    // 506+ Microsoft Store & native app launches
+    const appLaunchesQuery = useMemoFirebase(() => query(collection(firestore, 'app_launches'), orderBy('lastSeenAt', 'desc'), limit(1000)), [firestore]);
     const branchesQuery = useMemoFirebase(() => query(collection(firestore, 'branches')), [firestore]);
     const checkoutAttemptsQuery = useMemoFirebase(() => query(collection(firestore, 'checkout_attempts'), orderBy('timestamp', 'desc'), limit(ADMIN_LOG_LIMIT)), [firestore]);
     const importAttemptsQuery = useMemoFirebase(() => query(collection(firestore, 'import_attempts'), orderBy('timestamp', 'desc'), limit(ADMIN_LOG_LIMIT)), [firestore]);
     const storefrontSharesQuery = useMemoFirebase(() => query(collection(firestore, 'storefront_shares'), orderBy('timestamp', 'desc'), limit(ADMIN_LOG_LIMIT)), [firestore]);
     const receiptSharesQuery = useMemoFirebase(() => query(collection(firestore, 'receipt_shares'), orderBy('timestamp', 'desc'), limit(ADMIN_LOG_LIMIT)), [firestore]);
-    // NOTE: the orderBy on a collectionGroup needs a COLLECTION_GROUP-scoped
-    // index on onlineOrders.createdAt — Firestore only auto-creates single-field
-    // indexes at COLLECTION scope. It is declared in firestore.indexes.json, so
-    // `firebase deploy --only firestore:indexes` must land BEFORE this ships or
-    // this listener throws. Deploying an index first is safe: it is additive and
-    // does not affect the running app.
     const onlineOrdersQuery = useMemoFirebase(() => query(collectionGroup(firestore, 'onlineOrders'), orderBy('createdAt', 'desc'), limit(ADMIN_LOG_LIMIT)), [firestore]);
 
     const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
     const { data: businesses, isLoading: businessesLoading } = useCollection<BusinessInstance>(businessesQuery);
-    const { data: products, isLoading: productsLoading } = useCollection<Product>(productsQuery);
-    const { data: applications, isLoading: applicationsLoading } = useCollection<any>(applicationsQuery);
-    const { data: grants, isLoading: grantsLoading } = useCollection<any>(grantsQuery);
-    const { data: receipts, isLoading: receiptsLoading } = useCollection<Receipt>(receiptsQuery);
-    const { data: purchases, isLoading: purchasesLoading } = useCollection<Purchase>(purchasesQuery);
-    const { data: downloadClicks, isLoading: downloadClicksLoading } = useCollection<any>(downloadClicksQuery);
-    const { data: branches, isLoading: branchesLoading } = useCollection<any>(branchesQuery);
-    const { data: checkoutAttempts, isLoading: checkoutAttemptsLoading } = useCollection<any>(checkoutAttemptsQuery);
-    const { data: importAttempts, isLoading: importAttemptsLoading } = useCollection<any>(importAttemptsQuery);
-    const { data: storefrontShares, isLoading: storefrontSharesLoading } = useCollection<any>(storefrontSharesQuery);
-    const { data: receiptShares, isLoading: receiptSharesLoading } = useCollection<any>(receiptSharesQuery);
-    const { data: onlineOrders, isLoading: onlineOrdersLoading } = useCollection<any>(onlineOrdersQuery);
+    const { data: products } = useCollection<Product>(productsQuery);
+    const { data: applications } = useCollection<any>(applicationsQuery);
+    const { data: grants } = useCollection<any>(grantsQuery);
+    const { data: receipts } = useCollection<Receipt>(receiptsQuery);
+    const { data: purchases } = useCollection<Purchase>(purchasesQuery);
+    const { data: downloadClicks } = useCollection<any>(downloadClicksQuery);
+    const { data: appLaunches } = useCollection<any>(appLaunchesQuery);
+    const { data: branches } = useCollection<any>(branchesQuery);
+    const { data: checkoutAttempts } = useCollection<any>(checkoutAttemptsQuery);
+    const { data: importAttempts } = useCollection<any>(importAttemptsQuery);
+    const { data: storefrontShares } = useCollection<any>(storefrontSharesQuery);
+    const { data: receiptShares } = useCollection<any>(receiptSharesQuery);
+    const { data: onlineOrders } = useCollection<any>(onlineOrdersQuery);
 
-    const isLoading = usersLoading || businessesLoading || productsLoading || applicationsLoading || grantsLoading || receiptsLoading || purchasesLoading || downloadClicksLoading || branchesLoading || checkoutAttemptsLoading || importAttemptsLoading || storefrontSharesLoading || receiptSharesLoading || onlineOrdersLoading;
+    // Render immediately once core identity data arrives; don't hang the entire UI for secondary logs
+    const isInitialLoading = usersLoading && businessesLoading && (!users || users.length === 0);
 
-    if (isLoading) {
+    if (isInitialLoading) {
         return (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex min-h-[50vh] h-full items-center justify-center">
                 <Loader className="h-8 w-8 animate-spin text-primary" />
-                <p className="ml-4 text-lg">Loading Admin Dashboard...</p>
+                <p className="ml-4 text-base font-medium text-muted-foreground">Loading Admin Dashboard...</p>
             </div>
         );
     }
@@ -6161,6 +6275,7 @@ export default function AdminDashboardPage() {
         purchases={purchases || []} 
         applications={applications || []} 
         downloadClicks={downloadClicks || []} 
+        appLaunches={appLaunches || []}
         grants={grants || []} 
         checkoutAttempts={checkoutAttempts || []} 
         importAttempts={importAttempts || []}

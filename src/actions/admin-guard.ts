@@ -44,7 +44,7 @@ export async function requireSuperAdmin(idToken: string | undefined): Promise<Ad
     throw new Error('Not authorized.');
   }
 
-  const isOwner = decoded.uid === SUPER_ADMIN_UID || decoded.email === SUPER_ADMIN_EMAIL;
+  const isOwner = decoded.uid === SUPER_ADMIN_UID || decoded.email?.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase();
   if (!isOwner) {
     // Deliberately identical message to the failures above — a caller learns
     // only that they may not do this, not which check they tripped.
