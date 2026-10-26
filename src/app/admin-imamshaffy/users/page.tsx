@@ -224,6 +224,7 @@ function UserRowSkeleton() {
 }
 
 export default function UsersPage() {
+  const { user: authUser } = useUser();
   const { profile: currentUser, isLoading: isProfileLoading } = useCurrentUserProfile();
   const firestore = useFirestore();
   const router = useRouter();
@@ -244,8 +245,10 @@ export default function UsersPage() {
 
   // UI gate only; src/actions/admin-guard.ts is the real one, and firestore.rules
   // is what actually stops a non-owner reading this collection.
-  const canManageUsers = currentUser?.id === 'jzQgCHzaObeUbeYklTLtQQh03G53' ||
-                         currentUser?.email === 'belloimam431@gmail.com';
+  const emailLower = (authUser?.email || currentUser?.email)?.toLowerCase().trim();
+  const uid = authUser?.uid || currentUser?.id;
+  const canManageUsers = uid === 'jzQgCHzaObeUbeYklTLtQQh03G53' ||
+                         emailLower === 'belloimam431@gmail.com';
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || !canManageUsers) return null;

@@ -216,10 +216,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    const isAuthorizedAdmin = user.email === ADMIN_EMAIL;
+    const emailLower = user.email?.toLowerCase().trim();
+    const isAuthorizedAdmin = emailLower === ADMIN_EMAIL.toLowerCase() || user.uid === 'jzQgCHzaObeUbeYklTLtQQh03G53';
 
     if (!isAuthorizedAdmin && !isLoginPage) {
-      router.replace('/dashboard');
+      router.replace('/admin-imamshaffy/login?error=unauthorized');
     }
 
     if (isAuthorizedAdmin && isLoginPage) {
@@ -244,22 +245,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (isUserLoading) {
     return (
-      <div className="flex items-center justify-center min-h-0 h-full bg-background">
+      <div className="flex items-center justify-center min-h-[60vh] h-full bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader className="size-12 animate-spin text-primary" />
-          <p className="text-muted-foreground">Authenticating Admin...</p>
+          <p className="text-muted-foreground text-sm font-medium">Authenticating Admin...</p>
         </div>
       </div>
     );
   }
 
   if (pathname === '/admin-imamshaffy/login') {
-    return <div className="h-full overflow-y-auto w-full">{children}</div>;
+    return <div className="min-h-screen w-full">{children}</div>;
   }
 
-  if (user && user.email === ADMIN_EMAIL) {
+  const isAuthorized = user && (user.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase() || user.uid === 'jzQgCHzaObeUbeYklTLtQQh03G53');
+
+  if (isAuthorized) {
     return (
-      <div className="flex h-full w-full flex-col relative overflow-hidden">
+      <div className="min-h-screen w-full flex flex-col relative bg-background">
         <Confetti trigger={isConfettiActive} onComplete={() => setIsConfettiActive(false)} />
 
         {/* Top Header */}
@@ -342,8 +345,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        {/* Page content — extra bottom padding on mobile to clear the bottom nav */}
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 overflow-y-auto pb-24 md:pb-8">
+        {/* Page content — spacious, responsive dashboard layout */}
+        <main className="flex-1 w-full max-w-[1720px] mx-auto p-4 md:p-6 lg:p-8 pb-24 md:pb-12 min-w-0">
           {children}
         </main>
 
